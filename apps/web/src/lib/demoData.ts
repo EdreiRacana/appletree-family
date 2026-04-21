@@ -1,215 +1,136 @@
-// AppleTree Family — Demo data replicating the reference image layout
-// Replace with real Supabase data once connected
-
 import type { Member, Relationship } from './types'
 
-const TREE_ID = 'demo-tree-001'
-
 export const DEMO_MEMBERS: Member[] = [
-  // Generation -3 (great-grandparents row - top)
+  // Generation 0: The Roots (Grandparents)
   {
-    id: 'g3-1', treeId: TREE_ID, firstName: 'Santos', lastName: 'López',
-    dateOfBirth: '1815-01-01', dateOfDeath: '1889-01-01',
-    appleType: 'red', generation: -3, canvasX: 250, canvasY: 50,
+    id: 'm1',
+    treeId: 't1',
+    firstName: 'Santos',
+    lastName: 'López',
+    dateOfBirth: '1910-05-12',
+    dateOfDeath: '1995-11-20',
+    gender: 'male',
+    generation: 0,
+    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
+    appleType: 'red'
   },
   {
-    id: 'g3-2', treeId: TREE_ID, firstName: 'Canaria', lastName: 'López',
-    dateOfBirth: '1815-01-01', dateOfDeath: '1890-01-01',
-    appleType: 'green', generation: -3, canvasX: 370, canvasY: 50,
-  },
-  {
-    id: 'g3-3', treeId: TREE_ID, firstName: 'Azalan', lastName: 'Pérez',
-    dateOfBirth: '1826-01-01', dateOfDeath: '1900-01-01',
-    appleType: 'red', generation: -3, canvasX: 530, canvasY: 50,
-  },
-  {
-    id: 'g3-4', treeId: TREE_ID, firstName: 'Colles', lastName: 'Pérez',
-    dateOfBirth: '1826-01-01', dateOfDeath: '1901-01-01',
-    appleType: 'green', generation: -3, canvasX: 650, canvasY: 50,
-  },
-  // Babies on the right (newest generation)
-  {
-    id: 'baby-1', treeId: TREE_ID, firstName: 'Sofía', lastName: 'Pérez',
-    dateOfBirth: '2024-03-15',
-    appleType: 'pink', isBaby: true, gender: 'female',
-    generation: 1, canvasX: 780, canvasY: 50,
-  },
-  {
-    id: 'baby-2', treeId: TREE_ID, firstName: 'Mateo', lastName: 'Pérez',
-    dateOfBirth: '2023-11-02',
-    appleType: 'pink', isBaby: true, gender: 'male',
-    generation: 1, canvasX: 880, canvasY: 50,
+    id: 'm2',
+    treeId: 't1',
+    firstName: 'Margarita',
+    lastName: 'García',
+    dateOfBirth: '1915-08-22',
+    dateOfDeath: '2005-04-10',
+    gender: 'female',
+    generation: 0,
+    avatarUrl: 'https://images.unsplash.com/photo-1509783236416-c9ad59bae472?w=200&h=200&fit=crop',
+    appleType: 'red'
   },
 
-  // Generation -2 (grandparents)
+  // Generation 1: The Trunk (Parents)
   {
-    id: 'g2-1', treeId: TREE_ID, firstName: 'Margarita', lastName: 'López',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'red', generation: -2, canvasX: 180, canvasY: 190,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Margarita1&backgroundColor=ffb3b3',
+    id: 'm3',
+    treeId: 't1',
+    firstName: 'Andrés',
+    lastName: 'Pérez',
+    dateOfBirth: '1945-02-15',
+    gender: 'male',
+    generation: 1,
+    parents: ['m1', 'm2'],
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
+    appleType: 'red'
   },
   {
-    id: 'g2-2', treeId: TREE_ID, firstName: 'Narcise', lastName: 'López',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1975-01-01',
-    appleType: 'red', generation: -2, canvasX: 300, canvasY: 190,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Narcise&backgroundColor=ffb3b3',
+    id: 'm4',
+    treeId: 't1',
+    firstName: 'Elena',
+    lastName: 'López',
+    dateOfBirth: '1948-11-30',
+    gender: 'female',
+    generation: 1,
+    parents: ['m1', 'm2'],
+    avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
+    appleType: 'red'
   },
   {
-    id: 'g2-3', treeId: TREE_ID, firstName: 'Margarita', lastName: 'López',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1975-01-01',
-    appleType: 'green', generation: -2, canvasX: 420, canvasY: 190,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=MargaritaG&backgroundColor=b3ffb3',
-  },
-  {
-    id: 'g2-4', treeId: TREE_ID, firstName: 'Andrés', lastName: 'Pérez',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'red', generation: -2, canvasX: 580, canvasY: 190,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Andres2&backgroundColor=ffb3b3',
-  },
-  {
-    id: 'g2-5', treeId: TREE_ID, firstName: 'Andrés', lastName: 'Pérez',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1973-01-01',
-    appleType: 'red', generation: -2, canvasX: 700, canvasY: 190,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Andres3&backgroundColor=ffb3b3',
-  },
-  {
-    id: 'g2-6', treeId: TREE_ID, firstName: 'Andrés', lastName: 'Pérez',
-    dateOfBirth: '1880-01-01', dateOfDeath: '1973-01-01',
-    appleType: 'red', generation: -2, canvasX: 820, canvasY: 190,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Andres4&backgroundColor=ffb3b3',
-  },
-
-  // Generation -1 (parents)
-  {
-    id: 'g1-1', treeId: TREE_ID, firstName: 'Margarita', lastName: 'López',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'red', generation: -1, canvasX: 340, canvasY: 330,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=MargaritaP&backgroundColor=ffb3b3',
-  },
-  {
-    id: 'g1-2', treeId: TREE_ID, firstName: 'Sonioa', lastName: 'López',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'green', generation: -1, canvasX: 460, canvasY: 330,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sonioa&backgroundColor=b3ffb3',
-  },
-  {
-    id: 'g1-3', treeId: TREE_ID, firstName: 'Andrés', lastName: 'Pérez',
-    dateOfBirth: '1964-01-01', dateOfDeath: '1975-01-01',
-    appleType: 'red', generation: -1, canvasX: 580, canvasY: 330,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AndresP1&backgroundColor=ffb3b3',
-  },
-  {
-    id: 'g1-4', treeId: TREE_ID, firstName: 'Andrés', lastName: 'Pérez',
-    dateOfBirth: '1964-01-01', dateOfDeath: '1975-01-01',
-    appleType: 'red', generation: -1, canvasX: 700, canvasY: 330,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AndresP2&backgroundColor=ffb3b3',
+    id: 'm5',
+    treeId: 't1',
+    firstName: 'Carmen',
+    lastName: 'Rodríguez',
+    dateOfBirth: '1947-06-18',
+    gender: 'female',
+    generation: 1,
+    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+    appleType: 'green'
   },
 
-  // Generation 0 (center / self)
+  // Generation 2: The Branches (Siblings)
   {
-    id: 'g0-1', treeId: TREE_ID, firstName: 'Domme', lastName: 'López',
-    dateOfBirth: '1892-01-01', dateOfDeath: '1973-01-01',
-    appleType: 'red', generation: 0, canvasX: 270, canvasY: 460,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Domme&backgroundColor=ffb3b3',
+    id: 'm6',
+    treeId: 't1',
+    firstName: 'Carlos',
+    lastName: 'Pérez',
+    dateOfBirth: '1975-09-12',
+    gender: 'male',
+    generation: 2,
+    parents: ['m3', 'm5'],
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+    appleType: 'red'
   },
   {
-    id: 'g0-2', treeId: TREE_ID, firstName: 'Margarita', lastName: 'López',
-    dateOfBirth: '1899-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'red', generation: 0, canvasX: 430, canvasY: 460,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=MargaritaRoot&backgroundColor=ffb3b3',
+    id: 'm10', // NEW MEMBER: Carlos' Spouse
+    treeId: 't1',
+    firstName: 'Laura',
+    lastName: 'Sánchez',
+    dateOfBirth: '1978-04-15',
+    gender: 'female',
+    generation: 2,
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop',
+    appleType: 'green'
   },
   {
-    id: 'g0-3', treeId: TREE_ID, firstName: 'Andrés', lastName: 'Pérez',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'red', generation: 0, canvasX: 580, canvasY: 460,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AndresRoot&backgroundColor=ffb3b3',
-  },
-  {
-    id: 'g0-4', treeId: TREE_ID, firstName: 'Carloos', lastName: 'López',
-    dateOfBirth: '1889-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'red', generation: 0, canvasX: 720, canvasY: 460,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CarloosRoot&backgroundColor=ffb3b3',
+    id: 'm7',
+    treeId: 't1',
+    firstName: 'Lucía',
+    lastName: 'Pérez',
+    dateOfBirth: '1980-03-22',
+    gender: 'female',
+    generation: 2,
+    parents: ['m3', 'm5'],
+    avatarUrl: 'https://images.unsplash.com/photo-1491349174775-aaafddd81942?w=100&h=100&fit=crop',
+    appleType: 'red'
   },
 
-  // Generation 1 (bottom / youngest ancestor shown)
+  // Generation 3: The Leaves (Children)
   {
-    id: 'g_bottom', treeId: TREE_ID, firstName: 'Andrés', lastName: 'Pérez',
-    dateOfBirth: '1888-01-01', dateOfDeath: '1972-01-01',
-    appleType: 'red', generation: 1, canvasX: 500, canvasY: 580,
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AndresBottom&backgroundColor=ffb3b3',
+    id: 'm8',
+    treeId: 't1',
+    firstName: 'Mateo',
+    lastName: 'Pérez',
+    dateOfBirth: '2005-07-15',
+    gender: 'male',
+    generation: 3,
+    parents: ['m6', 'm10'], // Now has both parents
+    avatarUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&h=100&fit=crop',
+    appleType: 'pink',
+    isBaby: true
   },
+  {
+    id: 'm9',
+    treeId: 't1',
+    firstName: 'Camila',
+    lastName: 'Pérez',
+    dateOfBirth: '2008-12-05',
+    gender: 'female',
+    generation: 3,
+    parents: ['m6', 'm10'], // Now has both parents
+    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop',
+    appleType: 'pink'
+  }
 ]
 
 export const DEMO_RELATIONSHIPS: Relationship[] = [
-  // Spouse pairs (gen -3)
-  { id: 'r1', treeId: TREE_ID, member1Id: 'g3-1', member2Id: 'g3-2', relationship: 'spouse', isActive: true },
-  { id: 'r2', treeId: TREE_ID, member1Id: 'g3-3', member2Id: 'g3-4', relationship: 'spouse', isActive: true },
-
-  // Parent → child connections (gen -3 to gen -2)
-  { id: 'r3', treeId: TREE_ID, member1Id: 'g3-1', member2Id: 'g2-1', relationship: 'parent', isActive: true },
-  { id: 'r4', treeId: TREE_ID, member1Id: 'g3-1', member2Id: 'g2-2', relationship: 'parent', isActive: true },
-  { id: 'r5', treeId: TREE_ID, member1Id: 'g3-3', member2Id: 'g2-4', relationship: 'parent', isActive: true },
-  { id: 'r6', treeId: TREE_ID, member1Id: 'g3-3', member2Id: 'g2-5', relationship: 'parent', isActive: true },
-
-  // Gen -2 to gen -1
-  { id: 'r7', treeId: TREE_ID, member1Id: 'g2-2', member2Id: 'g1-1', relationship: 'parent', isActive: true },
-  { id: 'r8', treeId: TREE_ID, member1Id: 'g2-4', member2Id: 'g1-3', relationship: 'parent', isActive: true },
-
-  // Gen -1 to gen 0
-  { id: 'r9',  treeId: TREE_ID, member1Id: 'g1-1', member2Id: 'g0-1', relationship: 'parent', isActive: true },
-  { id: 'r10', treeId: TREE_ID, member1Id: 'g1-3', member2Id: 'g0-3', relationship: 'parent', isActive: true },
-
-  // Gen 0 to bottom
-  { id: 'r11', treeId: TREE_ID, member1Id: 'g0-2', member2Id: 'g_bottom', relationship: 'parent', isActive: true },
-  { id: 'r12', treeId: TREE_ID, member1Id: 'g0-3', member2Id: 'g_bottom', relationship: 'parent', isActive: true },
-]
-
-export const DEMO_FEED = [
-  {
-    id: 'f1', type: 'birthday', emoji: '🎂',
-    title: "Birthday's Carlos Pérez.",
-    time: '13 months ago',
-    images: [],
-  },
-  {
-    id: 'f2', type: 'anniversary', emoji: '🎊',
-    title: "Birthday's Anniversary!",
-    time: '12 months ago',
-    images: [],
-  },
-  {
-    id: 'f3', type: 'photo_upload', emoji: null,
-    title: 'Recent photo album uploaded me!',
-    time: '3 hours ago',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos&backgroundColor=ffb3b3',
-    images: [
-      'https://images.unsplash.com/photo-1511895426328-dc8714191011?w=80&q=60',
-      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=80&q=60',
-      'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=80&q=60',
-    ],
-  },
-  {
-    id: 'f4', type: 'achievement', emoji: '🎓',
-    title: "Carlos's Graduation!\nMaria's Trip Photos",
-    time: '1 years ago',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria&backgroundColor=b3ffb3',
-    images: [
-      'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=80&q=60',
-      'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=80&q=60',
-    ],
-  },
-  {
-    id: 'f5', type: 'photo_upload', emoji: null,
-    title: 'Recent photo album uploaded',
-    time: '1 hours ago',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Papa&backgroundColor=ffb3b3',
-    images: [],
-  },
-  {
-    id: 'f6', type: 'achievement', emoji: '🎉',
-    title: "Shared achievement posts\nCarlos's Graduation! 🎉",
-    time: '3 hours ago',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Abuela&backgroundColor=b3ffb3',
-    images: [],
-  },
+  { id: 'r1', treeId: 't1', member1Id: 'm1', member2Id: 'm2', relationship: 'spouse', isActive: true },
+  { id: 'r2', treeId: 't1', member1Id: 'm3', member2Id: 'm5', relationship: 'spouse', isActive: true },
+  { id: 'r3', treeId: 't1', member1Id: 'm6', member2Id: 'm10', relationship: 'spouse', isActive: true } // NEW RELATIONSHIP
 ]
