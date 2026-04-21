@@ -1,0 +1,254 @@
+'use client'
+
+import React, { useState } from 'react'
+import { X, Save, User as UserIcon, Calendar, ImageIcon } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import type { Member } from '@/lib/types'
+
+interface EditMemberModalProps {
+  member: Member
+  onClose: () => void
+  onSave: () => void
+}
+
+export default function EditMemberModal({ member, onClose, onSave }: EditMemberModalProps) {
+  const [formData, setFormData] = useState({
+    firstName: member.firstName,
+    lastName: member.lastName,
+    dateOfBirth: member.dateOfBirth || '',
+    avatarUrl: member.avatarUrl || '',
+    gender: member.gender || 'male',
+    appleType: member.appleType || 'red'
+  })
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const { error } = await supabase
+        .from('members')
+        .update({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          date_of_birth: formData.dateOfBirth,
+          avatar_url: formData.avatarUrl,
+          gender: formData.gender,
+          apple_type: formData.appleType
+        })
+        .eq('id', member.id)
+
+      if (error) throw error
+      onSave()
+      onClose()
+    } catch (err) {
+      console.error('Error saving member:', err)
+      alert('Error updating member details')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 5000,
+    }}>
+      <div style={{
+        backgroundColor: '#FAEFBC',
+        width: '100%',
+        maxWidth: '500px',
+        borderRadius: '24px',
+        padding: '32px',
+        position: 'relative',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(242,210,65,0.3)',
+        border: '2px solid #F2D241',
+        color: '#2C1810',
+        animation: 'modalFadeIn 0.3s ease-out'
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ margin: 0, fontFamily: 'serif', fontSize: '24px', color: '#8B4513' }}>
+            Editar Familiar
+          </h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B4513' }}>
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Avatar Preview Section */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', backgroundColor: 'rgba(139,69,19,0.05)', padding: '16px', borderRadius: '16px' }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '3px solid #F2D241',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+              backgroundColor: '#fff'
+            }}>
+              <img 
+                src={formData.avatarUrl || '/assets/default-avatar.png'} 
+                alt="Preview" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px', opacity: 0.7 }}>
+                <ImageIcon size={14} /> URL DE LA FOTO
+              </label>
+              <input 
+                type="text"
+                value={formData.avatarUrl}
+                onChange={(e) => setFormData({...formData, avatarUrl: e.target.value})}
+                placeholder="https://..."
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(139,69,19,0.2)',
+                  backgroundColor: 'rgba(255,255,255,0.5)',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={labelStyle}><UserIcon size={14} /> NOMBRE</label>
+              <input 
+                type="text" 
+                value={formData.firstName}
+                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                style={inputStyle} 
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>APELLIDOS</label>
+              <input 
+                type="text" 
+                value={formData.lastName}
+                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                style={inputStyle} 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}><Calendar size={14} /> FECHA DE NACIMIENTO</label>
+            <input 
+              type="date" 
+              value={formData.dateOfBirth}
+              onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+              style={inputStyle} 
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>TIPO DE MANZANA</label>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              {['red', 'green', 'pink'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setFormData({...formData, appleType: type as any})}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    border: formData.appleType === type ? '2px solid #F2D241' : '1px solid rgba(0,0,0,0.1)',
+                    backgroundColor: formData.appleType === type ? '#8B4513' : 'rgba(139,69,19,0.1)',
+                    color: formData.appleType === type ? '#FAEFBC' : '#2C1810',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {type.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+          <button 
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: '12px',
+              borderRadius: '12px',
+              border: '1px solid rgba(139,69,19,0.2)',
+              backgroundColor: 'transparent',
+              color: '#8B4513',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Cancelar
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            style={{
+              flex: 2,
+              padding: '12px',
+              borderRadius: '12px',
+              border: 'none',
+              backgroundColor: '#8B4513',
+              color: '#FAEFBC',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              cursor: isSaving ? 'wait' : 'pointer',
+              boxShadow: '0 4px 12px rgba(139,69,19,0.3)'
+            }}
+          >
+            {isSaving ? 'Guardando...' : <Save size={18} />}
+            {!isSaving && ' Guardar Cambios'}
+          </button>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.95) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+const labelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontSize: '12px',
+  fontWeight: 'bold',
+  marginBottom: '8px',
+  opacity: 0.6,
+  letterSpacing: '0.05em'
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px',
+  borderRadius: '12px',
+  border: '1px solid rgba(139,69,19,0.15)',
+  backgroundColor: 'rgba(255,255,255,0.7)',
+  fontSize: '15px',
+  color: '#2C1810',
+  outline: 'none',
+}
