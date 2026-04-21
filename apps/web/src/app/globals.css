@@ -1,56 +1,55 @@
 /* ============================================================
-   AppleTree Family — Global Styles
-   Design System: Earthy greens, warm ambers, apple reds
+   AppleTree Family — Global Styles (RESTORED)
+   Design System: Earthy greens, warm ambers, Lux Gold
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* --- CSS TOKENS --- */
 :root {
   /* Brand Colors */
-  --color-bark:       #3D2B1F;   /* Deep tree bark brown */
-  --color-moss:       #2D5016;   /* Deep forest green */
-  --color-leaf:       #4A7C2F;   /* Medium leaf green */
-  --color-leaf-light: #7BAC56;   /* Light leaf */
-  --color-sky:        #C8E6A0;   /* Canvas background */
-  --color-apple-red:  #C0392B;   /* Direct bloodline apple */
+  --color-bark:       #3D2B1F;
+  --color-moss:       #2D5016;
+  --color-leaf:       #4A7C2F;
+  --color-leaf-light: #7BAC56;
+  --color-sky:        #C8E6A0;
+  --color-apple-red:  #C0392B;
   --color-apple-red-shine: #E74C3C;
-  --color-apple-green: #27AE60;  /* Extended family apple */
-  --color-apple-green-shine: #2ECC71;
-  --color-apple-pink:  #E91E8C;  /* Baby apple */
+  --color-apple-green: #1E8449;
+  --color-apple-green-shine: #27AE60;
+  --color-apple-pink:  #E91E8C;
   --color-apple-pink-shine: #F06292;
 
+  /* Lux Gold Palette */
+  --color-gold-light:  #F5E6C8;
+  --color-gold-main:   #D4822A;
+  --color-gold-deep:   #B8691A;
+
   /* UI Colors */
-  --color-bg:         #F5F0E8;   /* Warm parchment background */
+  --color-bg:         #F5F0E8;
   --color-surface:    #FFFFFF;
   --color-surface-2:  #FAF6F0;
   --color-border:     #E8DDD0;
   --color-text:       #2C1810;
   --color-text-muted: #7A6558;
-  --color-accent:     #D4822A;   /* Golden amber accent */
-  --color-accent-dark:#B8691A;
 
   /* Shadows */
-  --shadow-apple: 0 8px 24px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.3);
-  --shadow-card:  0 4px 20px rgba(44, 24, 16, 0.08);
-  --shadow-hover: 0 8px 32px rgba(44, 24, 16, 0.15);
+  --shadow-apple: 0 8px 24px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
+  --shadow-lux:   0 12px 40px rgba(44, 24, 16, 0.15);
 
   /* Fonts */
   --font-body:    'Outfit', sans-serif;
   --font-display: 'Playfair Display', serif;
 
-  /* Sidebar width */
-  --sidebar-width: 220px;
-  --feed-width: 300px;
+  /* Dimensions */
+  --sidebar-width: 240px;
+  --feed-width: 320px;
+  --topbar-height: 64px;
 }
 
 /* --- BASE --- */
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
 html, body {
   height: 100%;
   font-family: var(--font-body);
@@ -63,7 +62,7 @@ html, body {
 .app-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr var(--feed-width);
-  grid-template-rows: 64px 1fr;
+  grid-template-rows: var(--topbar-height) 1fr;
   height: 100vh;
   width: 100vw;
 }
@@ -74,10 +73,11 @@ html, body {
   background: var(--color-bark);
   display: flex;
   align-items: center;
-  padding: 0 20px;
-  gap: 16px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-  z-index: 100;
+  padding: 0 24px;
+  gap: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+  z-index: 1000;
+  border-bottom: 2px solid var(--color-gold-main);
 }
 
 .sidebar {
@@ -86,7 +86,8 @@ html, body {
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
-  z-index: 50;
+  z-index: 100;
+  box-shadow: 4px 0 15px rgba(0,0,0,0.05);
 }
 
 .tree-canvas-area {
@@ -94,7 +95,19 @@ html, body {
   grid-row: 2;
   overflow: hidden;
   position: relative;
-  background: radial-gradient(ellipse at center, #D4E8A0 0%, #B8D480 40%, #8FBC4A 100%);
+  background: #1a2e1a url('/assets/arbol-base.png') no-repeat center center;
+  background-size: cover;
+  background-attachment: local;
+}
+
+/* Luxury Overlay for clarity */
+.tree-canvas-area::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(26,46,26,0.1) 0%, rgba(26,46,26,0.5) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .feed-panel {
@@ -103,167 +116,20 @@ html, body {
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
   overflow-y: auto;
-}
-
-/* --- TOPBAR ELEMENTS --- */
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-  color: white;
-}
-.logo-icon {
-  font-size: 28px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-}
-.logo-text {
-  font-family: var(--font-display);
-  font-size: 20px;
-  color: #F5E6C8;
-  line-height: 1.1;
-}
-.logo-sub {
-  font-family: var(--font-body);
-  font-size: 10px;
-  color: #BCA88A;
-  font-weight: 400;
-  letter-spacing: 0.05em;
-}
-
-.search-bar {
-  flex: 1;
-  max-width: 520px;
-  margin: 0 auto;
-  position: relative;
-}
-.search-bar input {
-  width: 100%;
-  padding: 10px 16px 10px 42px;
-  border-radius: 24px;
-  border: none;
-  background: rgba(255,255,255,0.12);
-  color: white;
-  font-family: var(--font-body);
-  font-size: 14px;
-  outline: none;
-  transition: background 0.2s;
-}
-.search-bar input::placeholder { color: rgba(255,255,255,0.5); }
-.search-bar input:focus { background: rgba(255,255,255,0.2); }
-.search-bar .search-icon {
-  position: absolute;
-  left: 14px; top: 50%;
-  transform: translateY(-50%);
-  color: rgba(255,255,255,0.5);
-  width: 16px; height: 16px;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
-}
-.topbar-btn {
-  background: rgba(255,255,255,0.12);
-  border: none;
-  border-radius: 50%;
-  width: 36px; height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: white;
-  transition: background 0.2s;
-}
-.topbar-btn:hover { background: rgba(255,255,255,0.22); }
-
-.avatar-sm {
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(255,255,255,0.3);
-  cursor: pointer;
-}
-
-/* --- SIDEBAR NAV --- */
-.sidebar-section {
-  padding: 16px 12px 8px;
-}
-.sidebar-label {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text-muted);
-  padding: 0 8px;
-  margin-bottom: 4px;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  text-decoration: none;
-  color: var(--color-text-muted);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-bottom: 2px;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-}
-.nav-item:hover {
-  background: var(--color-surface-2);
-  color: var(--color-text);
-}
-.nav-item.active {
-  background: linear-gradient(135deg, var(--color-moss), var(--color-leaf));
-  color: white;
-}
-.nav-item.active .nav-icon { opacity: 1; }
-.nav-icon { width: 18px; height: 18px; opacity: 0.7; }
-
-/* Photo albums in sidebar */
-.sidebar-album {
-  margin: 4px 8px;
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  position: relative;
-  height: 100px;
-  transition: transform 0.2s;
-}
-.sidebar-album:hover { transform: scale(1.02); }
-.sidebar-album img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-}
-.sidebar-album-overlay {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: linear-gradient(transparent, rgba(0,0,0,0.7));
-  padding: 8px;
-}
-.sidebar-album-title {
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-}
-.sidebar-album-sub {
-  color: rgba(255,255,255,0.7);
-  font-size: 10px;
+  z-index: 100;
 }
 
 /* --- APPLE NODE --- */
 .apple-node {
   position: relative;
   cursor: pointer;
+  z-index: 10;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.apple-node:hover {
+  transform: scale(1.1) translateY(-5px);
+  z-index: 50;
 }
 
 .apple-body {
@@ -272,269 +138,184 @@ html, body {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  transition: transform 0.2s, box-shadow 0.2s;
+  justifyContent: center;
   box-shadow: var(--shadow-apple);
+  border: 1px solid rgba(255,255,255,0.2);
+  overflow: visible;
 }
 
 .apple-body.red {
-  background: radial-gradient(circle at 35% 35%, var(--color-apple-red-shine), var(--color-apple-red) 50%, #922B21);
+  background: radial-gradient(circle at 35% 35%, var(--color-apple-red-shine), var(--color-apple-red) 70%, #922B21);
 }
 .apple-body.green {
-  background: radial-gradient(circle at 35% 35%, var(--color-apple-green-shine), var(--color-apple-green) 50%, #1E8449);
+  background: radial-gradient(circle at 35% 35%, var(--color-apple-green-shine), var(--color-apple-green) 70%, #1E8449);
 }
 .apple-body.pink {
-  background: radial-gradient(circle at 35% 35%, var(--color-apple-pink-shine), var(--color-apple-pink) 50%, #AD1457);
+  background: radial-gradient(circle at 35% 35%, var(--color-apple-pink-shine), var(--color-apple-pink) 70%, #C2185B);
 }
 
-.apple-body:hover {
-  transform: scale(1.08);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.35), inset 0 2px 4px rgba(255,255,255,0.35);
-}
-
-/* Shine effect */
 .apple-body::before {
   content: '';
   position: absolute;
-  top: 12px; left: 14px;
-  width: 22px; height: 14px;
-  background: rgba(255,255,255,0.35);
+  top: 10px; left: 12px;
+  width: 24px; height: 16px;
+  background: rgba(255,255,255,0.4);
   border-radius: 50%;
   transform: rotate(-30deg);
-  pointer-events: none;
+  filter: blur(1px);
 }
 
-/* Apple stem */
 .apple-stem {
   position: absolute;
-  top: -8px; left: 50%;
+  top: -10px; left: 50%;
   transform: translateX(-50%);
-  width: 4px; height: 12px;
+  width: 6px; height: 16px;
   background: linear-gradient(#5D4037, #3E2723);
-  border-radius: 2px;
+  border-radius: 3px;
+  z-index: -1;
 }
+
 .apple-leaf {
   position: absolute;
-  top: -6px; left: 52%;
-  width: 14px; height: 8px;
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  top: -8px; left: 54%;
+  width: 18px; height: 10px;
+  background: linear-gradient(135deg, #4CAF50, #1B5E20);
   border-radius: 50% 0 50% 0;
-  transform: rotate(-20deg);
+  transform: rotate(-15deg);
+  z-index: -1;
 }
 
 .apple-photo {
-  width: 58px; height: 58px;
+  width: 60px; height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(255,255,255,0.5);
-  position: relative;
-  z-index: 1;
-}
-
-.apple-baby-icon {
-  font-size: 32px;
-  position: relative;
-  z-index: 1;
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
 .apple-label {
-  margin-top: 6px;
+  margin-top: 10px;
   text-align: center;
-  max-width: 100px;
-}
-.apple-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-bark);
-  line-height: 1.2;
-  text-shadow: 0 1px 2px rgba(255,255,255,0.8);
-}
-.apple-dates {
-  font-size: 9px;
-  color: var(--color-text-muted);
-  margin-top: 1px;
+  transition: all 0.2s;
 }
 
-/* --- HOVER MENU (Interaction Wheel) --- */
+.apple-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.apple-dates {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-gold-light);
+  margin-top: 2px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* --- CONNECTORS --- */
+.tree-connector {
+  stroke: var(--color-gold-main);
+  stroke-width: 3.5;
+  fill: none;
+  opacity: 0.8;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+  transition: all 0.3s;
+}
+
+/* --- SIDEBAR NAV (Lux Gold) --- */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  transition: all 0.2s;
+  margin: 4px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, var(--color-gold-deep), var(--color-gold-main));
+  color: white;
+  box-shadow: 0 4px 12px rgba(212, 130, 42, 0.3);
+}
+
+/* --- LOGO --- */
+.logo-text {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(to bottom, #FFF, var(--color-gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* --- HOVER MENU (PARCHMENT STYLE) --- */
 .hover-menu {
   position: absolute;
-  left: 90px;
-  top: -10px;
-  background: white;
+  top: -260px; /* Position above the apple fruit body */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 210px;
+  background-color: #FAEFBC;
+  border: 1.5px solid #2C1810;
   border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.1);
-  padding: 6px;
-  min-width: 200px;
-  z-index: 200;
-  animation: menuFadeIn 0.15s ease-out;
-  pointer-events: all;
-  border: 1px solid var(--color-border);
-}
-
-@keyframes menuFadeIn {
-  from { opacity: 0; transform: scale(0.9) translateX(-8px); }
-  to   { opacity: 1; transform: scale(1) translateX(0); }
+  box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+  padding: 10px 0;
+  z-index: 5000;
+  display: flex;
+  flex-direction: column;
+  animation: slideUpFade 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .hover-menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background 0.12s;
-  border: none;
-  background: none;
+  gap: 12px;
+  padding: 12px 18px;
   width: 100%;
-  text-align: left;
-}
-.hover-menu-item:hover {
-  background: var(--color-surface-2);
-  color: var(--color-moss);
-}
-.hover-menu-icon {
-  width: 16px; height: 16px;
-  color: var(--color-leaf);
-  flex-shrink: 0;
-}
-.hover-menu-divider {
-  height: 1px;
-  background: var(--color-border);
-  margin: 4px 0;
-}
-
-/* --- TREE CANVAS LABELS --- */
-.tree-label {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--font-display);
-  font-size: 16px;
-  color: var(--color-moss);
-  text-shadow: 0 2px 4px rgba(255,255,255,0.6);
-  pointer-events: none;
-  white-space: nowrap;
-  font-weight: 600;
-}
-.tree-label.top { top: 16px; }
-.tree-label.bottom { bottom: 16px; }
-
-.tree-connector {
-  stroke: #5D4037;
-  stroke-width: 2.5;
-  fill: none;
-  opacity: 0.6;
-}
-
-/* --- FEED PANEL --- */
-.feed-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.feed-item {
-  display: flex;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  transition: background 0.15s;
-  cursor: pointer;
-}
-.feed-item:hover { background: var(--color-surface-2); }
-
-.feed-avatar {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 2px solid var(--color-border);
-}
-.feed-avatar-emoji {
-  width: 38px; height: 38px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-accent), var(--color-apple-red));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.feed-content { flex: 1; min-width: 0; }
-.feed-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
-.feed-time { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
-.feed-images {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  margin-top: 6px;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.feed-images img {
-  width: 100%; height: 48px;
-  object-fit: cover;
-}
-
-/* --- CANVAS SCROLL ARROWS --- */
-.canvas-arrow {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255,255,255,0.85);
+  background: none;
   border: none;
-  border-radius: 50%;
-  width: 36px; height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  z-index: 50;
+  color: #2C1810;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: left;
   transition: all 0.2s;
-  color: var(--color-bark);
-}
-.canvas-arrow:hover {
-  background: white;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  transform: translateX(-50%) scale(1.1);
-}
-.canvas-arrow.top { top: 12px; }
-.canvas-arrow.bottom { bottom: 12px; }
-
-/* --- SCROLLBAR STYLING --- */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 2px;
+  font-family: var(--font-body);
 }
 
-/* --- ANIMATIONS --- */
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+.hover-menu-item:hover {
+  background-color: rgba(44, 24, 16, 0.08); /* Subtle highlight */
 }
 
-.apple-body.animate-float {
-  animation: float 3s ease-in-out infinite;
+.hover-menu-icon {
+  width: 17px;
+  height: 17px;
+  opacity: 0.9;
 }
 
-/* --- RESPONSIVE --- */
-@media (max-width: 900px) {
-  .app-shell {
-    grid-template-columns: 60px 1fr;
-    grid-template-rows: 56px 1fr;
-  }
-  .feed-panel { display: none; }
-  .nav-item span { display: none; }
-  --sidebar-width: 60px;
+.hover-menu-divider {
+  height: 1.5px;
+  background-color: rgba(44, 24, 16, 0.12);
+  margin: 6px 0;
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
