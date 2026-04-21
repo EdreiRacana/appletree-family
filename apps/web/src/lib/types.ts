@@ -32,9 +32,12 @@ export interface Member {
   avatarCloudinaryId?: string | null
   isBaby?: boolean              // Computed from DOB
 
-  canvasX?: number              // Position on canvas
+  canvasX?: number
   canvasY?: number
-  generation?: number           // 0=root, negative=ancestors
+  generation?: number
+  
+  parents?: string[]             // Parent IDs
+  spouses?: string[]            // Spouse IDs
 
   memberPrivacy?: PrivacyLevel
   biography?: string | null
