@@ -1,23 +1,25 @@
 'use client'
 
-import { MessageCircle, Heart, Trophy, User, Shield, Share2 } from 'lucide-react'
+import { MessageCircle, Heart, Trophy, User, Shield, Share2, Edit2 } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface HoverMenuProps {
   member: Member
   onClose: () => void
+  onEdit: (member: Member) => void
 }
 
 const menuItems = [
   { id: 'chat',        icon: MessageCircle, label: (name: string) => `Chat with ${name}`, isContact: true },
   { id: 'greeting',    icon: Heart,         label: () => 'Send Greeting', isContact: true },
+  { id: 'edit',        icon: Edit2,         label: () => 'Edit Member Details', isContact: false },
   { id: 'achievement', icon: Trophy,        label: () => 'Post an Achievement', isContact: false },
   { id: 'profile',     icon: User,          label: () => 'View Full Profile', isContact: false },
   { id: 'privacy',     icon: Shield,        label: () => 'Adjust Privacy Settings', isContact: false },
   { id: 'share',       icon: Share2,        label: () => 'Share Photo', isContact: false },
 ]
 
-export default function HoverMenu({ member, onClose }: HoverMenuProps) {
+export default function HoverMenu({ member, onClose, onEdit }: HoverMenuProps) {
   
   // LOGIC: Check if member is a minor (< 18 years old or is marked as baby)
   const isMinor = () => {
@@ -38,7 +40,11 @@ export default function HoverMenu({ member, onClose }: HoverMenuProps) {
   }
 
   const handleAction = (actionId: string) => {
-    console.log('Action:', actionId, 'for member:', member.id)
+    if (actionId === 'edit') {
+      onEdit(member)
+    } else {
+      console.log('Action:', actionId, 'for member:', member.id)
+    }
     onClose()
   }
 
