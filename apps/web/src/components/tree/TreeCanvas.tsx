@@ -3,19 +3,22 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
-import { MousePointer2 } from 'lucide-react'
 import { computeTreeLayout } from '@/lib/treeLayout'
 import HoverMenu from './HoverMenu'
+import EditMemberModal from './EditMemberModal'
 
 interface TreeCanvasProps {
   members: Member[]
   relationships: Relationship[]
+  onRefresh: () => void
 }
 
-export default function TreeCanvas({ members, relationships }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh }: TreeCanvasProps) {
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
+  const [editingMember, setEditingMember] = useState<Member | null>(null)
   
-  const [offset, setOffset] = useState({ x: 0, y: -200 }) 
+  // Starting at 0,0 since we calibrated BASE_Y in the layout engine
+  const [offset, setOffset] = useState({ x: 0, y: 0 }) 
   const [isDragging, setIsDragging] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -70,7 +73,7 @@ export default function TreeCanvas({ members, relationships }: TreeCanvasProps) 
         userSelect: 'none'
       }}
     >
-      {/* 1. BACKGROUND IMAGE LAYER - 30% Opacity & Full Cover */}
+      {/* 1. BACKGROUND IMAGE LAYER */}
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -117,27 +120,31 @@ export default function TreeCanvas({ members, relationships }: TreeCanvasProps) 
         })}
 
         {/* Spouse Lines (Direct) */}
-        {relationships.map((rel) => {
-          const m1 = positionedMembers.find(m => m.id === rel.member1Id)
-          const m2 = positionedMembers.find(m => m.id === rel.member2Id)
-          if (!m1 || !m2 || rel.relationship !== 'spouse') return null
-          
-          const x1 = (m1.canvasX ?? 0) + offset.x
-          const y1 = (m1.canvasY ?? 0) + offset.y + 80
-          const x2 = (m2.canvasX ?? 0) + offset.x
-          const y2 = (m2.canvasY ?? 0) + offset.y + 80
-          
-          return (
-            <line
-              key={`spouse-line-${rel.id}`}
-              x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke="#D4AF37"
-              strokeWidth={1.5}
-              strokeDasharray="4, 4"
-              strokeLinecap="round"
-              opacity={0.6}
-            />
-          )
+        {positionedMembers.map((m1) => {
+          return relationships
+            .filter(rel => rel.relationship === 'spouse' && (rel.member1Id === m1.id || rel.member2Id === m1.id))
+            .map(rel => {
+              const otherId = rel.member1Id === m1.id ? rel.member2Id : rel.member1Id
+              const m2 = positionedMembers.find(m => m.id === otherId)
+              if (!m2 || m1.id > m2.id) return null // Draw once per pair
+              
+              const x1 = m1.canvasX + offset.x
+              const y1 = m1.canvasY + offset.y + 80
+              const x2 = m2.canvasX + offset.x
+              const y2 = m2.canvasY + offset.y + 80
+              
+              return (
+                <line
+                  key={`spouse-line-${rel.id}`}
+                  x1={x1} y1={y1} x2={x2} y2={y2}
+                  stroke="#D4AF37"
+                  strokeWidth={1.5}
+                  strokeDasharray="4, 4"
+                  strokeLinecap="round"
+                  opacity={0.6}
+                />
+              )
+            })
         })}
       </svg>
 
@@ -147,19 +154,23 @@ export default function TreeCanvas({ members, relationships }: TreeCanvasProps) 
           <div
             key={member.id}
             className="apple-node-clickable"
+            onMouseEnter={() => setHoveredMemberId(member.id)}
+            onMouseLeave={() => setHoveredMemberId(null)}
             style={{
               position: 'absolute',
-              left: (member.canvasX ?? 0) + offset.x - 100, 
-              top: (member.canvasY ?? 0) + offset.y,
+              left: member.canvasX + offset.x - 100, 
+              top: member.canvasY + offset.y,
               zIndex: hoveredMemberId === member.id ? 2000 : 50,
-              pointerEvents: 'auto'
+              pointerEvents: 'auto',
+              padding: '20px',
+              margin: '-20px'
             }}
           >
             <AppleNode
               member={member}
               isHovered={hoveredMemberId === member.id}
-              onHover={() => setHoveredMemberId(member.id)}
-              onLeave={() => setHoveredMemberId(null)}
+              onHover={() => {}}
+              onLeave={() => {}}
             />
 
             {/* INTERACTIVE HOVER MENU */}
@@ -167,11 +178,24 @@ export default function TreeCanvas({ members, relationships }: TreeCanvasProps) 
               <HoverMenu 
                 member={member} 
                 onClose={() => setHoveredMemberId(null)} 
+                onEdit={(m) => setEditingMember(m)}
               />
             )}
           </div>
         ))}
       </div>
+
+      {/* EDITING MODAL LAYER */}
+      {editingMember && (
+        <EditMemberModal
+          member={editingMember}
+          onClose={() => {
+            setEditingMember(null)
+            setHoveredMemberId(null)
+          }}
+          onSave={onRefresh}
+        />
+      )}
 
     </div>
   )
