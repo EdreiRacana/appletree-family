@@ -10,19 +10,31 @@ interface AppleNodeProps {
 
 export default function AppleNode({ member, isHovered, onHover, onLeave }: AppleNodeProps) {
   const [imgHasError, setImgHasError] = useState(false)
-  const isBaby = member.isBaby || member.generation === 3
+  const isBabyMode = () => {
+    if (member.isBaby) return true
+    if (!member.dateOfBirth) return false
+    
+    const birthDate = new Date(member.dateOfBirth)
+    const today = new Date('2026-04-21') // Demo Context
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--
+    
+    return age < 3
+  }
+
+  const isBaby = isBabyMode()
   
   const getAppleImage = () => {
     return member.appleType === 'green' ? '/assets/Manzana_verde.png' : '/assets/Manzana_roja.png'
   }
 
   const getMedallionContent = () => {
-    if (imgHasError) {
-      // Professional Fallback Avatar
-      return `https://api.dicebear.com/7.x/initials/svg?seed=${member.firstName}&backgroundColor=d4af37&fontFamily=Playfair%20Display`
-    }
     if (isBaby) {
-      return member.gender === 'female' ? '/assets/BB_nina.png' : '/assets/BB_nino.png'
+      return member.gender === 'female' ? '/assets/baby-girl.png' : '/assets/baby-boy.png'
+    }
+    if (imgHasError) {
+      return `https://api.dicebear.com/7.x/initials/svg?seed=${member.firstName}&backgroundColor=d4af37&fontFamily=Playfair%20Display`
     }
     return member.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`
   }
