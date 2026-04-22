@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageCircle, Heart, Trophy, User, Shield, Share2, Edit2, UserPlus } from 'lucide-react'
+import { MessageCircle, Heart, Trophy, User, Shield, Share2, Edit2, UserPlus, Trash2 } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface HoverMenuProps {
@@ -8,20 +8,20 @@ interface HoverMenuProps {
   onClose: () => void
   onEdit: (member: Member) => void
   onAdd: (member: Member) => void
+  onDelete: (member: Member) => void
 }
 
 const menuItems = [
-  { id: 'chat',        icon: MessageCircle, label: (name: string) => `Chat with ${name}`, isContact: true },
-  { id: 'greeting',    icon: Heart,         label: () => 'Send Greeting', isContact: true },
-  { id: 'add',         icon: UserPlus,      label: () => 'Add Family Member', isContact: false },
-  { id: 'edit',        icon: Edit2,         label: () => 'Edit Member Details', isContact: false },
-  { id: 'achievement', icon: Trophy,        label: () => 'Post an Achievement', isContact: false },
-  { id: 'profile',     icon: User,          label: () => 'View Full Profile', isContact: false },
-  { id: 'privacy',     icon: Shield,        label: () => 'Adjust Privacy Settings', isContact: false },
-  { id: 'share',       icon: Share2,        label: () => 'Share Photo', isContact: false },
+  { id: 'chat',        icon: MessageCircle, label: (name: string) => `Chatear con ${name}`, isContact: true },
+  { id: 'greeting',    icon: Heart,         label: () => 'Enviar Saludo', isContact: true },
+  { id: 'add',         icon: UserPlus,      label: () => 'Añadir Familiar', isContact: false },
+  { id: 'edit',        icon: Edit2,         label: () => 'Editar Detalles', isContact: false },
+  { id: 'delete',      icon: Trash2,        label: () => 'Eliminar Integrante', isContact: false, isCritical: true },
+  { id: 'achievement', icon: Trophy,        label: () => 'Publicar Logro', isContact: false },
+  { id: 'profile',     icon: User,          label: () => 'Ver Perfil', isContact: false },
 ]
 
-export default function HoverMenu({ member, onClose, onEdit, onAdd }: HoverMenuProps) {
+export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete }: HoverMenuProps) {
   
   // LOGIC: Check if member is a minor (< 18 years old or is marked as baby)
   const isMinor = () => {
@@ -46,6 +46,8 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd }: HoverMenuP
       onEdit(member)
     } else if (actionId === 'add') {
       onAdd(member)
+    } else if (actionId === 'delete') {
+      onDelete(member)
     } else {
       console.log('Action:', actionId, 'for member:', member.id)
     }
@@ -75,8 +77,9 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd }: HoverMenuP
             {showDivider && <div className="hover-menu-divider" />}
             <button
               id={`action-${item.id}-${member.id}`}
-              className="hover-menu-item"
+              className={`hover-menu-item ${item.isCritical ? 'critical' : ''}`}
               onClick={() => handleAction(item.id)}
+              style={item.isCritical ? { color: '#FF4444' } : {}}
             >
               <Icon className="hover-menu-icon" />
               {item.label(member.firstName)}
