@@ -200,19 +200,67 @@ export default function Sidebar() {
 
              {/* ⚙️ SETTINGS */}
              {activeTab === 'Settings' && (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                 <div style={{ padding: '15px', backgroundColor: 'rgba(44,24,16,0.05)', borderRadius: '12px' }}>
-                   <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: '900', color: '#2C1810' }}>Tree Name</p>
-                   <input type="text" defaultValue="AppleTree Family" style={{ width: '100%', background: 'white', border: '1px solid #2C1810', borderRadius: '8px', padding: '8px' }} />
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                 {/* Section: Identity */}
+                 <div>
+                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
+                     Tree Identity
+                   </h4>
+                   <div style={{ backgroundColor: 'rgba(255,255,255,0.4)', padding: '15px', borderRadius: '15px', border: '1px solid rgba(44,24,16,0.05)' }}>
+                     <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '900', color: '#2C1810' }}>Display Name</p>
+                     <input 
+                       type="text" 
+                       defaultValue="AppleTree Family" 
+                       style={{ 
+                         width: '100%', background: 'white', border: '1.5px solid rgba(44,24,16,0.2)', 
+                         borderRadius: '10px', padding: '10px', fontSize: '14px', color: '#2C1810', fontWeight: '700',
+                         outline: 'none'
+                       }} 
+                     />
+                   </div>
                  </div>
-                 <div style={{ padding: '15px', backgroundColor: 'rgba(44,24,16,0.05)', borderRadius: '12px' }}>
-                   <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: '900', color: '#2C1810' }}>Privacy</p>
-                   <select style={{ width: '100%', background: 'white', border: '1px solid #2C1810', borderRadius: '8px', padding: '8px' }}>
-                     <option>Family Only</option>
-                     <option>Public</option>
-                     <option>Private</option>
-                   </select>
+
+                 {/* Section: Privacy */}
+                 <div>
+                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
+                     Privacy & Security
+                   </h4>
+                   <div style={{ backgroundColor: 'rgba(255,255,255,0.4)', padding: '15px', borderRadius: '15px', border: '1px solid rgba(44,24,16,0.05)' }}>
+                     <select style={{ 
+                       width: '100%', background: 'white', border: '1.5px solid rgba(44,24,16,0.2)', 
+                       borderRadius: '10px', padding: '10px', fontSize: '14px', color: '#2C1810', fontWeight: '700',
+                       outline: 'none'
+                     }}>
+                       <option>🔒 Private (Only Me)</option>
+                       <option>👥 Family Only (Collaborators)</option>
+                       <option>🌐 Public Legacy (Visible to All)</option>
+                     </select>
+                   </div>
                  </div>
+
+                 {/* Section: Appearance */}
+                 <div>
+                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
+                     Visual Experience
+                   </h4>
+                   <div style={{ backgroundColor: 'rgba(255,255,255,0.4)', padding: '15px', borderRadius: '15px', border: '1px solid rgba(44,24,16,0.05)' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#2C1810' }}>Background Opacity</span>
+                        <span style={{ fontSize: '11px', fontWeight: '900', color: '#2C1810', opacity: 0.5 }}>30%</span>
+                     </div>
+                     <input type="range" min="0" max="100" defaultValue="30" style={{ width: '100%', accentColor: '#2C1810' }} />
+                   </div>
+                 </div>
+
+                 {/* Save Button */}
+                 <button style={{
+                   width: '100%', padding: '15px', backgroundColor: '#2C1810', color: '#FAEFBC',
+                   borderRadius: '15px', border: 'none', fontSize: '14px', fontWeight: '950',
+                   textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
+                   boxShadow: '0 10px 20px rgba(44,24,16,0.2)', marginTop: '10px'
+                 }}>
+                   Save Configuration
+                 </button>
                </div>
              )}
           </div>
