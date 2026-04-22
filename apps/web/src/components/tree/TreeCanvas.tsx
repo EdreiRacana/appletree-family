@@ -6,6 +6,7 @@ import type { Member, Relationship } from '@/lib/types'
 import { computeTreeLayout } from '@/lib/treeLayout'
 import HoverMenu from './HoverMenu'
 import EditMemberModal from './EditMemberModal'
+import AddMemberModal from './AddMemberModal'
 
 interface TreeCanvasProps {
   members: Member[]
@@ -16,6 +17,7 @@ interface TreeCanvasProps {
 export default function TreeCanvas({ members, relationships, onRefresh }: TreeCanvasProps) {
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
+  const [addingToMember, setAddingToMember] = useState<Member | null>(null)
   
   // Starting at 0,0 since we calibrated BASE_Y in the layout engine
   const [offset, setOffset] = useState({ x: 0, y: 0 }) 
@@ -32,6 +34,14 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
     setIsDragging(true)
     setLastMousePos({ x: e.clientX, y: e.clientY })
   }
+
+  useEffect(() => {
+    const handleOpenModal = (e: any) => {
+      if (e.detail) setAddingToMember(e.detail)
+    }
+    window.addEventListener('open-add-modal', handleOpenModal)
+    return () => window.removeEventListener('open-add-modal', handleOpenModal)
+  }, [])
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return
@@ -179,11 +189,24 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
                 member={member} 
                 onClose={() => setHoveredMemberId(null)} 
                 onEdit={(m) => setEditingMember(m)}
+                onAdd={(m) => setAddingToMember(m)}
               />
             )}
           </div>
         ))}
       </div>
+
+      {/* ADD MEMBER MODAL LAYER */}
+      {addingToMember && (
+        <AddMemberModal
+          targetMember={addingToMember}
+          onClose={() => {
+            setAddingToMember(null)
+            setHoveredMemberId(null)
+          }}
+          onSave={onRefresh}
+        />
+      )}
 
       {/* EDITING MODAL LAYER */}
       {editingMember && (
