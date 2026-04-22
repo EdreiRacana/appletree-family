@@ -171,7 +171,11 @@ export default function FeedPanel() {
             <div key={story.id} style={{...cardStyle, overflow: 'visible', marginBottom: '10px'}}>
               {story.imageUrl && (
                 <div style={{...imageContainerStyle, height: '140px', borderRadius: '20px 20px 0 0', backgroundImage: `url(${story.imageUrl})`}}>
-                  <div style={badgeStyle}>{String(story.metadata?.year || 'Recuerdo')}</div>
+                  <div style={badgeStyle}>
+                    {typeof story.metadata?.year === 'string' || typeof story.metadata?.year === 'number' 
+                      ? String(story.metadata.year) 
+                      : 'Recuerdo'}
+                  </div>
                 </div>
               )}
               
