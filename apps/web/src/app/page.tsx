@@ -89,26 +89,14 @@ export default function AppleTreeDashboard() {
       position: 'relative' 
     }}>
       {/* 1. Global Navigation Bar */}
-      <Topbar 
-        onAdd={() => {
-          if (treeData.members.length > 0) {
-            // By default, start the add wizard from the first member if using the topbar
-            const root = treeData.members[0]
-            // We dispatch an event or use a ref? 
-            // Better: We'll add a small state or just let the TreeCanvas handle it.
-            // For now, I'll trigger the first member's add flow via a custom event
-            const event = new CustomEvent('open-add-modal', { detail: root })
-            window.dispatchEvent(event)
-          }
-        }}
-      />
+      <Topbar />
 
       {/* 2. Main Workspace Layout */}
       <div style={{ 
         display: 'flex', 
         width: '100%', 
-        height: 'calc(100vh - 110px)', 
-        marginTop: '110px',
+        height: 'calc(100vh - 140px)', 
+        marginTop: '140px',
         position: 'relative'
       }}>
         {/* Genealogy Tree Layer (Interactive Canvas) */}
