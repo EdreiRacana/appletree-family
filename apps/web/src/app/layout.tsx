@@ -2,12 +2,12 @@ import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'AppleTree Family — Your Roots, Connected',
+  title: 'AppleFamily Tree — Cultivating Roots, Celebrating Legacies',
   description: 'La red social familiar y árbol genealógico interactivo. Conecta generaciones, comparte logros y preserva memorias.',
   keywords: 'árbol genealógico, familia, red social familiar, genealogía interactiva',
-  authors: [{ name: 'AppleTree Family' }],
+  authors: [{ name: 'AppleFamily Tree' }],
   openGraph: {
-    title: 'AppleTree Family',
+    title: 'AppleFamily Tree',
     description: 'Conecta tu familia a través de generaciones',
     type: 'website',
   },
