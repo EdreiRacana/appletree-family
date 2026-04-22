@@ -89,7 +89,7 @@ export default function Sidebar() {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '25px' }}>
-             {/* HOME CONTENT */}
+             {/* 🏠 HOME */}
              {activeTab === 'Home' && (
                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                  <div style={{ backgroundColor: 'rgba(44,24,16,0.05)', padding: '20px', borderRadius: '15px' }}>
@@ -110,26 +110,29 @@ export default function Sidebar() {
                </div>
              )}
 
-             {/* PHOTO ALBUMS CONTENT */}
-             {activeTab === 'Photo Albums' && albums.map(album => (
-                <div key={album.id} style={{ cursor: 'pointer' }}>
-                   <div style={{ 
-                     width: '100%', height: '150px', 
-                     backgroundImage: `url(${album.image})`,
-                     backgroundSize: 'cover', backgroundPosition: 'center',
-                     borderRadius: '18px',
-                     border: '1.5px solid #2C1810', 
-                     boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
-                     transition: 'transform 0.2s ease'
-                   }} />
-                   <p style={{ fontSize: '15px', fontWeight: '900', color: '#2C1810', marginTop: '12px', marginBottom: '4px' }}>
-                     {album.title}
-                   </p>
-                   <p style={{ fontSize: '12px', color: '#2C1810', fontWeight: '800', opacity: 0.8 }}>{album.type}</p>
-                </div>
-             ))}
+             {/* 🖼️ PHOTO ALBUMS */}
+             {activeTab === 'Photo Albums' && (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                 {albums.map(album => (
+                    <div key={album.id} style={{ cursor: 'pointer' }}>
+                       <div style={{ 
+                         width: '100%', height: '150px', 
+                         backgroundImage: `url(${album.image})`,
+                         backgroundSize: 'cover', backgroundPosition: 'center',
+                         borderRadius: '18px',
+                         border: '1.5px solid #2C1810', 
+                         boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
+                       }} />
+                       <p style={{ fontSize: '15px', fontWeight: '900', color: '#2C1810', marginTop: '12px', marginBottom: '4px' }}>
+                         {album.title}
+                       </p>
+                       <p style={{ fontSize: '12px', color: '#2C1810', fontWeight: '800', opacity: 0.8 }}>{album.type}</p>
+                    </div>
+                 ))}
+               </div>
+             )}
 
-             {/* EVENTS CONTENT */}
+             {/* 📅 EVENTS */}
              {activeTab === 'Events' && (
                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                  {[
@@ -150,23 +153,18 @@ export default function Sidebar() {
                </div>
              )}
 
-             {/* NETWORK CONTENT */}
+             {/* 🔗 NETWORK */}
              {activeTab === 'Network' && (
                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                 {/* Search Bar */}
-                 <div style={{ position: 'relative' }}>
-                   <input 
-                     type="text" 
-                     placeholder="Search family name..." 
-                     style={{
-                       width: '100%', padding: '12px 15px', borderRadius: '12px',
-                       border: '1.5px solid rgba(44,24,16,0.2)', backgroundColor: 'rgba(44,24,16,0.03)',
-                       color: '#2C1810', fontSize: '13px', fontWeight: '700', outline: 'none'
-                     }}
-                   />
-                 </div>
-
-                 {/* Collaborators Section */}
+                 <input 
+                   type="text" 
+                   placeholder="Search family name..." 
+                   style={{
+                     width: '100%', padding: '12px 15px', borderRadius: '12px',
+                     border: '1.5px solid rgba(44,24,16,0.2)', backgroundColor: 'rgba(44,24,16,0.03)',
+                     color: '#2C1810', fontSize: '13px', fontWeight: '700', outline: 'none'
+                   }}
+                 />
                  <div>
                    <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
                      Tree Collaborators
@@ -191,27 +189,30 @@ export default function Sidebar() {
                      ))}
                    </div>
                  </div>
-
-                 {/* Pending Invites */}
-                 <div>
-                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
-                     Pending Invites (1)
-                   </h4>
-                   <div style={{ padding: '15px', backgroundColor: '#2C1810', borderRadius: '15px', color: '#FAEFBC' }}>
-                      <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '800' }}>Uncle Roberto wants to connect his tree.</p>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <button style={{ flex: 1, padding: '6px', borderRadius: '8px', backgroundColor: '#FAEFBC', color: '#2C1810', border: 'none', fontSize: '11px', fontWeight: '950', cursor: 'pointer' }}>Accept</button>
-                        <button style={{ flex: 1, padding: '6px', borderRadius: '8px', backgroundColor: 'rgba(250,239,188,0.2)', color: '#FAEFBC', border: 'none', fontSize: '11px', fontWeight: '950', cursor: 'pointer' }}>Ignore</button>
-                      </div>
-                   </div>
+                 <div style={{ padding: '15px', backgroundColor: '#2C1810', borderRadius: '15px', color: '#FAEFBC' }}>
+                    <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '800' }}>Uncle Roberto wants to connect his tree.</p>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button style={{ flex: 1, padding: '6px', borderRadius: '8px', backgroundColor: '#FAEFBC', color: '#2C1810', border: 'none', fontSize: '11px', fontWeight: '950', cursor: 'pointer' }}>Accept</button>
+                    </div>
                  </div>
                </div>
              )}
 
-             {/* PLACEHOLDERS FOR OTHERS */}
+             {/* ⚙️ SETTINGS */}
              {activeTab === 'Settings' && (
-               <div style={{ textAlign: 'center', opacity: 0.5, marginTop: '40px' }}>
-                 <p style={{ color: '#2C1810', fontWeight: '800' }}>Coming soon in the next update.</p>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                 <div style={{ padding: '15px', backgroundColor: 'rgba(44,24,16,0.05)', borderRadius: '12px' }}>
+                   <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: '900', color: '#2C1810' }}>Tree Name</p>
+                   <input type="text" defaultValue="AppleTree Family" style={{ width: '100%', background: 'white', border: '1px solid #2C1810', borderRadius: '8px', padding: '8px' }} />
+                 </div>
+                 <div style={{ padding: '15px', backgroundColor: 'rgba(44,24,16,0.05)', borderRadius: '12px' }}>
+                   <p style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: '900', color: '#2C1810' }}>Privacy</p>
+                   <select style={{ width: '100%', background: 'white', border: '1px solid #2C1810', borderRadius: '8px', padding: '8px' }}>
+                     <option>Family Only</option>
+                     <option>Public</option>
+                     <option>Private</option>
+                   </select>
+                 </div>
                </div>
              )}
           </div>
