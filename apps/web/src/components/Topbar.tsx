@@ -10,60 +10,74 @@ interface TopbarProps {
 export default function Topbar({ onAdd }: TopbarProps) {
   return (
     <header style={{
-      height: '110px',
+      height: '140px',
       width: '100%',
       position: 'fixed',
       top: 0,
       left: 0,
-      backgroundColor: '#1B2E1B',
-      backgroundImage: 'linear-gradient(to right, #1B2E1B 0%, #2C1810 100%)',
+      backgroundColor: '#0F1A0F',
+      backgroundImage: 'linear-gradient(to right, #0F1A0F 0%, #1B2E1B 50%, #254025 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 50px',
+      padding: '0 30px', // REDUCED LEFT/RIGHT PADDING TO MOVE LEFT
       zIndex: 2000,
       boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
       borderBottom: '3px solid #D4AF37'
     }}>
-      {/* 1. THE PERFECT TRANSPARENT LOGO - PROFESSIONALLY CLEANED */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+      {/* 1. ICON-FIRST BRANDING - LEFT ALIGNED & SYMMETRICAL */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
         <div style={{ 
-          height: '100px',
+          height: '70px',
           width: 'auto',
           display: 'flex', 
           alignItems: 'center', 
-          justifyContent: 'center',
-          backgroundColor: 'transparent'
+          justifyContent: 'center'
         }}>
           <img 
-            src="/assets/logo.png" // USING THE NEW PERFECT VERSION
+            src="/assets/logo.png" 
             alt="AppleTree Family Logo" 
             style={{ 
               height: '100%', 
               width: 'auto',
               objectFit: 'contain',
-              // Shadow to make the transparent logo pop
-              filter: 'drop-shadow(0 6px 15px rgba(0,0,0,0.6))'
+              filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))'
             }}
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '2px' }}>
           <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: '950', 
-            color: '#D4AF37', 
+            fontSize: '18px', 
+            fontWeight: '900', 
+            background: 'linear-gradient(180deg, #E8DAB2 0%, #C5A059 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             fontFamily: 'Playfair Display, serif',
             margin: 0,
-            letterSpacing: '0.05em',
-            lineHeight: 1
+            letterSpacing: '0.04em',
+            lineHeight: 1,
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+            textAlign: 'center',
+            textTransform: 'uppercase'
           }}>
-            AppleTree Family
+            AppleFamily Tree
           </h1>
-          <span style={{ fontSize: '13px', color: '#F5E6C8', fontWeight: '800', letterSpacing: '0.12em', opacity: 0.9 }}>
-            YOUR INTERCONNECTED ROOTS
+          <span style={{ 
+            fontSize: '9px', 
+            color: '#E8DAB2', 
+            fontFamily: 'Playfair Display, serif',
+            fontStyle: 'italic',
+            opacity: 0.8, 
+            marginTop: '2px',
+            lineHeight: '1',
+            display: 'block',
+            letterSpacing: '0.01em',
+            textAlign: 'center',
+            fontWeight: '400'
+          }}>
+            Cultivating Your Roots, Celebrating Your Legacy
           </span>
         </div>
-        <Share2 size={36} color="#D4AF37" style={{ marginLeft: '25px', cursor: 'pointer' }} />
       </div>
 
       {/* 2. Global Navigation */}
