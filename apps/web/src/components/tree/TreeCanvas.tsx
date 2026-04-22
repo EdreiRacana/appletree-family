@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
 import { computeTreeLayout } from '@/lib/treeLayout'
+import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
 import EditMemberModal from './EditMemberModal'
 import AddMemberModal from './AddMemberModal'
@@ -68,6 +69,34 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
     setOffset(prev => ({ ...prev, y: prev.y - e.deltaY * 0.5 }))
   }
 
+  const handleDeleteMember = async (member: Member) => {
+    if (!window.confirm(`¿Estás seguro de que quieres eliminar a ${member.firstName} ${member.lastName}? Esta acción no se puede deshacer.`)) {
+      return
+    }
+
+    try {
+      // 1. Eliminar relaciones primero (para evitar errores de clave foránea)
+      await supabase
+        .from('relationships')
+        .delete()
+        .or(`member1_id.eq.${member.id},member2_id.eq.${member.id}`)
+
+      // 2. Eliminar al integrante
+      const { error } = await supabase
+        .from('members')
+        .delete()
+        .eq('id', member.id)
+
+      if (error) throw error
+      
+      onRefresh()
+      setHoveredMemberId(null)
+    } catch (err) {
+      console.error('Error deleting member:', err)
+      alert('No se pudo eliminar al integrante.')
+    }
+  }
+
   return (
     <div
       ref={containerRef}
@@ -93,7 +122,7 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
         opacity: 0.3,
         zIndex: 1,
         pointerEvents: 'none',
-        transform: 'translateY(100px) scale(1.1)' 
+        transform: 'translateY(120px) scale(1.5)' 
       }} />
 
       {/* Shadow Overlay */}
@@ -111,10 +140,13 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
           const midX = parents.reduce((sum, p) => sum + (p.canvasX ?? 0), 0) / parents.length
           const midY = parents.reduce((sum, p) => sum + (p.canvasY ?? 0), 0) / parents.length
 
+          // SEGURIDAD: Solo dibujar si el hijo es de una generación superior (Y menor en canvas)
+          if (child.canvasY >= midY) return null
+
           const x1 = midX + offset.x
-          const y1 = midY + offset.y + 80 
+          const y1 = midY + offset.y + 100 // Exactamente desde la línea de la pareja
           const x2 = (child.canvasX ?? 0) + offset.x
-          const y2 = (child.canvasY ?? 0) + offset.y + 80 
+          const y2 = (child.canvasY ?? 0) + offset.y + 200 // Hasta la base del hijo
 
           return (
             <path
@@ -139,9 +171,9 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
               if (!m2 || m1.id > m2.id) return null // Draw once per pair
               
               const x1 = m1.canvasX + offset.x
-              const y1 = m1.canvasY + offset.y + 80
+              const y1 = m1.canvasY + offset.y + 100 // Center of node
               const x2 = m2.canvasX + offset.x
-              const y2 = m2.canvasY + offset.y + 80
+              const y2 = m2.canvasY + offset.y + 100 // Center of node
               
               return (
                 <line
@@ -190,6 +222,7 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
                 onClose={() => setHoveredMemberId(null)} 
                 onEdit={(m) => setEditingMember(m)}
                 onAdd={(m) => setAddingToMember(m)}
+                onDelete={(m) => handleDeleteMember(m)}
               />
             )}
           </div>
@@ -200,6 +233,7 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
       {addingToMember && (
         <AddMemberModal
           targetMember={addingToMember}
+          relationships={relationships}
           onClose={() => {
             setAddingToMember(null)
             setHoveredMemberId(null)
