@@ -3,7 +3,12 @@
 import React, { useState } from 'react'
 import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X } from 'lucide-react'
 
-export default function Sidebar() {
+interface SidebarProps {
+  bgOpacity: number
+  onOpacityChange: (val: number) => void
+}
+
+export default function Sidebar({ bgOpacity, onOpacityChange }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<string | null>('My Tree')
 
   const menuItems = [
@@ -246,9 +251,14 @@ export default function Sidebar() {
                    <div style={{ backgroundColor: 'rgba(255,255,255,0.4)', padding: '15px', borderRadius: '15px', border: '1px solid rgba(44,24,16,0.05)' }}>
                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <span style={{ fontSize: '12px', fontWeight: '800', color: '#2C1810' }}>Background Opacity</span>
-                        <span style={{ fontSize: '11px', fontWeight: '900', color: '#2C1810', opacity: 0.5 }}>30%</span>
+                        <span style={{ fontSize: '11px', fontWeight: '900', color: '#2C1810', opacity: 0.5 }}>{Math.round(bgOpacity * 100)}%</span>
                      </div>
-                     <input type="range" min="0" max="100" defaultValue="30" style={{ width: '100%', accentColor: '#2C1810' }} />
+                     <input 
+                        type="range" min="0" max="100" 
+                        value={bgOpacity * 100} 
+                        onChange={(e) => onOpacityChange(parseInt(e.target.value) / 100)}
+                        style={{ width: '100%', accentColor: '#2C1810' }} 
+                     />
                    </div>
                  </div>
 
