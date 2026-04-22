@@ -263,12 +263,15 @@ export default function Sidebar({ bgOpacity, onOpacityChange }: SidebarProps) {
                  </div>
 
                  {/* Save Button */}
-                 <button style={{
-                   width: '100%', padding: '15px', backgroundColor: '#2C1810', color: '#FAEFBC',
-                   borderRadius: '15px', border: 'none', fontSize: '14px', fontWeight: '950',
-                   textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
-                   boxShadow: '0 10px 20px rgba(44,24,16,0.2)', marginTop: '10px'
-                 }}>
+                 <button 
+                   onClick={() => setActiveTab(null)}
+                   style={{
+                     width: '100%', padding: '15px', backgroundColor: '#2C1810', color: '#FAEFBC',
+                     borderRadius: '15px', border: 'none', fontSize: '14px', fontWeight: '950',
+                     textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer',
+                     boxShadow: '0 10px 20px rgba(44,24,16,0.2)', marginTop: '10px'
+                   }}
+                 >
                    Save Configuration
                  </button>
                </div>
