@@ -136,7 +136,7 @@ export default function AppleTreeDashboard() {
 
         {/* Sidebar Navigation Rail & Floating Panels (Left Overlay) */}
         <div className="hide-on-mobile">
-          <Sidebar />
+          <Sidebar bgOpacity={bgOpacity} onOpacityChange={setBgOpacity} />
         </div>
 
         {/* Dynamic Social Feed / Events (Right Overlay) */}
