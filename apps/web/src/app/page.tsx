@@ -14,7 +14,8 @@ export default function AppleTreeDashboard() {
     relationships: []
   })
   const [loading, setLoading] = useState(true)
-
+  const [bgOpacity, setBgOpacity] = useState(0.3)
+ 
   // THE MASTER TREE ID CREATED IN THE SEED
   const TREE_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -109,6 +110,7 @@ export default function AppleTreeDashboard() {
             members={treeData.members} 
             relationships={treeData.relationships} 
             onRefresh={fetchFamilyData}
+            bgOpacity={bgOpacity}
           />
         )}
 
