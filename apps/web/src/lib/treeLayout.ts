@@ -24,7 +24,7 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
   // 2. DIMENSIONS (Calibrated for Top-Down view)
   const HORIZONTAL_UNIT_GAP = 400 
   const VERTICAL_GENERATION_GAP = 280 // More room for visual clarity
-  const START_Y = 200 // Grandparents start at the top
+  const ROOT_Y = 900 // Grandparents (Roots) start at the bottom
   const CENTER_X = 960
 
   const positioned: (Member & { canvasX: number, canvasY: number })[] = []
@@ -61,7 +61,7 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
 
     // Calculate row container width to center it
     let currentX = CENTER_X - (((units.length - 1) * HORIZONTAL_UNIT_GAP) / 2)
-    const currentY = START_Y + (g * VERTICAL_GENERATION_GAP)
+    const currentY = ROOT_Y - (g * VERTICAL_GENERATION_GAP)
 
     units.forEach(unit => {
       if (unit.length === 2) {
