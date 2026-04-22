@@ -92,13 +92,16 @@ export default function AppleTreeDashboard() {
       <Topbar />
 
       {/* 2. Main Workspace Layout */}
-      <div style={{ 
-        display: 'flex', 
-        width: '100%', 
-        height: 'calc(100vh - 140px)', 
-        marginTop: '140px',
-        position: 'relative'
-      }}>
+      <div 
+        className="main-layout"
+        style={{ 
+          display: 'flex', 
+          width: '100%', 
+          height: 'calc(100vh - 140px)', 
+          marginTop: '140px',
+          position: 'relative'
+        }}
+      >
         {/* Genealogy Tree Layer (Interactive Canvas) */}
         {/* We keep it mounted to preserve camera position during refreshes */}
         {(treeData.members.length > 0 || !loading) && (
@@ -130,10 +133,14 @@ export default function AppleTreeDashboard() {
         )}
 
         {/* Sidebar Navigation Rail & Floating Panels (Left Overlay) */}
-        <Sidebar />
+        <div className="hide-on-mobile">
+          <Sidebar />
+        </div>
 
         {/* Dynamic Social Feed / Events (Right Overlay) */}
-        <FeedPanel />
+        <div className="hide-on-mobile">
+          <FeedPanel />
+        </div>
       </div>
 
       <style jsx global>{`
@@ -143,6 +150,27 @@ export default function AppleTreeDashboard() {
           background-color: #1B2E1B;
           overflow: hidden;
         }
+        
+        /* Mobile Safety Rules */
+        @media (max-width: 768px) {
+          .hide-on-mobile {
+            display: none !important;
+          }
+          .topbar-container {
+            height: 100px !important;
+          }
+          .main-layout {
+            height: calc(100vh - 100px) !important;
+            margin-top: 100px !important;
+          }
+          .brand-logo-container {
+            height: 50px !important;
+          }
+          .brand-title {
+            font-size: 14px !important;
+          }
+        }
+
         @keyframes slideIn {
           from { transform: translateX(-30px); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
