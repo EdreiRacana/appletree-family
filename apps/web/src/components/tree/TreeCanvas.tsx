@@ -245,8 +245,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, bgOpacit
               <HoverMenu 
                 member={member} 
                 onClose={() => setHoveredMemberId(null)} 
-                onEdit={(m) => setEditingMember(m)}
-                onAdd={(m) => setAddingToMember(m)}
+                onEdit={(m) => {
+                  setEditingMember(m)
+                  setHoveredMemberId(null)
+                }}
+                onAdd={(m) => {
+                  setAddingToMember(m)
+                  setHoveredMemberId(null)
+                }}
                 onDelete={(m) => handleDeleteMember(m)}
               />
             )}
