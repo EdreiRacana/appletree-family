@@ -3,7 +3,11 @@
 import React from 'react'
 import { Search, Bell, User, Plus, Share2, Settings } from 'lucide-react'
 
-export default function Topbar() {
+interface TopbarProps {
+  onAdd?: () => void
+}
+
+export default function Topbar({ onAdd }: TopbarProps) {
   return (
     <header style={{
       height: '110px',
@@ -89,7 +93,11 @@ export default function Topbar() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
-        <button className="topbar-btn" style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}>
+        <button 
+          className="topbar-btn" 
+          onClick={onAdd}
+          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}
+        >
           <Plus size={30} color="#F5E6C8" />
         </button>
         <button className="topbar-btn" style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}>
