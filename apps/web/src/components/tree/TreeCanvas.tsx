@@ -54,16 +54,38 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
 
   const handleMouseUp = () => setIsDragging(false)
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('.apple-node-clickable')) return
+    const touch = e.touches[0]
+    setIsDragging(true)
+    setLastMousePos({ x: touch.clientX, y: touch.clientY })
+  }
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!isDragging) return
+    const touch = e.touches[0]
+    const deltaX = touch.clientX - lastMousePos.x
+    const deltaY = touch.clientY - lastMousePos.y
+    setOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
+    setLastMousePos({ x: touch.clientX, y: touch.clientY })
+  }, [isDragging, lastMousePos])
+
+  const handleTouchEnd = () => setIsDragging(false)
+
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove)
       window.addEventListener('mouseup', handleMouseUp)
+      window.addEventListener('touchmove', handleTouchMove, { passive: false })
+      window.addEventListener('touchend', handleTouchEnd)
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [isDragging, handleMouseMove])
+  }, [isDragging, handleMouseMove, handleTouchMove])
 
   const handleWheel = (e: React.WheelEvent) => {
     setOffset(prev => ({ ...prev, y: prev.y - e.deltaY * 0.5 }))
@@ -101,6 +123,7 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
     <div
       ref={containerRef}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
       onWheel={handleWheel}
       style={{
         width: '100%',
@@ -109,7 +132,8 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
         overflow: 'hidden',
         backgroundColor: '#1B2E1B', 
         cursor: isDragging ? 'grabbing' : 'grab',
-        userSelect: 'none'
+        userSelect: 'none',
+        touchAction: 'none'
       }}
     >
       {/* 1. BACKGROUND IMAGE LAYER */}
