@@ -21,10 +21,10 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
 
   const sortedGens = Object.keys(gens).map(Number).sort((a,b) => a - b)
   
-  // 2. DIMENSIONS (Calibrated for a standard 1080p view)
+  // 2. DIMENSIONS (Calibrated for Top-Down view)
   const HORIZONTAL_UNIT_GAP = 400 
-  const VERTICAL_GENERATION_GAP = 190
-  const BASE_Y = 800 // Lowered from 1300 to bring the tree into view
+  const VERTICAL_GENERATION_GAP = 280 // More room for visual clarity
+  const START_Y = 200 // Grandparents start at the top
   const CENTER_X = 960
 
   const positioned: (Member & { canvasX: number, canvasY: number })[] = []
@@ -61,7 +61,7 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
 
     // Calculate row container width to center it
     let currentX = CENTER_X - (((units.length - 1) * HORIZONTAL_UNIT_GAP) / 2)
-    const currentY = BASE_Y - (gIdx * VERTICAL_GENERATION_GAP)
+    const currentY = START_Y + (g * VERTICAL_GENERATION_GAP)
 
     units.forEach(unit => {
       if (unit.length === 2) {
