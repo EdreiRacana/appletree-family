@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { X, Save, User as UserIcon, Calendar, ImageIcon, Baby, UserPlus, Heart } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import type { Member, Relationship } from '@/lib/types'
+import { Member, Relationship } from '@/lib/types'
 
 interface AddMemberModalProps {
   targetMember: Member
