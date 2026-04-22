@@ -13,9 +13,10 @@ interface TreeCanvasProps {
   members: Member[]
   relationships: Relationship[]
   onRefresh: () => void
+  bgOpacity: number
 }
 
-export default function TreeCanvas({ members, relationships, onRefresh }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, bgOpacity }: TreeCanvasProps) {
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
@@ -143,7 +144,7 @@ export default function TreeCanvas({ members, relationships, onRefresh }: TreeCa
         backgroundImage: 'url("/assets/arbol-base.png")',
         backgroundSize: 'cover',
         backgroundPosition: 'center bottom',
-        opacity: 0.3,
+        opacity: bgOpacity,
         zIndex: 1,
         pointerEvents: 'none',
         transform: 'translateY(120px) scale(1.5)' 
