@@ -7,13 +7,14 @@ import type { Member } from '@/lib/types'
 
 interface AddMemberModalProps {
   targetMember: Member
+  relationships: Relationship[]
   onClose: () => void
   onSave: () => void
 }
 
 type RelType = 'child' | 'parent' | 'spouse'
 
-export default function AddMemberModal({ targetMember, onClose, onSave }: AddMemberModalProps) {
+export default function AddMemberModal({ targetMember, relationships, onClose, onSave }: AddMemberModalProps) {
   const [step, setStep] = useState<'choose' | 'form'>('choose')
   const [relType, setRelType] = useState<RelType>('child')
   
@@ -38,12 +39,16 @@ export default function AddMemberModal({ targetMember, onClose, onSave }: AddMem
       if (relType === 'parent') newGen -= 1
 
       // 2. Prepare Parent IDs if adding a child
-      let parentIds: string[] = []
+      let parentIds: string[] = [targetMember.id]
       if (relType === 'child') {
-        parentIds = [targetMember.id]
-        // If target has spouses, we could add the first one as a co-parent
-        if (targetMember.spouses && targetMember.spouses.length > 0) {
-          parentIds.push(targetMember.spouses[0])
+        // Find spouse in relationships to add as co-parent
+        const spouseRel = relationships.find(rel => 
+          rel.relationship === 'spouse' && 
+          (rel.member1Id === targetMember.id || rel.member2Id === targetMember.id)
+        )
+        if (spouseRel) {
+          const spouseId = spouseRel.member1Id === targetMember.id ? spouseRel.member2Id : spouseRel.member1Id
+          parentIds.push(spouseId)
         }
       }
 
