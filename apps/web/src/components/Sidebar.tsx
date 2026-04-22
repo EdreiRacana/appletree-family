@@ -89,7 +89,29 @@ export default function Sidebar() {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '25px' }}>
-             {albums.map(album => (
+             {/* HOME CONTENT */}
+             {activeTab === 'Home' && (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                 <div style={{ backgroundColor: 'rgba(44,24,16,0.05)', padding: '20px', borderRadius: '15px' }}>
+                   <p style={{ margin: 0, color: '#2C1810', fontSize: '15px', fontWeight: '800', lineHeight: '1.4' }}>
+                     Welcome back to your family sanctuary. Your legacy continues to grow.
+                   </p>
+                 </div>
+                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                   <div style={{ backgroundColor: '#2C1810', color: '#FAEFBC', padding: '15px', borderRadius: '12px', textAlign: 'center' }}>
+                     <h4 style={{ margin: 0, fontSize: '20px' }}>24</h4>
+                     <p style={{ margin: 0, fontSize: '9px', fontWeight: '900', textTransform: 'uppercase' }}>Members</p>
+                   </div>
+                   <div style={{ backgroundColor: '#2C1810', color: '#FAEFBC', padding: '15px', borderRadius: '12px', textAlign: 'center' }}>
+                     <h4 style={{ margin: 0, fontSize: '20px' }}>12</h4>
+                     <p style={{ margin: 0, fontSize: '9px', fontWeight: '900', textTransform: 'uppercase' }}>Generations</p>
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* PHOTO ALBUMS CONTENT */}
+             {activeTab === 'Photo Albums' && albums.map(album => (
                 <div key={album.id} style={{ cursor: 'pointer' }}>
                    <div style={{ 
                      width: '100%', height: '150px', 
@@ -106,6 +128,92 @@ export default function Sidebar() {
                    <p style={{ fontSize: '12px', color: '#2C1810', fontWeight: '800', opacity: 0.8 }}>{album.type}</p>
                 </div>
              ))}
+
+             {/* EVENTS CONTENT */}
+             {activeTab === 'Events' && (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                 {[
+                   { date: 'Oct 24', name: 'Grandma Maria', type: 'Birthday' },
+                   { date: 'Nov 12', name: 'Perez Family', type: 'Anniversary' }
+                 ].map((event, i) => (
+                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 0', borderBottom: '1px solid rgba(44,24,16,0.1)' }}>
+                     <div style={{ backgroundColor: '#2C1810', color: '#FAEFBC', padding: '8px', borderRadius: '8px', minWidth: '50px', textAlign: 'center' }}>
+                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '900' }}>{event.date.split(' ')[0]}</p>
+                        <p style={{ margin: 0, fontSize: '14px', fontWeight: '900' }}>{event.date.split(' ')[1]}</p>
+                     </div>
+                     <div>
+                       <p style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: '#2C1810' }}>{event.name}</p>
+                       <p style={{ margin: 0, fontSize: '11px', color: '#2C1810', opacity: 0.6 }}>{event.type}</p>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
+
+             {/* NETWORK CONTENT */}
+             {activeTab === 'Network' && (
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                 {/* Search Bar */}
+                 <div style={{ position: 'relative' }}>
+                   <input 
+                     type="text" 
+                     placeholder="Search family name..." 
+                     style={{
+                       width: '100%', padding: '12px 15px', borderRadius: '12px',
+                       border: '1.5px solid rgba(44,24,16,0.2)', backgroundColor: 'rgba(44,24,16,0.03)',
+                       color: '#2C1810', fontSize: '13px', fontWeight: '700', outline: 'none'
+                     }}
+                   />
+                 </div>
+
+                 {/* Collaborators Section */}
+                 <div>
+                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
+                     Tree Collaborators
+                   </h4>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                     {[
+                       { name: 'Elena Racana', role: 'Editor', status: 'Online', avatar: 'https://i.pravatar.cc/150?u=elena' },
+                       { name: 'Carlos Perez', role: 'Viewer', status: 'Away', avatar: 'https://i.pravatar.cc/150?u=carlos' }
+                     ].map((user, i) => (
+                       <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: '14px', border: '1px solid rgba(44,24,16,0.05)' }}>
+                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                           <div style={{ width: '35px', height: '35px', borderRadius: '50%', border: '2px solid #2C1810', overflow: 'hidden' }}>
+                             <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                           </div>
+                           <div>
+                             <p style={{ margin: 0, fontSize: '13px', fontWeight: '900', color: '#2C1810' }}>{user.name}</p>
+                             <p style={{ margin: 0, fontSize: '10px', color: '#2C1810', opacity: 0.6 }}>{user.role}</p>
+                           </div>
+                         </div>
+                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: user.status === 'Online' ? '#4CAF50' : '#FFC107' }} />
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Pending Invites */}
+                 <div>
+                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
+                     Pending Invites (1)
+                   </h4>
+                   <div style={{ padding: '15px', backgroundColor: '#2C1810', borderRadius: '15px', color: '#FAEFBC' }}>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '800' }}>Uncle Roberto wants to connect his tree.</p>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button style={{ flex: 1, padding: '6px', borderRadius: '8px', backgroundColor: '#FAEFBC', color: '#2C1810', border: 'none', fontSize: '11px', fontWeight: '950', cursor: 'pointer' }}>Accept</button>
+                        <button style={{ flex: 1, padding: '6px', borderRadius: '8px', backgroundColor: 'rgba(250,239,188,0.2)', color: '#FAEFBC', border: 'none', fontSize: '11px', fontWeight: '950', cursor: 'pointer' }}>Ignore</button>
+                      </div>
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* PLACEHOLDERS FOR OTHERS */}
+             {activeTab === 'Settings' && (
+               <div style={{ textAlign: 'center', opacity: 0.5, marginTop: '40px' }}>
+                 <p style={{ color: '#2C1810', fontWeight: '800' }}>Coming soon in the next update.</p>
+               </div>
+             )}
           </div>
         </div>
       )}
