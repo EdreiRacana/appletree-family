@@ -18,24 +18,39 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
     dateOfBirth: member.dateOfBirth || '',
     avatarUrl: member.avatarUrl || '',
     gender: member.gender || 'male',
-    appleType: member.appleType || 'red'
+    appleType: member.appleType || 'red',
+    isBaby: member.isBaby || false
   })
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const { error } = await supabase
+      const updateData: any = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        date_of_birth: formData.dateOfBirth,
+        avatar_url: formData.avatarUrl,
+        gender: formData.gender,
+        apple_type: formData.appleType,
+        is_baby: formData.isBaby
+      }
+
+      let { error } = await supabase
         .from('members')
-        .update({
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          date_of_birth: formData.dateOfBirth,
-          avatar_url: formData.avatarUrl,
-          gender: formData.gender,
-          apple_type: formData.appleType
-        })
+        .update(updateData)
         .eq('id', member.id)
+
+      // INDESTRUCTIBLE FALLBACK: If column is missing in DB
+      if (error && (error.message?.includes('is_baby') || error.code === 'PGRST204')) {
+        console.warn('Database is missing is_baby column. Retrying update without privacy flag...')
+        const { is_baby, ...resilientData } = updateData
+        const retry = await supabase
+          .from('members')
+          .update(resilientData)
+          .eq('id', member.id)
+        error = retry.error
+      }
 
       if (error) throw error
       onSave()
@@ -153,6 +168,37 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
             />
           </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(242,210,65,0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #F2D241' }}>
+            <div>
+              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#8B4513', display: 'block' }}>MODO BEBÉ (PRIVACIDAD)</span>
+              <span style={{ fontSize: '11px', opacity: 0.6 }}>Oculta la foto real y usa un icono.</span>
+            </div>
+            <button
+              onClick={() => setFormData({...formData, isBaby: !formData.isBaby})}
+              style={{
+                width: '44px',
+                height: '24px',
+                borderRadius: '12px',
+                backgroundColor: formData.isBaby ? '#8B4513' : '#D1D5DB',
+                position: 'relative',
+                cursor: 'pointer',
+                border: 'none',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div style={{
+                width: '18px',
+                height: '18px',
+                borderRadius: '50%',
+                backgroundColor: '#FFF',
+                position: 'absolute',
+                top: '3px',
+                left: formData.isBaby ? '23px' : '3px',
+                transition: 'all 0.2s ease'
+              }} />
+            </button>
+          </div>
+
           <div>
             <label style={labelStyle}>TIPO DE MANZANA</label>
             <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
@@ -217,6 +263,41 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
           >
             {isSaving ? 'Guardando...' : <Save size={18} />}
             {!isSaving && ' Guardar Cambios'}
+          </button>
+        </div>
+
+        {/* DELETE ACTION */}
+        <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px dashed rgba(139,69,19,0.1)', textAlign: 'center' }}>
+          <button
+            onClick={async () => {
+              if (confirm(`¿Estás seguro de que deseas eliminar a ${member.firstName} de la familia? Esta acción no se puede deshacer.`)) {
+                setIsSaving(true)
+                try {
+                  const { error } = await supabase.from('members').delete().eq('id', member.id)
+                  if (error) throw error
+                  onSave()
+                  onClose()
+                } catch (err) {
+                  console.error('Error deleting member:', err)
+                  alert('No se pudo eliminar al familiar.')
+                } finally {
+                  setIsSaving(false)
+                }
+              }
+            }}
+            disabled={isSaving}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#B22222',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              opacity: 0.7
+            }}
+          >
+            ELIMINAR MIEMBRO DE LA FAMILIA
           </button>
         </div>
       </div>
