@@ -30,7 +30,7 @@ export interface Member {
   appleType: AppleType
   avatarUrl?: string | null
   avatarCloudinaryId?: string | null
-  isBaby?: boolean              // Computed from DOB
+  isBaby?: boolean              // Manual privacy toggle or computed from age
 
   canvasX?: number
   canvasY?: number
