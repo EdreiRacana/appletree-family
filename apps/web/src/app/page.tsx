@@ -10,6 +10,7 @@ import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import EditMemberModal from '@/components/tree/EditMemberModal'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
+// Build trigger: v2.0-stats-fix
 import Sidebar from '@/components/Sidebar'
 
 export default function AppleTreeDashboard() {
