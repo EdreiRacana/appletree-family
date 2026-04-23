@@ -14,13 +14,13 @@ interface TreeCanvasProps {
   relationships: Relationship[]
   onRefresh: () => void
   onViewProfile: (member: Member) => void
+  onEditMember: (member: Member) => void
   onAddStory: (member: Member) => void
   bgOpacity: number
 }
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onAddStory, bgOpacity }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity }: TreeCanvasProps) {
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
-  const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
   
   // Starting at 0,0 since we calibrated BASE_Y in the layout engine
@@ -248,7 +248,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 member={member} 
                 onClose={() => setHoveredMemberId(null)} 
                 onEdit={(m) => {
-                  setEditingMember(m)
+                  onEditMember(m)
                   setHoveredMemberId(null)
                 }}
                 onAdd={(m) => {
@@ -282,19 +282,6 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           onSave={onRefresh}
         />
       )}
-
-      {/* EDITING MODAL LAYER */}
-      {editingMember && (
-        <EditMemberModal
-          member={editingMember}
-          onClose={() => {
-            setEditingMember(null)
-            setHoveredMemberId(null)
-          }}
-          onSave={onRefresh}
-        />
-      )}
-
     </div>
   )
 }
