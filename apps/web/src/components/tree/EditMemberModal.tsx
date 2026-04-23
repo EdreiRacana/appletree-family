@@ -36,7 +36,6 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth || null,
         avatar_url: formData.avatarUrl || null,
-        gender: formData.gender,
         apple_type: formData.appleType,
         biography: formData.biography || null,
         occupation: formData.occupation || null,

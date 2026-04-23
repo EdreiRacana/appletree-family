@@ -59,7 +59,6 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth || null,
         avatar_url: formData.avatarUrl || null,
-        gender: formData.gender,
         apple_type: formData.appleType,
         generation: newGen,
         parents: parentIds
