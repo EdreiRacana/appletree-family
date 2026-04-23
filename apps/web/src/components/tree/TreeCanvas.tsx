@@ -13,10 +13,11 @@ interface TreeCanvasProps {
   members: Member[]
   relationships: Relationship[]
   onRefresh: () => void
+  onViewProfile: (member: Member) => void
   bgOpacity: number
 }
 
-export default function TreeCanvas({ members, relationships, onRefresh, bgOpacity }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, bgOpacity }: TreeCanvasProps) {
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
@@ -254,6 +255,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, bgOpacit
                   setHoveredMemberId(null)
                 }}
                 onDelete={(m) => handleDeleteMember(m)}
+                onViewProfile={(m) => {
+                  onViewProfile(m)
+                  setHoveredMemberId(null)
+                }}
               />
             )}
           </div>
