@@ -30,8 +30,10 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
 
   const handleSave = async () => {
     setIsSaving(true)
+    console.log('Tentando guardar cambios para:', member.id);
     try {
-      const updateData: any = {
+      // SOLO enviamos columnas que existen 100% en la tabla 'members'
+      const updateData = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth || null,
@@ -49,12 +51,17 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         .update(updateData)
         .eq('id', member.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('Error detallado de Supabase:', error.message, error.details, error.hint);
+        throw new Error(error.message);
+      }
+      
+      console.log('¡Guardado exitoso!');
       onSave()
       onClose()
-    } catch (err) {
-      console.error('Error saving member:', err)
-      alert('Error al guardar los cambios. Por favor, verifica los datos.')
+    } catch (err: any) {
+      console.error('Error al guardar:', err);
+      alert(`No se pudo guardar: ${err.message || 'Error desconocido'}`);
     } finally {
       setIsSaving(false)
     }
