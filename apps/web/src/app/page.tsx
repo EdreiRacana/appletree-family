@@ -5,6 +5,7 @@ import Topbar from '@/components/Topbar'
 import Sidebar from '@/components/Sidebar'
 import FeedPanel from '@/components/FeedPanel'
 import TreeCanvas from '@/components/tree/TreeCanvas'
+import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
 
@@ -15,6 +16,7 @@ export default function AppleTreeDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [bgOpacity, setBgOpacity] = useState(0.3)
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
  
   // THE MASTER TREE ID CREATED IN THE SEED
   const TREE_ID = '00000000-0000-0000-0000-000000000001'
@@ -110,9 +112,20 @@ export default function AppleTreeDashboard() {
             members={treeData.members} 
             relationships={treeData.relationships} 
             onRefresh={fetchFamilyData}
+            onViewProfile={(m) => setSelectedMember(m)}
             bgOpacity={bgOpacity}
           />
         )}
+
+        {/* 3. Member Profile Detail Panel (Sliding Overlay) */}
+        <MemberProfilePanel 
+          member={selectedMember} 
+          onClose={() => setSelectedMember(null)}
+          onEdit={(m) => {
+            // Future: Trigger Edit modal from here if needed
+            setSelectedMember(null)
+          }}
+        />
 
         {/* Loading Spinner only for INITIAL load to avoid jumps */}
         {loading && treeData.members.length === 0 && (
