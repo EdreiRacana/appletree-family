@@ -38,6 +38,7 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth || null,
         avatar_url: formData.avatarUrl || null,
+        gender: formData.gender,
         apple_type: formData.appleType,
         biography: formData.biography || null,
         occupation: formData.occupation || null,
@@ -248,28 +249,42 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
             </button>
           </div>
 
-          <div>
-            <label style={labelStyle}>TIPO DE MANZANA</label>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-              {['red', 'green', 'pink'].map(type => (
-                <button
-                  key={type}
-                  onClick={() => setFormData({...formData, appleType: type as any})}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    border: formData.appleType === type ? '2px solid #F2D241' : '1px solid rgba(0,0,0,0.1)',
-                    backgroundColor: formData.appleType === type ? '#8B4513' : 'rgba(139,69,19,0.1)',
-                    color: formData.appleType === type ? '#FAEFBC' : '#2C1810',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {type.toUpperCase()}
-                </button>
-              ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={labelStyle}>GÉNERO</label>
+              <select 
+                value={formData.gender}
+                onChange={(e) => setFormData({...formData, gender: e.target.value as any})}
+                style={inputStyle}
+              >
+                <option value="male">Hombre</option>
+                <option value="female">Mujer</option>
+                <option value="other">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>TIPO DE MANZANA</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {['red', 'green', 'pink'].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => setFormData({...formData, appleType: type as any})}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      borderRadius: '8px',
+                      border: formData.appleType === type ? '2px solid #F2D241' : '1px solid rgba(0,0,0,0.1)',
+                      backgroundColor: formData.appleType === type ? '#8B4513' : 'rgba(139,69,19,0.1)',
+                      color: formData.appleType === type ? '#FAEFBC' : '#2C1810',
+                      cursor: 'pointer',
+                      fontSize: '10px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    {type.toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
