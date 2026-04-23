@@ -32,18 +32,13 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
     setIsSaving(true)
     console.log('Tentando guardar cambios para:', member.id);
     try {
-      // SOLO enviamos columnas que existen 100% en la tabla 'members'
+      // Solo enviamos los campos básicos que están garantizados en la DB
       const updateData = {
         first_name: formData.firstName,
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth || null,
         avatar_url: formData.avatarUrl || null,
-        apple_type: formData.appleType,
-        biography: formData.biography || null,
-        occupation: formData.occupation || null,
-        birth_place: formData.birthPlace || null,
-        nickname: formData.nickname || null,
-        maiden_name: formData.maidenName || null
+        apple_type: formData.appleType
       }
 
       const { error } = await supabase
