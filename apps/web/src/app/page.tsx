@@ -7,6 +7,7 @@ import FeedPanel from '@/components/FeedPanel'
 import AddStoryModal from '@/components/AddStoryModal'
 import TreeCanvas from '@/components/tree/TreeCanvas'
 import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
+import EditMemberModal from '@/components/tree/EditMemberModal'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
 
@@ -18,6 +19,7 @@ export default function AppleTreeDashboard() {
   const [loading, setLoading] = useState(true)
   const [bgOpacity, setBgOpacity] = useState(0.3)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
   const [storyActor, setStoryActor] = useState<Member | null>(null)
  
@@ -116,6 +118,7 @@ export default function AppleTreeDashboard() {
             relationships={treeData.relationships} 
             onRefresh={fetchFamilyData}
             onViewProfile={(m) => setSelectedMember(m)}
+            onEditMember={(m) => setEditingMember(m)}
             onAddStory={(m) => {
               setStoryActor(m)
               setIsStoryModalOpen(true)
@@ -129,10 +132,19 @@ export default function AppleTreeDashboard() {
           member={selectedMember} 
           onClose={() => setSelectedMember(null)}
           onEdit={(m) => {
-            // Future: Trigger Edit modal from here if needed
+            setEditingMember(m)
             setSelectedMember(null)
           }}
         />
+
+        {/* 4. Edit Member Modal */}
+        {editingMember && (
+          <EditMemberModal
+            member={editingMember}
+            onClose={() => setEditingMember(null)}
+            onSave={fetchFamilyData}
+          />
+        )}
 
         {/* 4. Add Story / Achievement Modal */}
         {isStoryModalOpen && (
