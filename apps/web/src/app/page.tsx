@@ -201,7 +201,7 @@ export default function AppleTreeDashboard() {
         body {
           margin: 0;
           padding: 0;
-          background-color: #1B2E1B;
+          background-color: RED; /* PRUEBA DE CONEXIÓN EXTREMA */
           overflow: hidden;
         }
         
