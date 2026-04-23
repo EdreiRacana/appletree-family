@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Topbar from '@/components/Topbar'
 import Sidebar from '@/components/Sidebar'
 import FeedPanel from '@/components/FeedPanel'
+import AddStoryModal from '@/components/AddStoryModal'
 import TreeCanvas from '@/components/tree/TreeCanvas'
 import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import { supabase } from '@/lib/supabase'
@@ -17,6 +18,8 @@ export default function AppleTreeDashboard() {
   const [loading, setLoading] = useState(true)
   const [bgOpacity, setBgOpacity] = useState(0.3)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
+  const [storyActor, setStoryActor] = useState<Member | null>(null)
  
   // THE MASTER TREE ID CREATED IN THE SEED
   const TREE_ID = '00000000-0000-0000-0000-000000000001'
@@ -113,6 +116,10 @@ export default function AppleTreeDashboard() {
             relationships={treeData.relationships} 
             onRefresh={fetchFamilyData}
             onViewProfile={(m) => setSelectedMember(m)}
+            onAddStory={(m) => {
+              setStoryActor(m)
+              setIsStoryModalOpen(true)
+            }}
             bgOpacity={bgOpacity}
           />
         )}
@@ -126,6 +133,23 @@ export default function AppleTreeDashboard() {
             setSelectedMember(null)
           }}
         />
+
+        {/* 4. Add Story / Achievement Modal */}
+        {isStoryModalOpen && (
+          <AddStoryModal 
+            treeId={TREE_ID}
+            onClose={() => {
+              setIsStoryModalOpen(false)
+              setStoryActor(null)
+            }}
+            onSave={() => {
+              // The FeedPanel will refresh automatically if we use a shared state or 
+              // just let the user see it on the next poll/refresh.
+              // For now, we trigger a global refresh or just close.
+              fetchFamilyData() 
+            }}
+          />
+        )}
 
         {/* Loading Spinner only for INITIAL load to avoid jumps */}
         {loading && treeData.members.length === 0 && (
