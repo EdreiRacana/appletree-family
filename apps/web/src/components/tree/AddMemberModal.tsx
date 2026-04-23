@@ -62,28 +62,14 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
         gender: formData.gender,
         apple_type: formData.appleType,
         generation: newGen,
-        parents: parentIds,
-        is_baby: formData.isBaby
+        parents: parentIds
       }
 
-      let { data: newMember, error: mError } = await supabase
+      const { data: newMember, error: mError } = await supabase
         .from('members')
         .insert(insertData)
         .select()
         .single()
-
-      // INDESTRUCTIBLE FALLBACK: If column is_baby is missing in DB, retry without it
-      if (mError && (mError.message?.includes('is_baby') || mError.code === 'PGRST204')) {
-        console.warn('Database is missing is_baby column. Retrying without privacy flag...')
-        const { is_baby, ...resilientData } = insertData
-        const retry = await supabase
-          .from('members')
-          .insert(resilientData)
-          .select()
-          .single()
-        newMember = retry.data
-        mError = retry.error
-      }
 
       if (mError) throw mError
 
