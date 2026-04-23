@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Save, User as UserIcon, Calendar, ImageIcon } from 'lucide-react'
+import { X, Save, User as UserIcon, Calendar, ImageIcon, MapPin, Briefcase, BookOpen, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { Member } from '@/lib/types'
 
@@ -19,7 +19,12 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
     avatarUrl: member.avatarUrl || '',
     gender: member.gender || 'male',
     appleType: member.appleType || 'red',
-    isBaby: member.isBaby || false
+    isBaby: member.isBaby || false,
+    biography: member.biography || '',
+    occupation: member.occupation || '',
+    birthPlace: member.birthPlace || '',
+    nickname: member.nickname || '',
+    maidenName: member.maidenName || ''
   })
   const [isSaving, setIsSaving] = useState(false)
 
@@ -33,7 +38,12 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         avatar_url: formData.avatarUrl,
         gender: formData.gender,
         apple_type: formData.appleType,
-        is_baby: formData.isBaby
+        is_baby: formData.isBaby,
+        biography: formData.biography,
+        occupation: formData.occupation,
+        birth_place: formData.birthPlace,
+        nickname: formData.nickname,
+        maiden_name: formData.maidenName
       }
 
       let { error } = await supabase
@@ -158,13 +168,58 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={labelStyle}><Calendar size={14} /> FECHA DE NACIMIENTO</label>
+              <input 
+                type="date" 
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+                style={inputStyle} 
+              />
+            </div>
+            <div>
+              <label style={labelStyle}><MapPin size={14} /> LUGAR DE ORIGEN</label>
+              <input 
+                type="text" 
+                value={formData.birthPlace}
+                onChange={(e) => setFormData({...formData, birthPlace: e.target.value})}
+                placeholder="Ej: Ciudad de México"
+                style={inputStyle} 
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={labelStyle}><Star size={14} /> APODO / NICKNAME</label>
+              <input 
+                type="text" 
+                value={formData.nickname}
+                onChange={(e) => setFormData({...formData, nickname: e.target.value})}
+                placeholder="Ej: El Chato"
+                style={inputStyle} 
+              />
+            </div>
+            <div>
+              <label style={labelStyle}><Briefcase size={14} /> PROFESIÓN / OCUPACIÓN</label>
+              <input 
+                type="text" 
+                value={formData.occupation}
+                onChange={(e) => setFormData({...formData, occupation: e.target.value})}
+                placeholder="Ej: Ingeniero, Ama de casa..."
+                style={inputStyle} 
+              />
+            </div>
+          </div>
+
           <div>
-            <label style={labelStyle}><Calendar size={14} /> FECHA DE NACIMIENTO</label>
-            <input 
-              type="date" 
-              value={formData.dateOfBirth}
-              onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-              style={inputStyle} 
+            <label style={labelStyle}><BookOpen size={14} /> BIOGRAFÍA Y LOGROS (Boda, Graduación...)</label>
+            <textarea 
+              value={formData.biography}
+              onChange={(e) => setFormData({...formData, biography: e.target.value})}
+              placeholder="Escribe aquí los momentos más importantes de su vida..."
+              style={{ ...inputStyle, height: '100px', resize: 'none', lineHeight: '1.5' }} 
             />
           </div>
 
