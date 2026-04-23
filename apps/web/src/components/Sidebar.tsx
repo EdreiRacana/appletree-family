@@ -1,5 +1,6 @@
 'use client'
 
+import React, { useState } from 'react'
 import type { Member } from '@/lib/types'
 import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X, PieChart, Info, Star } from 'lucide-react'
 
