@@ -10,6 +10,7 @@ interface HoverMenuProps {
   onAdd: (member: Member) => void
   onDelete: (member: Member) => void
   onViewProfile: (member: Member) => void
+  onAddStory: (member: Member) => void
 }
 
 const menuItems = [
@@ -22,7 +23,7 @@ const menuItems = [
   { id: 'profile',     icon: User,          label: () => 'Ver Perfil', isContact: false },
 ]
 
-export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile }: HoverMenuProps) {
+export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory }: HoverMenuProps) {
   
   // LOGIC: Check if member is a minor (< 18 years old or is marked as baby)
   const isMinor = () => {
@@ -51,6 +52,8 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
       onDelete(member)
     } else if (actionId === 'profile') {
       onViewProfile(member)
+    } else if (actionId === 'achievement') {
+      onAddStory(member)
     } else {
       console.log('Action:', actionId, 'for member:', member.id)
     }
