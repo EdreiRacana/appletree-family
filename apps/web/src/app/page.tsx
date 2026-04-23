@@ -60,7 +60,8 @@ export default function AppleTreeDashboard() {
         spouses: m.spouses || [],
         isBaby: m.is_baby,
         biography: m.biography,
-        occupation: m.occupation
+        occupation: m.occupation,
+        birthPlace: m.birth_place
       }))
 
       // CRITICAL FIX: Map relationships too!
