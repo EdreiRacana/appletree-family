@@ -126,6 +126,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit }: MemberPr
             textAlign: 'center'
           }}>
             {member.firstName} {member.lastName}
+            {member.nickname && <span style={{ fontSize: '18px', opacity: 0.7, display: 'block', fontStyle: 'italic' }}>"{member.nickname}"</span>}
           </h2>
           <p style={{ 
             color: '#D4822A', 
@@ -149,12 +150,12 @@ export default function MemberProfilePanel({ member, onClose, onEdit }: MemberPr
         }}>
           
           {/* Quick Info Bar */}
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
              <div style={badgeStyle} title="Ubicación">
-               <MapPin size={16} /> {member.birthPlace || 'México'}
+               <MapPin size={16} /> {member.birthPlace || 'Sin ubicación'}
              </div>
              <div style={badgeStyle} title="Ocupación">
-               <Briefcase size={16} /> {member.occupation || 'Legado Familiar'}
+               <Briefcase size={16} /> {member.occupation || 'Sin ocupación'}
              </div>
           </div>
 
@@ -179,26 +180,36 @@ export default function MemberProfilePanel({ member, onClose, onEdit }: MemberPr
           <section>
             <div style={sectionHeaderStyle}>
               <Award size={20} color="#D4822A" />
-              <h3 style={sectionTitleStyle}>Línea del Tiempo</h3>
+              <h3 style={sectionTitleStyle}>Línea del Tiempo & Hitos</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px' }}>
-              {timeline.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                  <span style={{ 
-                    minWidth: '50px', 
-                    fontSize: '14px', 
-                    fontWeight: '900', 
-                    color: '#D4822A',
-                    paddingTop: '3px'
-                  }}>
-                    {item.year}
+              {/* Actual Birth Event */}
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                <span style={{ minWidth: '50px', fontSize: '14px', fontWeight: '900', color: '#D4822A', paddingTop: '3px' }}>
+                  {birthYear}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: 0, fontSize: '15px', color: '#2C1810', fontWeight: '800' }}>Nacimiento</h4>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#7A6558', fontWeight: '500' }}>
+                    {member.birthPlace ? `Llegada al mundo en ${member.birthPlace}` : 'Comienzo de la historia familiar.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Dynamic logic could be added here for structured milestones */}
+              {member.biography && (
+                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                  <span style={{ minWidth: '50px', fontSize: '14px', fontWeight: '900', color: '#D4822A', paddingTop: '3px' }}>
+                    INFO
                   </span>
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '15px', color: '#2C1810', fontWeight: '800' }}>{item.title}</h4>
-                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#7A6558', fontWeight: '500' }}>{item.desc}</p>
+                    <h4 style={{ margin: 0, fontSize: '15px', color: '#2C1810', fontWeight: '800' }}>Vida y Legado</h4>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#7A6558', fontWeight: '500' }}>
+                      Información detallada sobre su trayectoria y momentos clave.
+                    </p>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </section>
 
