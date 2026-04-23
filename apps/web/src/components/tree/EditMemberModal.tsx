@@ -34,40 +34,28 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
       const updateData: any = {
         first_name: formData.firstName,
         last_name: formData.lastName,
-        date_of_birth: formData.dateOfBirth,
-        avatar_url: formData.avatarUrl,
+        date_of_birth: formData.dateOfBirth || null,
+        avatar_url: formData.avatarUrl || null,
         gender: formData.gender,
         apple_type: formData.appleType,
-        is_baby: formData.isBaby,
-        biography: formData.biography,
-        occupation: formData.occupation,
-        birth_place: formData.birthPlace,
-        nickname: formData.nickname,
-        maiden_name: formData.maidenName
+        biography: formData.biography || null,
+        occupation: formData.occupation || null,
+        birth_place: formData.birthPlace || null,
+        nickname: formData.nickname || null,
+        maiden_name: formData.maidenName || null
       }
 
-      let { error } = await supabase
+      const { error } = await supabase
         .from('members')
         .update(updateData)
         .eq('id', member.id)
-
-      // INDESTRUCTIBLE FALLBACK: If column is missing in DB
-      if (error && (error.message?.includes('is_baby') || error.code === 'PGRST204')) {
-        console.warn('Database is missing is_baby column. Retrying update without privacy flag...')
-        const { is_baby, ...resilientData } = updateData
-        const retry = await supabase
-          .from('members')
-          .update(resilientData)
-          .eq('id', member.id)
-        error = retry.error
-      }
 
       if (error) throw error
       onSave()
       onClose()
     } catch (err) {
       console.error('Error saving member:', err)
-      alert('Error updating member details')
+      alert('Error al guardar los cambios. Por favor, verifica los datos.')
     } finally {
       setIsSaving(false)
     }
