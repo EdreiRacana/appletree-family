@@ -14,7 +14,7 @@ export default function HomeDashboard({ members }: HomeDashboardProps) {
   const males = members.filter(m => m.gender === 'male').length
   const females = members.filter(m => m.gender === 'female').length
   const completeness = Math.round((members.filter(m => m.biography).length / (totalMembers || 1)) * 100)
-  const babies = members.filter(m => m.is_baby).length
+  const babies = members.filter(m => m.isBaby).length
   
   // Stats by generation
   const genCounts = members.reduce((acc, m) => {
