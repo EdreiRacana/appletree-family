@@ -8,10 +8,11 @@ import AddStoryModal from '@/components/AddStoryModal'
 import TreeCanvas from '@/components/tree/TreeCanvas'
 import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import EditMemberModal from '@/components/tree/EditMemberModal'
+import HomeDashboard from '@/components/HomeDashboard'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
-// Build trigger: v2.0-stats-fix
-import Sidebar from '@/components/Sidebar'
+
+// Build trigger: v3.0-full-dashboard
 
 export default function AppleTreeDashboard() {
   const [treeData, setTreeData] = useState<{ members: Member[], relationships: Relationship[] }>({
@@ -24,6 +25,7 @@ export default function AppleTreeDashboard() {
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
   const [storyActor, setStoryActor] = useState<Member | null>(null)
+  const [activeTab, setActiveTab] = useState<string | null>('Home')
  
   // THE MASTER TREE ID CREATED IN THE SEED
   const TREE_ID = '00000000-0000-0000-0000-000000000001'
@@ -113,22 +115,30 @@ export default function AppleTreeDashboard() {
           position: 'relative'
         }}
       >
-        {/* Genealogy Tree Layer (Interactive Canvas) */}
-        {/* We keep it mounted to preserve camera position during refreshes */}
-        {(treeData.members.length > 0 || !loading) && (
-          <TreeCanvas 
-            members={treeData.members} 
-            relationships={treeData.relationships} 
-            onRefresh={fetchFamilyData}
-            onViewProfile={(m) => setSelectedMember(m)}
-            onEditMember={(m) => setEditingMember(m)}
-            onAddStory={(m) => {
-              setStoryActor(m)
-              setIsStoryModalOpen(true)
-            }}
-            bgOpacity={bgOpacity}
-          />
-        )}
+        {/* Main Content Area */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {/* Conditionally render Home Dashboard or Tree Canvas */}
+          {activeTab === 'Home' ? (
+             <HomeDashboard members={treeData.members} />
+          ) : (
+            <>
+              {(treeData.members.length > 0 || !loading) && (
+                <TreeCanvas 
+                  members={treeData.members} 
+                  relationships={treeData.relationships} 
+                  onRefresh={fetchFamilyData}
+                  onViewProfile={(m) => setSelectedMember(m)}
+                  onEditMember={(m) => setEditingMember(m)}
+                  onAddStory={(m) => {
+                    setStoryActor(m)
+                    setIsStoryModalOpen(true)
+                  }}
+                  bgOpacity={bgOpacity}
+                />
+              )}
+            </>
+          )}
+        </div>
 
         {/* 3. Member Profile Detail Panel (Sliding Overlay) */}
         <MemberProfilePanel 
@@ -158,9 +168,6 @@ export default function AppleTreeDashboard() {
               setStoryActor(null)
             }}
             onSave={() => {
-              // The FeedPanel will refresh automatically if we use a shared state or 
-              // just let the user see it on the next poll/refresh.
-              // For now, we trigger a global refresh or just close.
               fetchFamilyData() 
             }}
           />
@@ -188,7 +195,13 @@ export default function AppleTreeDashboard() {
 
         {/* Sidebar Navigation Rail & Floating Panels (Left Overlay) */}
         <div className="hide-on-mobile">
-          <Sidebar bgOpacity={bgOpacity} onOpacityChange={setBgOpacity} />
+          <Sidebar 
+            bgOpacity={bgOpacity} 
+            onOpacityChange={setBgOpacity} 
+            members={treeData.members}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </div>
 
         {/* Dynamic Social Feed / Events (Right Overlay) */}
@@ -201,7 +214,7 @@ export default function AppleTreeDashboard() {
         body {
           margin: 0;
           padding: 0;
-          background-color: RED; /* PRUEBA DE CONEXIÓN EXTREMA */
+          background-color: #1B2E1B; 
           overflow: hidden;
         }
         
