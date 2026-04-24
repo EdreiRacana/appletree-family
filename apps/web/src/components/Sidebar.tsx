@@ -77,7 +77,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
       </nav>
 
       {/* 2. Floating Content Panel (COLOR: #FAEFBC) */}
-      {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && (
+      {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && activeTab !== 'Photo Albums' && (
         <div style={{
           width: '320px',
           backgroundColor: '#FAEFBC',
