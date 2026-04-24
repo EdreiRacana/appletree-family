@@ -8,10 +8,11 @@ interface SidebarProps {
   bgOpacity: number
   onOpacityChange: (val: number) => void
   members: Member[]
+  activeTab: string | null
+  onTabChange: (tab: string | null) => void
 }
 
-export default function Sidebar({ bgOpacity, onOpacityChange, members }: SidebarProps) {
-  const [activeTab, setActiveTab] = useState<string | null>('Home')
+export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab, onTabChange }: SidebarProps) {
 
   const menuItems = [
     { icon: <Home size={34} />, label: 'Home' },
@@ -46,7 +47,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members }: Sidebar
         {menuItems.map((item) => (
           <div
             key={item.label}
-            onClick={() => setActiveTab(item.label)}
+            onClick={() => onTabChange(item.label)}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -76,7 +77,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members }: Sidebar
       </nav>
 
       {/* 2. Floating Content Panel (COLOR: #FAEFBC) */}
-      {activeTab && activeTab !== 'My Tree' && (
+      {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && (
         <div style={{
           width: '320px',
           backgroundColor: '#FAEFBC',
@@ -90,83 +91,12 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members }: Sidebar
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', alignItems: 'center' }}>
             <h3 style={{ fontSize: '22px', fontWeight: '950', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>{activeTab}</h3>
-            <button onClick={() => setActiveTab(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
               <X size={24} color="#2C1810" style={{ opacity: 0.7 }} />
             </button>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '25px' }}>
-             {/* 🏠 HOME - Family Dashboard */}
-             {activeTab === 'Home' && (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                 {/* Greeting */}
-                 <div style={{ backgroundColor: '#2C1810', padding: '20px', borderRadius: '20px', color: '#FAEFBC', boxShadow: '0 10px 20px rgba(0,0,0,0.1)' }}>
-                   <p style={{ margin: 0, fontSize: '13px', fontWeight: '800', opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Dashboard</p>
-                   <h4 style={{ margin: '5px 0 0', fontSize: '20px', fontFamily: 'serif' }}>Estado del Árbol</h4>
-                 </div>
-
-                 {/* Statistics Cards */}
-                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                   <div style={statCardStyle}>
-                     <span style={statValueStyle}>{members.length}</span>
-                     <span style={statLabelStyle}>Integrantes</span>
-                   </div>
-                   <div style={statCardStyle}>
-                     <span style={statValueStyle}>
-                       {(() => {
-                         const gens = members.map(m => m.generation || 0)
-                         return gens.length > 0 ? Math.max(...gens) - Math.min(...gens) + 1 : 0
-                       })()}
-                     </span>
-                     <span style={statLabelStyle}>Generaciones</span>
-                   </div>
-                 </div>
-
-                 {/* Gender Split */}
-                 <div style={{ ...statCardStyle, width: '100%', textAlign: 'left' }}>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                     <span style={statLabelStyle}>Distribución de Género</span>
-                     <PieChart size={14} opacity={0.5} />
-                   </div>
-                   <div style={{ height: '10px', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: '5px', overflow: 'hidden', display: 'flex' }}>
-                     {(() => {
-                       const men = members.filter(m => m.gender === 'male').length
-                       const women = members.filter(m => m.gender === 'female').length
-                       const total = men + women || 1
-                       return (
-                         <>
-                           <div style={{ width: `${(men/total)*100}%`, backgroundColor: '#4A90E2' }} />
-                           <div style={{ width: `${(women/total)*100}%`, backgroundColor: '#E24A90' }} />
-                         </>
-                       )
-                     })()}
-                   </div>
-                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10px', fontWeight: '900' }}>
-                     <span style={{ color: '#4A90E2' }}>Hombres: {members.filter(m => m.gender === 'male').length}</span>
-                     <span style={{ color: '#E24A90' }}>Mujeres: {members.filter(m => m.gender === 'female').length}</span>
-                   </div>
-                 </div>
-
-                 {/* Tree Quality / Health */}
-                 <div style={{ ...statCardStyle, width: '100%', backgroundColor: 'rgba(212, 130, 42, 0.1)' }}>
-                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                     <div style={{ width: '45px', height: '45px', borderRadius: '50%', backgroundColor: '#D4822A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
-                       <Star size={24} />
-                     </div>
-                     <div>
-                       <span style={statLabelStyle}>Completitud del Legado</span>
-                       <span style={{ display: 'block', fontSize: '18px', fontWeight: '900', color: '#2C1810' }}>
-                         {Math.round((members.filter(m => m.biography).length / (members.length || 1)) * 100)}%
-                       </span>
-                     </div>
-                   </div>
-                 </div>
-
-                 <p style={{ fontSize: '11px', color: '#2C1810', opacity: 0.5, fontStyle: 'italic', textAlign: 'center' }}>
-                   "Una familia sin historias es como un árbol sin raíces."
-                 </p>
-               </div>
-             )}
 
              {/* 🖼️ PHOTO ALBUMS */}
              {activeTab === 'Photo Albums' && (
@@ -317,7 +247,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members }: Sidebar
 
                  {/* Save Button */}
                  <button 
-                   onClick={() => setActiveTab(null)}
+                   onClick={() => onTabChange(null)}
                    style={{
                      width: '100%', padding: '15px', backgroundColor: '#2C1810', color: '#FAEFBC',
                      borderRadius: '15px', border: 'none', fontSize: '14px', fontWeight: '950',
