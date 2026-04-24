@@ -8,9 +8,10 @@ interface MemberProfilePanelProps {
   member: Member | null
   onClose: () => void
   onEdit?: (member: Member) => void
+  onInvite?: (member: Member) => void
 }
 
-export default function MemberProfilePanel({ member, onClose, onEdit }: MemberProfilePanelProps) {
+export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }: MemberProfilePanelProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -224,9 +225,11 @@ export default function MemberProfilePanel({ member, onClose, onEdit }: MemberPr
             <button style={actionButtonStyle}>
               <MessageCircle size={18} /> Chatear
             </button>
-            <button style={actionButtonStyle}>
-              <Share2 size={18} /> Compartir
-            </button>
+            {onInvite && (
+              <button onClick={() => onInvite(member)} style={{ ...actionButtonStyle, border: '2px solid #D4822A', color: '#B8691A' }}>
+                <Share2 size={18} /> Invitar
+              </button>
+            )}
             {onEdit && (
               <button onClick={() => onEdit(member)} style={{ ...actionButtonStyle, backgroundColor: '#D4822A', color: 'white', border: 'none' }}>
                 <Edit3 size={18} /> Editar
