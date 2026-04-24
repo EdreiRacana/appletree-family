@@ -5,9 +5,11 @@ import { Search, Bell, User, Plus, Share2, Settings } from 'lucide-react'
 
 interface TopbarProps {
   onAdd?: () => void
+  viewFocus?: 'all' | 'paternal' | 'maternal'
+  onViewFocusChange?: (focus: 'all' | 'paternal' | 'maternal') => void
 }
 
-export default function Topbar({ onAdd }: TopbarProps) {
+export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange }: TopbarProps) {
   return (
     <header 
       className="topbar-container"
@@ -71,54 +73,69 @@ export default function Topbar({ onAdd }: TopbarProps) {
           >
             AppleFamily Tree
           </h1>
-          <span 
-            className="mobile-hide"
-            style={{ 
-              fontSize: '9px', 
-              color: '#E8DAB2', 
-              fontFamily: 'Playfair Display, serif',
-              fontStyle: 'italic',
-              opacity: 0.8, 
-              marginTop: '2px',
-              lineHeight: '1',
-              display: 'block',
-              letterSpacing: '0.01em',
-              textAlign: 'center',
-              fontWeight: '400'
-            }}
-          >
-            Cultivating Your Roots, Celebrating Your Legacy
-          </span>
         </div>
       </div>
 
-      {/* 2. Global Navigation */}
-      <div 
-        className="mobile-hide"
-        style={{ 
-          flex: 1, 
-          maxWidth: '650px', 
-          height: '58px',
-          backgroundColor: 'rgba(232, 218, 183, 0.12)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '18px',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 30px',
-          border: '2px solid rgba(212, 175, 55, 0.25)',
-          margin: '0 60px'
-        }}
-      >
-        <Search size={22} color="#F5E6C8" style={{ opacity: 0.6 }} />
-        <input 
-          type="text" 
-          placeholder="Look up family members..." 
-          style={{
-            background: 'none', border: 'none', outline: 'none', color: '#F5E6C8',
-            fontSize: '17px', marginLeft: '20px', width: '100%', fontWeight: '700'
+      {/* 2. Global Navigation / Search & Toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+        {/* Toggle Switch */}
+        <div style={{ 
+          display: 'flex', 
+          backgroundColor: 'rgba(232, 218, 183, 0.1)', 
+          borderRadius: '12px', 
+          padding: '4px',
+          border: '1px solid rgba(212, 175, 55, 0.3)'
+        }}>
+          {[
+            { id: 'paternal', label: 'Paterna' },
+            { id: 'all', label: 'Ambas' },
+            { id: 'maternal', label: 'Materna' }
+          ].map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => onViewFocusChange?.(opt.id as any)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: viewFocus === opt.id ? '#D4AF37' : 'transparent',
+                color: viewFocus === opt.id ? '#0F1A0F' : '#E8DAB2',
+                fontSize: '11px',
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <div 
+          className="mobile-hide"
+          style={{ 
+            width: '400px', 
+            height: '48px',
+            backgroundColor: 'rgba(232, 218, 183, 0.12)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 20px',
+            border: '2px solid rgba(212, 175, 55, 0.25)'
           }}
-        />
-        <Settings size={22} color="#F5E6C8" style={{ opacity: 0.6, cursor: 'pointer' }} />
+        >
+          <Search size={18} color="#F5E6C8" style={{ opacity: 0.6 }} />
+          <input 
+            type="text" 
+            placeholder="Search family..." 
+            style={{
+              background: 'none', border: 'none', outline: 'none', color: '#F5E6C8',
+              fontSize: '14px', marginLeft: '12px', width: '100%', fontWeight: '700'
+            }}
+          />
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
