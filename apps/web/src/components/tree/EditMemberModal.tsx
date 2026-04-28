@@ -16,6 +16,7 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
     firstName: member.firstName,
     lastName: member.lastName,
     dateOfBirth: member.dateOfBirth || '',
+    dateOfDeath: member.dateOfDeath || '',
     avatarUrl: member.avatarUrl || '',
     gender: member.gender || 'male',
     appleType: member.appleType || 'red',
@@ -37,6 +38,7 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         first_name: formData.firstName,
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth || null,
+        date_of_death: formData.dateOfDeath || null,
         avatar_url: formData.avatarUrl || null,
         gender: formData.gender,
         apple_type: formData.appleType,
@@ -174,6 +176,18 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
               />
             </div>
             <div>
+              <label style={labelStyle}><Calendar size={14} /> FECHA DE FALLECIMIENTO</label>
+              <input 
+                type="date" 
+                value={formData.dateOfDeath}
+                onChange={(e) => setFormData({...formData, dateOfDeath: e.target.value})}
+                style={inputStyle} 
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
               <label style={labelStyle}><MapPin size={14} /> LUGAR DE ORIGEN</label>
               <input 
                 type="text" 
@@ -183,9 +197,6 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
                 style={inputStyle} 
               />
             </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}><Star size={14} /> APODO / NICKNAME</label>
               <input 
@@ -196,6 +207,9 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
                 style={inputStyle} 
               />
             </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}><Briefcase size={14} /> PROFESIÓN / OCUPACIÓN</label>
               <input 
