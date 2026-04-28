@@ -221,12 +221,12 @@ export default function AppleTreeDashboard() {
 
   const handleStartMyTree = async () => {
     try {
-      const newTreeId = `tree-${Date.now()}`
+      const newTreeId = crypto.randomUUID()
       
       // Create first member for this tree
       const { data: newMember, error } = await supabase.from('members').insert({
         tree_id: newTreeId,
-        first_name: loginInputUser || 'Yo',
+        first_name: loginInputUser || 'Francisco',
         last_name: '',
         generation: 0,
         gender: 'male',
@@ -240,15 +240,16 @@ export default function AppleTreeDashboard() {
         tree_id: newTreeId,
         type: 'member_added',
         title: 'Árbol Creado',
-        description: `${loginInputUser || 'Usuario'} ha comenzado su árbol genealógico.`,
+        description: `${loginInputUser || 'Francisco'} ha comenzado su árbol genealógico.`,
         privacy: 'family'
       })
 
       setCurrentTreeId(newTreeId)
       setNotificationCount(0)
+      setTutorialStep(0)
     } catch (err) {
       console.error('Error starting new tree:', err)
-      alert('Error al crear tu árbol')
+      alert('Error al crear tu árbol: Verifica tu conexión a internet.')
     }
   }
 
@@ -353,10 +354,13 @@ export default function AppleTreeDashboard() {
             )}
 
             {tutorialStep === 3 && (
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '350px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
-                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>Añadir e Invitar</h3>
-                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Haz clic en cualquier manzana para ver sus detalles, añadir familiares o invitarlos por WhatsApp.</p>
-                <button onClick={() => setTutorialStep(0)} style={{ padding: '12px 24px', backgroundColor: '#25D366', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>¡Empezar!</button>
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '380px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>El Siguiente Paso</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Puedes explorar el árbol de ejemplo para ver todo el potencial, o si estás listo, ¡crear el tuyo ahora mismo!</p>
+                <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                  <button onClick={() => handleStartMyTree()} style={{ padding: '14px', backgroundColor: '#D4AF37', color: '#0F1A0F', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)' }}>✨ Empezar Mi Propio Árbol</button>
+                  <button onClick={() => setTutorialStep(0)} style={{ padding: '12px', backgroundColor: 'transparent', color: '#8B4513', border: '2px solid #D4822A', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Explorar Ejemplo Primero</button>
+                </div>
               </div>
             )}
           </div>
