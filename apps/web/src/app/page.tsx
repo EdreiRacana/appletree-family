@@ -154,6 +154,30 @@ export default function AppleTreeDashboard() {
     setInvitingMember(null)
   }
 
+  const handleLogin = () => {
+    if (loginInputUser.toLowerCase() === 'francisco' && loginInputPass === 'admin') {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('currentUser', 'Francisco');
+        const savedTreeId = window.localStorage.getItem('apple_user_tree_id');
+        const skippedTutorial = window.localStorage.getItem('apple_tutorial_skipped') === 'true';
+        
+        if (savedTreeId) {
+          setCurrentTreeId(savedTreeId);
+          setTutorialStep(0);
+        } else if (skippedTutorial) {
+          setTutorialStep(0);
+        } else {
+          setTutorialStep(1);
+        }
+      } else {
+        setTutorialStep(1);
+      }
+      setIsLoggedIn(true);
+    } else {
+      setLoginError('Credenciales incorrectas');
+    }
+  }
+
   if (!isLoggedIn) {
     return (
       <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1B2E1B', position: 'relative' }}>
@@ -179,17 +203,7 @@ export default function AppleTreeDashboard() {
             value={loginInputPass}
             onChange={e => setLoginInputPass(e.target.value)}
             onKeyDown={e => {
-              if (e.key === 'Enter') {
-                if (loginInputUser.toLowerCase() === 'francisco' && loginInputPass === 'admin') {
-                  if (typeof window !== 'undefined') {
-                    window.localStorage.setItem('currentUser', 'Francisco');
-                  }
-                  setIsLoggedIn(true);
-                  setTutorialStep(1);
-                } else {
-                  setLoginError('Credenciales incorrectas');
-                }
-              }
+              if (e.key === 'Enter') handleLogin()
             }}
             style={{ width: '100%', padding: '16px', marginBottom: '8px', borderRadius: '16px', border: '2px solid rgba(139,69,19,0.2)', outline: 'none', backgroundColor: '#FFF', fontSize: '15px', color: '#2C1810' }} 
           />
@@ -199,17 +213,7 @@ export default function AppleTreeDashboard() {
           </div>
 
           <button 
-            onClick={() => {
-              if (loginInputUser.toLowerCase() === 'francisco' && loginInputPass === 'admin') {
-                if (typeof window !== 'undefined') {
-                  window.localStorage.setItem('currentUser', 'Francisco');
-                }
-                setIsLoggedIn(true);
-                setTutorialStep(1);
-              } else {
-                setLoginError('Credenciales incorrectas');
-              }
-            }}
+            onClick={handleLogin}
             style={{ width: '100%', padding: '16px', backgroundColor: '#8B4513', color: '#FAEFBC', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 20px rgba(139,69,19,0.3)' }}
           >
             Entrar al Legado
@@ -250,6 +254,11 @@ export default function AppleTreeDashboard() {
         privacy: 'family'
       })
 
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('apple_user_tree_id', newTreeId)
+        window.localStorage.setItem('apple_tutorial_skipped', 'true')
+      }
+
       setCurrentTreeId(newTreeId)
       setNotificationCount(0)
       setTutorialStep(0)
@@ -257,6 +266,11 @@ export default function AppleTreeDashboard() {
       console.error('Error starting new tree:', err)
       alert('Error al crear tu árbol: Verifica tu conexión a internet.')
     }
+  }
+
+  const handleShowTutorial = () => {
+    setCurrentTreeId(DEMO_TREE_ID)
+    setTutorialStep(1)
   }
 
   return (
@@ -267,6 +281,7 @@ export default function AppleTreeDashboard() {
         onAdd={() => {}} 
         notificationCount={notificationCount} 
         onStartMyTree={handleStartMyTree}
+        onShowTutorial={handleShowTutorial}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
@@ -365,7 +380,16 @@ export default function AppleTreeDashboard() {
                 <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Puedes explorar el árbol de ejemplo para ver todo el potencial, o si estás listo, ¡crear el tuyo ahora mismo!</p>
                 <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
                   <button onClick={() => handleStartMyTree()} style={{ padding: '14px', backgroundColor: '#D4AF37', color: '#0F1A0F', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)' }}>✨ Empezar Mi Propio Árbol</button>
-                  <button onClick={() => setTutorialStep(0)} style={{ padding: '12px', backgroundColor: 'transparent', color: '#8B4513', border: '2px solid #D4822A', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Explorar Ejemplo Primero</button>
+                  <button onClick={() => setTutorialStep(0)} style={{ padding: '12px', backgroundColor: 'transparent', color: '#8B4513', border: '2px solid #D4822A', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Explorar Ejemplo</button>
+                  <button 
+                    onClick={() => {
+                      if (typeof window !== 'undefined') window.localStorage.setItem('apple_tutorial_skipped', 'true')
+                      setTutorialStep(0)
+                    }} 
+                    style={{ background: 'none', border: 'none', color: '#D4822A', textDecoration: 'underline', cursor: 'pointer', fontSize: '12px', marginTop: '5px' }}
+                  >
+                    No mostrar de nuevo
+                  </button>
                 </div>
               </div>
             )}
