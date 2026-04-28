@@ -33,44 +33,76 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     const genMembers = [...gens[g]]
     const levelMembers: (Member & { canvasX: number, canvasY: number })[] = []
     
-    // Group spouses at this level
+    // Group spouses at this level into clusters
+    const spouseAdjacency: Record<string, string[]> = {}
+    genMembers.forEach(m => { spouseAdjacency[m.id] = [] })
+
     const genSpouseRels = stableRelationships.filter(rel => 
       rel.relationship === 'spouse' && 
       genMembers.some(m => m.id === rel.member1Id) && 
       genMembers.some(m => m.id === rel.member2Id)
     )
 
+    genSpouseRels.forEach(rel => {
+      if (spouseAdjacency[rel.member1Id] && spouseAdjacency[rel.member2Id]) {
+        spouseAdjacency[rel.member1Id].push(rel.member2Id)
+        spouseAdjacency[rel.member2Id].push(rel.member1Id)
+      }
+    })
+
     const processedIds = new Set<string>()
     const units: Member[][] = []
 
-    genSpouseRels.forEach(rel => {
-      const m1 = genMembers.find(m => m.id === rel.member1Id)
-      const m2 = genMembers.find(m => m.id === rel.member2Id)
-      if (m1 && m2 && !processedIds.has(m1.id) && !processedIds.has(m2.id)) {
-        units.push([m1, m2])
-        processedIds.add(m1.id)
-        processedIds.add(m2.id)
-      }
-    })
-
     genMembers.forEach(m => {
       if (!processedIds.has(m.id)) {
-        units.push([m])
+        // Find connected component (cluster)
+        const clusterIds: string[] = []
+        const queue = [m.id]
+        processedIds.add(m.id)
+
+        while (queue.length > 0) {
+          const curr = queue.shift()!
+          clusterIds.push(curr)
+          spouseAdjacency[curr].forEach(neighbor => {
+            if (!processedIds.has(neighbor)) {
+              processedIds.add(neighbor)
+              queue.push(neighbor)
+            }
+          })
+        }
+
+        // Sort cluster so node with most connections is in the middle
+        if (clusterIds.length > 1) {
+          clusterIds.sort((a, b) => spouseAdjacency[b].length - spouseAdjacency[a].length)
+          const arranged: string[] = []
+          clusterIds.forEach((id, idx) => {
+            if (idx % 2 === 0) arranged.push(id)
+            else arranged.unshift(id)
+          })
+          units.push(arranged.map(id => genMembers.find(member => member.id === id)!))
+        } else {
+          units.push([m])
+        }
       }
     })
 
-    // Calculate row container width to center it
-    let currentX = CENTER_X - (((units.length - 1) * HORIZONTAL_UNIT_GAP) / 2)
+    // Calculate row container width to center it dynamically based on unit sizes
+    const unitWidths = units.map(u => Math.max(HORIZONTAL_UNIT_GAP, u.length * 200))
+    const totalRowWidth = unitWidths.reduce((sum, width) => sum + width, 0)
+    let startX = CENTER_X - (totalRowWidth / 2)
     const currentY = ROOT_Y - (g * VERTICAL_GENERATION_GAP)
 
-    units.forEach(unit => {
-      if (unit.length === 2) {
-        levelMembers.push({ ...unit[0], canvasX: currentX - 100, canvasY: currentY })
-        levelMembers.push({ ...unit[1], canvasX: currentX + 100, canvasY: currentY })
-      } else {
-        levelMembers.push({ ...unit[0], canvasX: currentX, canvasY: currentY })
-      }
-      currentX += HORIZONTAL_UNIT_GAP
+    units.forEach((unit, idx) => {
+      const uWidth = unitWidths[idx]
+      const centerX = startX + uWidth / 2
+      const L = unit.length
+      const startOffset = -((L - 1) * 200) / 2
+      
+      unit.forEach((member, i) => {
+        levelMembers.push({ ...member, canvasX: centerX + startOffset + i * 200, canvasY: currentY })
+      })
+      
+      startX += uWidth
     })
 
     positioned.push(...levelMembers)
