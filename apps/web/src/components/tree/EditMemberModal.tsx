@@ -60,6 +60,20 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
       }
       
       console.log('¡Guardado exitoso!');
+
+      try {
+        const currentUser = window.localStorage?.getItem('currentUser') || 'Francisco'
+        await supabase.from('activities').insert({
+          tree_id: member.treeId,
+          type: 'member_updated',
+          title: `Perfil Actualizado`,
+          description: `${currentUser} actualizó la información de ${formData.firstName} ${formData.lastName}.`,
+          privacy: 'family'
+        })
+      } catch (logErr) {
+        console.error('Non-critical: failed to log activity', logErr)
+      }
+
       onSave()
       onClose()
     } catch (err: any) {
