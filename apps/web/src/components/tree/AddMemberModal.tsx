@@ -22,6 +22,7 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
     firstName: '',
     lastName: targetMember.lastName,
     dateOfBirth: '',
+    dateOfDeath: '',
     avatarUrl: '',
     gender: 'male',
     appleType: 'red',
@@ -58,6 +59,7 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
         first_name: formData.firstName,
         last_name: formData.lastName,
         date_of_birth: formData.dateOfBirth || null,
+        date_of_death: formData.dateOfDeath || null,
         avatar_url: formData.avatarUrl || null,
         apple_type: formData.appleType,
         generation: newGen,
@@ -161,9 +163,15 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
               </div>
             </div>
 
-            <div>
-              <label style={labelStyle}><Calendar size={14} /> FECHA DE NACIMIENTO</label>
-              <input type="date" value={formData.dateOfBirth} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} style={inputStyle} />
+            <div style={grid2Style}>
+              <div>
+                <label style={labelStyle}><Calendar size={14} /> FECHA DE NACIMIENTO</label>
+                <input type="date" value={formData.dateOfBirth} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}><Calendar size={14} /> FECHA DE FALLECIMIENTO</label>
+                <input type="date" value={formData.dateOfDeath} onChange={e => setFormData({...formData, dateOfDeath: e.target.value})} style={inputStyle} />
+              </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(242,210,65,0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #F2D241' }}>
