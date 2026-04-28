@@ -223,14 +223,20 @@ export default function AppleTreeDashboard() {
     try {
       const newTreeId = crypto.randomUUID()
       
-      // Create first member for this tree
+      // 1. Create the tree first (required for foreign key constraint)
+      const { error: treeError } = await supabase.from('trees').insert({
+        id: newTreeId,
+        name: `Árbol de ${loginInputUser || 'Francisco'}`
+      })
+      if (treeError) throw treeError
+
+      // 2. Create first member for this tree (removed invalid 'is_baby' column)
       const { data: newMember, error } = await supabase.from('members').insert({
         tree_id: newTreeId,
         first_name: loginInputUser || 'Francisco',
         last_name: '',
         generation: 0,
-        gender: 'male',
-        is_baby: false
+        gender: 'male'
       }).select().single()
 
       if (error) throw error
