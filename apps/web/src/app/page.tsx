@@ -39,13 +39,14 @@ export default function AppleTreeDashboard() {
   const [tutorialStep, setTutorialStep] = useState(0)
   const [notificationCount, setNotificationCount] = useState(1)
 
-  // THE MASTER TREE ID CREATED IN THE SEED
-  const TREE_ID = '00000000-0000-0000-0000-000000000001'
+  // THE MASTER TREE ID (DEMO)
+  const DEMO_TREE_ID = '00000000-0000-0000-0000-000000000001'
+  const [currentTreeId, setCurrentTreeId] = useState<string>(DEMO_TREE_ID)
 
   const fetchFamilyData = React.useCallback(async () => {
     try {
-      const { data: membersData, error: mError } = await supabase.from('members').select('*').eq('tree_id', TREE_ID)
-      const { data: relsData, error: rError } = await supabase.from('relationships').select('*').eq('tree_id', TREE_ID)
+      const { data: membersData, error: mError } = await supabase.from('members').select('*').eq('tree_id', currentTreeId)
+      const { data: relsData, error: rError } = await supabase.from('relationships').select('*').eq('tree_id', currentTreeId)
       if (mError || rError) throw mError || rError
 
       const mappedMembers: Member[] = (membersData || []).map((m: any) => ({
@@ -89,7 +90,7 @@ export default function AppleTreeDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [TREE_ID])
+  }, [currentTreeId])
 
   useEffect(() => {
     fetchFamilyData()
@@ -218,9 +219,49 @@ export default function AppleTreeDashboard() {
     )
   }
 
+  const handleStartMyTree = async () => {
+    try {
+      const newTreeId = `tree-${Date.now()}`
+      
+      // Create first member for this tree
+      const { data: newMember, error } = await supabase.from('members').insert({
+        tree_id: newTreeId,
+        first_name: loginInputUser || 'Yo',
+        last_name: '',
+        generation: 0,
+        gender: 'male',
+        is_baby: false
+      }).select().single()
+
+      if (error) throw error
+
+      // Also log activity
+      await supabase.from('activities').insert({
+        tree_id: newTreeId,
+        type: 'member_added',
+        title: 'Árbol Creado',
+        description: `${loginInputUser || 'Usuario'} ha comenzado su árbol genealógico.`,
+        privacy: 'family'
+      })
+
+      setCurrentTreeId(newTreeId)
+      setNotificationCount(0)
+    } catch (err) {
+      console.error('Error starting new tree:', err)
+      alert('Error al crear tu árbol')
+    }
+  }
+
   return (
     <main style={{ width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#1B2E1B', position: 'relative' }}>
-      <Topbar viewFocus={viewFocus} onViewFocusChange={setViewFocus} onAdd={() => {}} notificationCount={notificationCount} />
+      <Topbar 
+        viewFocus={viewFocus} 
+        onViewFocusChange={setViewFocus} 
+        onAdd={() => {}} 
+        notificationCount={notificationCount} 
+        onStartMyTree={handleStartMyTree}
+        showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
+      />
 
       <div className="main-layout" style={{ display: 'flex', width: '100%', height: 'calc(100vh - 140px)', marginTop: '140px', position: 'relative' }}>
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
@@ -244,7 +285,7 @@ export default function AppleTreeDashboard() {
 
           {activeTab === 'Photo Albums' && (
             <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
-              <PhotoAlbums />
+              <PhotoAlbums treeId={currentTreeId} />
             </div>
           )}
         </div>
@@ -266,7 +307,7 @@ export default function AppleTreeDashboard() {
           />
         )}
 
-        {isStoryModalOpen && <AddStoryModal treeId={TREE_ID} onClose={() => { setIsStoryModalOpen(false); setStoryActor(null); }} onSave={fetchFamilyData} />}
+        {isStoryModalOpen && <AddStoryModal treeId={currentTreeId} onClose={() => { setIsStoryModalOpen(false); setStoryActor(null); }} onSave={fetchFamilyData} />}
 
         {loading && treeData.members.length === 0 && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
@@ -285,7 +326,7 @@ export default function AppleTreeDashboard() {
         </div>
 
         <div className="hide-on-mobile">
-          <FeedPanel refreshTrigger={treeData.members.length} />
+          <FeedPanel refreshTrigger={treeData.members.length} treeId={currentTreeId} />
         </div>
       </div>
 
