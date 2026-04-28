@@ -86,6 +86,36 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
       }
     })
 
+    // SORT UNITS BY PARENT X COORDINATE TO PREVENT LINE CROSSING
+    // By determining where the parents of this unit are placed, we can order the children 
+    // horizontally so their connection lines go straight up instead of crossing.
+    units.sort((unitA, unitB) => {
+      const getParentX = (unit: Member[]) => {
+        let totalX = 0
+        let count = 0
+        unit.forEach(m => {
+          if (m.parents && m.parents.length > 0) {
+            m.parents.forEach(pid => {
+              const pNode = positioned.find(pn => pn.id === pid)
+              if (pNode && pNode.canvasX !== undefined) {
+                totalX += pNode.canvasX
+                count++
+              }
+            })
+          }
+        })
+        return count > 0 ? totalX / count : CENTER_X // neutral fallback
+      }
+
+      const pXa = getParentX(unitA)
+      const pXb = getParentX(unitB)
+      
+      if (pXa !== pXb) return pXa - pXb
+      
+      // Fallback to ID sorting
+      return unitA[0].id.localeCompare(unitB[0].id)
+    })
+
     // Calculate row container width to center it dynamically based on unit sizes
     const unitWidths = units.map(u => Math.max(HORIZONTAL_UNIT_GAP, u.length * 200))
     const totalRowWidth = unitWidths.reduce((sum, width) => sum + width, 0)
