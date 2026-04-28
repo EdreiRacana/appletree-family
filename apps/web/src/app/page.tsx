@@ -30,7 +30,15 @@ export default function AppleTreeDashboard() {
   const [storyActor, setStoryActor] = useState<Member | null>(null)
   const [activeTab, setActiveTab] = useState<string | null>('Home')
   const [viewFocus, setViewFocus] = useState<'all' | 'paternal' | 'maternal'>('all')
- 
+
+  // MOCK LOGIN STATE
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [loginInputUser, setLoginInputUser] = useState('')
+  const [loginInputPass, setLoginInputPass] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [tutorialStep, setTutorialStep] = useState(0)
+  const [notificationCount, setNotificationCount] = useState(1)
+
   // THE MASTER TREE ID CREATED IN THE SEED
   const TREE_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -70,7 +78,12 @@ export default function AppleTreeDashboard() {
         isActive: r.is_active
       }))
 
-      setTreeData({ members: mappedMembers, relationships: mappedRels })
+      setTreeData(prev => {
+        if (prev.members.length > 0 && mappedMembers.length > prev.members.length) {
+          setNotificationCount(n => n + 1)
+        }
+        return { members: mappedMembers, relationships: mappedRels }
+      })
     } catch (err) {
       console.error('Error fetching tree data:', err)
     } finally {
@@ -137,13 +150,77 @@ export default function AppleTreeDashboard() {
 
   const handleSendInvite = (email: string, side: string, message: string) => {
     console.log('Invitation sent to:', email, 'for side:', side)
-    // Here we would call the Supabase API to create the invitation record
     setInvitingMember(null)
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1B2E1B', position: 'relative' }}>
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.1, backgroundImage: 'url(/assets/image_19.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        
+        <div style={{ zIndex: 10, backgroundColor: '#FAEFBC', padding: '50px', borderRadius: '32px', border: '3px solid #F2D241', width: '90%', maxWidth: '400px', boxShadow: '0 30px 60px rgba(0,0,0,0.5)', textAlign: 'center' }}>
+          <div style={{ width: '80px', height: '80px', margin: '0 auto 20px', borderRadius: '50%', backgroundColor: '#8B4513', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '40px' }}>🍏</span>
+          </div>
+          <h1 style={{ fontFamily: 'serif', color: '#2C1810', margin: '0 0 10px', fontSize: '28px' }}>AppleTree Family</h1>
+          <p style={{ color: '#8B4513', opacity: 0.8, marginBottom: '30px', fontWeight: 'bold', fontSize: '14px' }}>Acceso Privado Familiar</p>
+          
+          <input 
+            type="text" 
+            placeholder="Usuario" 
+            value={loginInputUser}
+            onChange={e => setLoginInputUser(e.target.value)}
+            style={{ width: '100%', padding: '16px', marginBottom: '16px', borderRadius: '16px', border: '2px solid rgba(139,69,19,0.2)', outline: 'none', backgroundColor: '#FFF', fontSize: '15px', color: '#2C1810' }} 
+          />
+          <input 
+            type="password" 
+            placeholder="Contraseña" 
+            value={loginInputPass}
+            onChange={e => setLoginInputPass(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                if (loginInputUser.toLowerCase() === 'francisco' && loginInputPass === 'admin') {
+                  if (typeof window !== 'undefined') {
+                    window.localStorage.setItem('currentUser', 'Francisco');
+                  }
+                  setIsLoggedIn(true);
+                  setTutorialStep(1);
+                } else {
+                  setLoginError('Credenciales incorrectas');
+                }
+              }
+            }}
+            style={{ width: '100%', padding: '16px', marginBottom: '8px', borderRadius: '16px', border: '2px solid rgba(139,69,19,0.2)', outline: 'none', backgroundColor: '#FFF', fontSize: '15px', color: '#2C1810' }} 
+          />
+          
+          <div style={{ minHeight: '24px', marginBottom: '16px' }}>
+            {loginError && <p style={{ color: '#B22222', fontSize: '13px', margin: 0, fontWeight: 'bold' }}>{loginError}</p>}
+          </div>
+
+          <button 
+            onClick={() => {
+              if (loginInputUser.toLowerCase() === 'francisco' && loginInputPass === 'admin') {
+                if (typeof window !== 'undefined') {
+                  window.localStorage.setItem('currentUser', 'Francisco');
+                }
+                setIsLoggedIn(true);
+                setTutorialStep(1);
+              } else {
+                setLoginError('Credenciales incorrectas');
+              }
+            }}
+            style={{ width: '100%', padding: '16px', backgroundColor: '#8B4513', color: '#FAEFBC', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 20px rgba(139,69,19,0.3)' }}
+          >
+            Entrar al Legado
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <main style={{ width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#1B2E1B', position: 'relative' }}>
-      <Topbar viewFocus={viewFocus} onViewFocusChange={setViewFocus} onAdd={() => {}} />
+      <Topbar viewFocus={viewFocus} onViewFocusChange={setViewFocus} onAdd={() => {}} notificationCount={notificationCount} />
 
       <div className="main-layout" style={{ display: 'flex', width: '100%', height: 'calc(100vh - 140px)', marginTop: '140px', position: 'relative' }}>
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
@@ -208,15 +285,51 @@ export default function AppleTreeDashboard() {
         </div>
 
         <div className="hide-on-mobile">
-          <FeedPanel />
+          <FeedPanel refreshTrigger={treeData.members.length} />
         </div>
       </div>
+
+        {/* TUTORIAL OVERLAY */}
+        {tutorialStep > 0 && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', transition: 'all 0.5s' }} />
+            
+            {tutorialStep === 1 && (
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '350px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>Tu Árbol Familiar</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Bienvenido a tu legado. Aquí podrás ver toda tu descendencia y ascendencia en una interfaz profesional.</p>
+                <button onClick={() => setTutorialStep(2)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Siguiente</button>
+              </div>
+            )}
+
+            {tutorialStep === 2 && (
+              <div style={{ position: 'absolute', top: '200px', right: '350px', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '320px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <div style={{ position: 'absolute', right: '-15px', top: '30px', width: '0', height: '0', borderTop: '15px solid transparent', borderBottom: '15px solid transparent', borderLeft: '15px solid #D4822A' }} />
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>Actividad en Tiempo Real</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>En este panel derecho verás instantáneamente cuando alguien agregue a un nuevo familiar o suba una foto.</p>
+                <button onClick={() => setTutorialStep(3)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Siguiente</button>
+              </div>
+            )}
+
+            {tutorialStep === 3 && (
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '350px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>Añadir e Invitar</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Haz clic en cualquier manzana para ver sus detalles, añadir familiares o invitarlos por WhatsApp.</p>
+                <button onClick={() => setTutorialStep(0)} style={{ padding: '12px 24px', backgroundColor: '#25D366', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>¡Empezar!</button>
+              </div>
+            )}
+          </div>
+        )}
 
       <style jsx global>{`
         body { margin: 0; padding: 0; background-color: #1B2E1B; overflow: hidden; }
         @media (max-width: 768px) {
           .hide-on-mobile { display: none !important; }
           .main-layout { height: calc(100vh - 100px) !important; margin-top: 100px !important; }
+        }
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.95) translateY(10px) translate(-50%, -50%); }
+          to { opacity: 1; transform: scale(1) translateY(0) translate(-50%, -50%); }
         }
       `}</style>
     </main>
