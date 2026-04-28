@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import type { FeedActivity } from '@/lib/types'
 import AddStoryModal from './AddStoryModal'
 
-export default function FeedPanel() {
+export default function FeedPanel({ refreshTrigger }: { refreshTrigger?: number }) {
   const [stories, setStories] = useState<FeedActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -67,7 +67,7 @@ export default function FeedPanel() {
 
   useEffect(() => {
     fetchStories()
-  }, [])
+  }, [refreshTrigger])
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('¿Eliminar esta historia para siempre?')) return
