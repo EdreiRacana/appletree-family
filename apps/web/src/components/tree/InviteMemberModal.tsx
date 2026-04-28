@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Send, Mail, Shield, TreePine, Info } from 'lucide-react'
+import { X, Send, Mail, Shield, TreePine, Info, MessageCircle } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface InviteMemberModalProps {
@@ -197,36 +197,65 @@ export default function InviteMemberModal({ member, onClose, onSend }: InviteMem
           </div>
 
           {/* Actions */}
-          <button 
-            onClick={handleSend}
-            disabled={!email || isSending}
-            style={{
-              width: '100%',
-              padding: '18px',
-              backgroundColor: '#D4822A',
-              color: 'white',
-              borderRadius: '16px',
-              border: 'none',
-              fontSize: '16px',
-              fontWeight: '950',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              opacity: (!email || isSending) ? 0.6 : 1,
-              boxShadow: '0 10px 30px rgba(212, 130, 42, 0.3)'
-            }}
-          >
-            {isSending ? (
-              <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
-            ) : (
-              <>
-                <Send size={20} />
-                Enviar Invitación de Honor
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button 
+              onClick={handleSend}
+              disabled={!email || isSending}
+              style={{
+                width: '100%',
+                padding: '16px',
+                backgroundColor: '#D4822A',
+                color: 'white',
+                borderRadius: '16px',
+                border: 'none',
+                fontSize: '15px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                opacity: (!email || isSending) ? 0.6 : 1,
+                boxShadow: '0 8px 25px rgba(212, 130, 42, 0.3)'
+              }}
+            >
+              {isSending ? (
+                <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
+              ) : (
+                <>
+                  <Send size={18} />
+                  Enviar por Correo
+                </>
+              )}
+            </button>
+            
+            <button 
+              onClick={() => {
+                const encodedMessage = encodeURIComponent(`${message}\n\nEntra aquí: https://appletree.family/invite/token123`);
+                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+                onClose();
+              }}
+              style={{
+                width: '100%',
+                padding: '16px',
+                backgroundColor: '#25D366',
+                color: 'white',
+                borderRadius: '16px',
+                border: 'none',
+                fontSize: '15px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: '0 8px 25px rgba(37, 211, 102, 0.3)'
+              }}
+            >
+              <MessageCircle size={18} />
+              Enviar por WhatsApp
+            </button>
+          </div>
         </div>
       </div>
     </div>
