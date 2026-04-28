@@ -19,7 +19,7 @@ interface Photo {
   caption?: string
 }
 
-export default function PhotoAlbums() {
+export default function PhotoAlbums({ treeId }: { treeId: string }) {
   const [albums, setAlbums] = useState<Album[]>([])
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -29,14 +29,13 @@ export default function PhotoAlbums() {
   const [newAlbumName, setNewAlbumName] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
 
-  const CURRENT_USER_NAME = 'Elena Racana'
-  const TREE_ID = '00000000-0000-0000-0000-000000000001'
+  const CURRENT_USER_NAME = 'Familiar'
 
-  useEffect(() => { fetchAlbums() }, [])
+  useEffect(() => { fetchAlbums() }, [treeId])
 
   const fetchAlbums = async () => {
     try {
-      const { data, error } = await supabase.from('albums').select('*').eq('tree_id', TREE_ID).order('created_at', { ascending: false })
+      const { data, error } = await supabase.from('albums').select('*').eq('tree_id', treeId).order('created_at', { ascending: false })
       if (error) throw error
       if (data) setAlbums(data)
     } catch (err: any) {
@@ -65,7 +64,7 @@ export default function PhotoAlbums() {
     if (!newAlbumName.trim()) return
     setLoading(true)
     try {
-      const { data, error } = await supabase.from('albums').insert({ tree_id: TREE_ID, name: newAlbumName.trim(), created_by_name: CURRENT_USER_NAME, privacy: 'public' }).select().single()
+      const { data, error } = await supabase.from('albums').insert({ tree_id: treeId, name: newAlbumName.trim(), created_by_name: CURRENT_USER_NAME, privacy: 'public' }).select().single()
       if (error) throw error
       if (data) { 
         setAlbums([data, ...albums])
