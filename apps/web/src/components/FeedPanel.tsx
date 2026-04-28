@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import type { FeedActivity } from '@/lib/types'
 import AddStoryModal from './AddStoryModal'
 
-export default function FeedPanel({ refreshTrigger }: { refreshTrigger?: number }) {
+export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?: number, treeId: string }) {
   const [stories, setStories] = useState<FeedActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -16,9 +16,6 @@ export default function FeedPanel({ refreshTrigger }: { refreshTrigger?: number 
   const [commentText, setCommentText] = useState<Record<string, string>>({})
   const [storyComments, setStoryComments] = useState<Record<string, any[]>>({})
   const [reactionCounts, setReactionCounts] = useState<Record<string, Record<string, number>>>({})
-
-  // THE MASTER TREE ID
-  const TREE_ID = '00000000-0000-0000-0000-000000000001'
 
   const fetchReactions = async () => {
     try {
@@ -39,7 +36,7 @@ export default function FeedPanel({ refreshTrigger }: { refreshTrigger?: number 
       const { data, error } = await supabase
         .from('activities')
         .select('*')
-        .eq('tree_id', TREE_ID)
+        .eq('tree_id', treeId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -283,7 +280,7 @@ export default function FeedPanel({ refreshTrigger }: { refreshTrigger?: number 
       {/* MODAL */}
       {(showAddModal || editingStory) && (
         <AddStoryModal 
-          treeId={TREE_ID} 
+          treeId={treeId} 
           initialData={editingStory}
           onClose={() => {
             setShowAddModal(false)
