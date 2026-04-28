@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, Bell, User, Plus, Share2, Settings } from 'lucide-react'
+import { Search, Bell, User, Plus, Share2, Settings, HelpCircle } from 'lucide-react'
 
 interface TopbarProps {
   onAdd?: () => void
@@ -9,10 +9,19 @@ interface TopbarProps {
   onViewFocusChange?: (focus: 'all' | 'paternal' | 'maternal') => void
   notificationCount?: number
   onStartMyTree?: () => void
+  onShowTutorial?: () => void
   showStartTreeBtn?: boolean
 }
 
-export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange, notificationCount = 1, onStartMyTree, showStartTreeBtn = false }: TopbarProps) {
+export default function Topbar({ 
+  onAdd, 
+  viewFocus = 'all', 
+  onViewFocusChange, 
+  notificationCount = 1, 
+  onStartMyTree, 
+  onShowTutorial,
+  showStartTreeBtn = false 
+}: TopbarProps) {
   return (
     <header 
       className="topbar-container"
@@ -166,6 +175,14 @@ export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange, no
           style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}
         >
           <Plus size={30} color="#F5E6C8" />
+        </button>
+        <button 
+          className="topbar-btn" 
+          onClick={onShowTutorial}
+          title="Ver Tutorial"
+          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}
+        >
+          <HelpCircle size={30} color="#F5E6C8" />
         </button>
         <button className="topbar-btn" style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}>
           <User size={30} color="#F5E6C8" />
