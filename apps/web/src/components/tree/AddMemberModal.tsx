@@ -110,6 +110,25 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
           })
       }
 
+      // 5. Activity Logging
+      try {
+        const currentUser = window.localStorage?.getItem('currentUser') || 'Francisco'
+        let relationText = 'a un nuevo familiar'
+        if (relType === 'child') relationText = `a un hijo/a de ${targetMember.firstName}`
+        if (relType === 'spouse') relationText = `a una pareja para ${targetMember.firstName}`
+        if (relType === 'parent') relationText = `a un padre/madre de ${targetMember.firstName}`
+
+        await supabase.from('activities').insert({
+          tree_id: targetMember.treeId,
+          type: 'member_added',
+          title: `¡Creció la Familia!`,
+          description: `${currentUser} añadió ${relationText}: ${formData.firstName} ${formData.lastName}.`,
+          privacy: 'family'
+        })
+      } catch (logErr) {
+        console.error('Non-critical: failed to log activity', logErr)
+      }
+
       onSave()
       onClose()
     } catch (err) {
