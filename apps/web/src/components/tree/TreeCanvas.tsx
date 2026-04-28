@@ -47,6 +47,22 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return () => window.removeEventListener('open-add-modal', handleOpenModal)
   }, [])
 
+  // AUTO-CENTERING LOGIC
+  useEffect(() => {
+    if (positionedMembers.length > 0 && containerRef.current) {
+      const root = positionedMembers.find(m => m.generation === 0) || positionedMembers[0]
+      const rect = containerRef.current.getBoundingClientRect()
+      
+      const targetX = (rect.width / 2) - root.canvasX
+      // Center vertically, or push it down a bit so the tree grows upwards
+      const targetY = (rect.height / 2) - root.canvasY + (positionedMembers.length === 1 ? 0 : 200)
+
+      if ((offset.x === 0 && offset.y === 0) || positionedMembers.length === 1) {
+        setOffset({ x: targetX, y: targetY })
+      }
+    }
+  }, [positionedMembers.length, offset.x, offset.y])
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return
     const deltaX = e.clientX - lastMousePos.x
