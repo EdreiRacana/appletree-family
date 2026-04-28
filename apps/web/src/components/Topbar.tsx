@@ -8,9 +8,11 @@ interface TopbarProps {
   viewFocus?: 'all' | 'paternal' | 'maternal'
   onViewFocusChange?: (focus: 'all' | 'paternal' | 'maternal') => void
   notificationCount?: number
+  onStartMyTree?: () => void
+  showStartTreeBtn?: boolean
 }
 
-export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange, notificationCount = 1 }: TopbarProps) {
+export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange, notificationCount = 1, onStartMyTree, showStartTreeBtn = false }: TopbarProps) {
   return (
     <header 
       className="topbar-container"
@@ -140,6 +142,24 @@ export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange, no
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+        {showStartTreeBtn && (
+          <button 
+            onClick={onStartMyTree}
+            style={{ 
+              padding: '12px 24px', 
+              backgroundColor: '#D4AF37', 
+              color: '#0F1A0F', 
+              borderRadius: '12px', 
+              border: 'none', 
+              fontWeight: '900', 
+              fontSize: '14px', 
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)'
+            }}
+          >
+            Empezar Mi Árbol
+          </button>
+        )}
         <button 
           className="topbar-btn" 
           onClick={onAdd}
