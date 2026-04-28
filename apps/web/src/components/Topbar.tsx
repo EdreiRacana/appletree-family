@@ -7,9 +7,10 @@ interface TopbarProps {
   onAdd?: () => void
   viewFocus?: 'all' | 'paternal' | 'maternal'
   onViewFocusChange?: (focus: 'all' | 'paternal' | 'maternal') => void
+  notificationCount?: number
 }
 
-export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange }: TopbarProps) {
+export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange, notificationCount = 1 }: TopbarProps) {
   return (
     <header 
       className="topbar-container"
@@ -151,12 +152,14 @@ export default function Topbar({ onAdd, viewFocus = 'all', onViewFocusChange }: 
         </button>
         <div style={{ position: 'relative' }}>
           <Bell size={32} color="#D4AF37" />
-          <div style={{ 
-            position: 'absolute', top: '-5px', right: '-5px', 
-            width: '16px', height: '16px', background: '#FF4B2B', 
-            borderRadius: '50%', color: 'white', fontSize: '10px', 
-            fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>3</div>
+          {notificationCount > 0 && (
+            <div style={{ 
+              position: 'absolute', top: '-5px', right: '-5px', 
+              width: '16px', height: '16px', background: '#FF4B2B', 
+              borderRadius: '50%', color: 'white', fontSize: '10px', 
+              fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>{notificationCount}</div>
+          )}
         </div>
       </div>
     </header>
