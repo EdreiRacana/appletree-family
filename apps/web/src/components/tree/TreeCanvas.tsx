@@ -22,6 +22,7 @@ interface TreeCanvasProps {
 export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity }: TreeCanvasProps) {
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   // Starting at 0,0 since we calibrated BASE_Y in the layout engine
   const [offset, setOffset] = useState({ x: 0, y: 0 }) 
@@ -239,8 +240,15 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           <div
             key={member.id}
             className="apple-node-clickable"
-            onMouseEnter={() => setHoveredMemberId(member.id)}
-            onMouseLeave={() => setHoveredMemberId(null)}
+            onMouseEnter={() => {
+              if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+              setHoveredMemberId(member.id)
+            }}
+            onMouseLeave={() => {
+              hoverTimeoutRef.current = setTimeout(() => {
+                setHoveredMemberId(null)
+              }, 400)
+            }}
             style={{
               position: 'absolute',
               left: member.canvasX + offset.x - 100, 
@@ -263,6 +271,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               <HoverMenu 
                 member={member} 
                 onClose={() => setHoveredMemberId(null)} 
+                onMouseEnter={() => {
+                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+                  setHoveredMemberId(member.id)
+                }}
                 onEdit={(m) => {
                   onEditMember(m)
                   setHoveredMemberId(null)
