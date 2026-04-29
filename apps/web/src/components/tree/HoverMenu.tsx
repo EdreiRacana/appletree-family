@@ -11,6 +11,7 @@ interface HoverMenuProps {
   onDelete: (member: Member) => void
   onViewProfile: (member: Member) => void
   onAddStory: (member: Member) => void
+  onMouseEnter?: () => void
 }
 
 const menuItems = [
@@ -23,7 +24,7 @@ const menuItems = [
   { id: 'profile',     icon: User,          label: () => 'Ver Perfil', isContact: false },
 ]
 
-export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory }: HoverMenuProps) {
+export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onMouseEnter }: HoverMenuProps) {
   
   // LOGIC: Check if member is a minor (< 18 years old or is marked as baby)
   const isMinor = () => {
@@ -72,6 +73,7 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
     <div
       className="hover-menu"
       onMouseLeave={onClose}
+      onMouseEnter={onMouseEnter}
       id={`hover-menu-${member.id}`}
     >
       {filteredItems.map((item, idx) => {
