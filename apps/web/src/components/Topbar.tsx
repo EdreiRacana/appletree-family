@@ -12,6 +12,7 @@ interface TopbarProps {
   onShowTutorial?: () => void
   onShowTerms?: () => void
   onClearNotifications?: () => void
+  userAvatarUrl?: string
   showStartTreeBtn?: boolean
 }
 
@@ -21,9 +22,9 @@ export default function Topbar({
   onViewFocusChange, 
   notificationCount = 1, 
   onStartMyTree, 
-  onShowTutorial,
   onShowTerms,
   onClearNotifications,
+  userAvatarUrl,
   showStartTreeBtn = false 
 }: TopbarProps) {
   return (
@@ -200,9 +201,25 @@ export default function Topbar({
         <button 
           className="topbar-btn" 
           title="Perfil de Usuario"
-          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+          style={{ 
+            width: '50px', height: '50px', 
+            backgroundColor: 'rgba(255,255,255,0.1)', 
+            borderRadius: '15px', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+            border: 'none', cursor: 'pointer',
+            overflow: 'hidden',
+            padding: userAvatarUrl ? '0' : '0'
+          }}
         >
-          <User size={28} color="#F5E6C8" />
+          {userAvatarUrl ? (
+            <img 
+              src={userAvatarUrl} 
+              alt="User" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            />
+          ) : (
+            <User size={28} color="#F5E6C8" />
+          )}
         </button>
         <button 
           className="topbar-btn"
