@@ -22,6 +22,7 @@ export default function Topbar({
   onViewFocusChange, 
   notificationCount = 1, 
   onStartMyTree, 
+  onShowTutorial,
   onShowTerms,
   onClearNotifications,
   userAvatarUrl,
