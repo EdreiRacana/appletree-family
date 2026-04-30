@@ -323,8 +323,8 @@ export default function AppleTreeDashboard() {
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
         userAvatarUrl={
-          treeData.members.find(m => m.firstName.toLowerCase() === 'francisco' && m.avatarUrl)?.avatarUrl ||
-          treeData.members.find(m => m.firstName.toLowerCase() === 'francisco')?.avatarUrl
+          (treeData.members.find(m => m.firstName.toLowerCase() === 'francisco' && m.avatarUrl)?.avatarUrl ||
+          treeData.members.find(m => m.firstName.toLowerCase() === 'francisco')?.avatarUrl) || undefined
         }
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
