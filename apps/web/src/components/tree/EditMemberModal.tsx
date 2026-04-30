@@ -132,6 +132,8 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         backgroundColor: '#FAEFBC',
         width: '100%',
         maxWidth: '500px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         borderRadius: '24px',
         padding: '32px',
         position: 'relative',
