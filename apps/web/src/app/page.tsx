@@ -395,25 +395,54 @@ export default function AppleTreeDashboard() {
             
             {tutorialStep === 1 && (
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '350px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
-                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>Tu Árbol Familiar</h3>
-                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Bienvenido a tu legado. Aquí podrás ver toda tu descendencia y ascendencia en una interfaz profesional.</p>
-                <button onClick={() => setTutorialStep(2)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Siguiente</button>
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>🌳 Bienvenido al Legado</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Estás viendo el Árbol Genealógico de la Familia Pérez. Aquí es donde la historia cobra vida.</p>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => setTutorialStep(0)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #D4822A', borderRadius: '10px', color: '#8B4513', fontWeight: 'bold', cursor: 'pointer' }}>Omitir</button>
+                  <button onClick={() => setTutorialStep(2)} style={{ flex: 2, padding: '10px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Siguiente</button>
+                </div>
               </div>
             )}
 
             {tutorialStep === 2 && (
-              <div style={{ position: 'absolute', top: '200px', right: '350px', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '320px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
-                <div style={{ position: 'absolute', right: '-15px', top: '30px', width: '0', height: '0', borderTop: '15px solid transparent', borderBottom: '15px solid transparent', borderLeft: '15px solid #D4822A' }} />
-                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>Actividad en Tiempo Real</h3>
-                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>En este panel derecho verás instantáneamente cuando alguien agregue a un nuevo familiar o suba una foto.</p>
-                <button onClick={() => setTutorialStep(3)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Siguiente</button>
+              <div style={{ position: 'absolute', top: '150px', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '25px', borderRadius: '24px', border: '3px solid #D4822A', width: '380px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <div style={{ position: 'absolute', top: '-15px', left: '50%', transform: 'translateX(-50%)', width: '0', height: '0', borderLeft: '15px solid transparent', borderRight: '15px solid transparent', borderBottom: '15px solid #D4822A' }} />
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '20px' }}>🔍 Herramientas de Control</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Usa la barra superior para buscar familiares o filtrar el árbol por línea **Paterna** o **Materna** instantáneamente.</p>
+                <button onClick={() => setTutorialStep(3)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Entendido</button>
               </div>
             )}
 
             {tutorialStep === 3 && (
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '380px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
-                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>El Siguiente Paso</h3>
-                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Puedes explorar el árbol de ejemplo para ver todo el potencial, o si estás listo, ¡crear el tuyo ahora mismo!</p>
+              <div style={{ position: 'absolute', top: '50%', left: '120px', transform: 'translateY(-50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '25px', borderRadius: '24px', border: '3px solid #D4822A', width: '300px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <div style={{ position: 'absolute', left: '-15px', top: '50%', transform: 'translateY(-50%)', width: '0', height: '0', borderTop: '15px solid transparent', borderBottom: '15px solid transparent', borderRight: '15px solid #D4822A' }} />
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '20px' }}>🧭 Navegación</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Accede a tus **Álbumes de Fotos**, eventos de la red y ajustes personales desde la barra lateral izquierda.</p>
+                <button onClick={() => setTutorialStep(4)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Siguiente</button>
+              </div>
+            )}
+
+            {tutorialStep === 4 && (
+              <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '25px', borderRadius: '24px', border: '3px solid #D4822A', width: '380px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '20px' }}>➕ Expandir tu Árbol</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Pasa el mouse sobre cualquier **Manzana** para revelar el botón **(+)**. Ahí podrás añadir hijos, padres o parejas con un solo clic.</p>
+                <button onClick={() => setTutorialStep(5)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>¡Genial!</button>
+              </div>
+            )}
+
+            {tutorialStep === 5 && (
+              <div style={{ position: 'absolute', top: '250px', right: '350px', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '320px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <div style={{ position: 'absolute', right: '-15px', top: '30px', width: '0', height: '0', borderTop: '15px solid transparent', borderBottom: '15px solid transparent', borderLeft: '15px solid #D4822A' }} />
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '20px' }}>🔔 Actividad</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Mira las últimas actualizaciones de la familia y fotos nuevas en este panel lateral en tiempo real.</p>
+                <button onClick={() => setTutorialStep(6)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Último paso</button>
+              </div>
+            )}
+
+            {tutorialStep === 6 && (
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '400px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
+                <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>🚀 Tu Turno</h3>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Puedes seguir explorando este ejemplo o regresar a tu árbol personal para continuar construyendo tu propio legado.</p>
                 <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
                   {typeof window !== 'undefined' && window.localStorage.getItem('apple_user_tree_id') ? (
                     <button onClick={handleReturnToMyTree} style={{ padding: '14px', backgroundColor: '#D4AF37', color: '#0F1A0F', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)' }}>✨ Volver a Mi Árbol</button>
