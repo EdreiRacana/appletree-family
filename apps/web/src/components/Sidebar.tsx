@@ -86,16 +86,14 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
           ))}
         </nav>
 
-        {/* SECURE SYSTEM LEGEND (Below container) */}
+        {/* SECURE SYSTEM LEGEND (Below container, no border, single line) */}
         <div style={{
           display: 'flex',
-          flexDirection: 'column',
+          flexDirection: 'row',
           alignItems: 'center',
-          gap: '6px',
-          padding: '12px 5px',
-          borderRadius: '16px',
-          border: '2px solid rgba(0, 255, 65, 0.3)',
-          backgroundColor: '#0F1A0F'
+          gap: '8px',
+          padding: '0 5px',
+          marginTop: '5px'
         }}>
           <div style={{ 
             width: '6px', 
@@ -107,14 +105,12 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
           <span style={{
             color: '#00FF41',
             fontFamily: 'monospace',
-            fontSize: '9px',
+            fontSize: '11px',
             fontWeight: 'bold',
-            textAlign: 'center',
-            lineHeight: 1.2,
             letterSpacing: '1px',
             animation: 'matrixPulse 2s infinite'
           }}>
-            SECURE<br/>SYSTEM
+            SECURE SYSTEM
           </span>
         </div>
       </div>
