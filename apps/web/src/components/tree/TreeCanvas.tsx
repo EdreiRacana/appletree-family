@@ -26,6 +26,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   
   // Starting at 0,0 since we calibrated BASE_Y in the layout engine
   const [offset, setOffset] = useState({ x: 0, y: 0 }) 
+  const [scale, setScale] = useState(1)
   const [isDragging, setIsDragging] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,21 +49,33 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return () => window.removeEventListener('open-add-modal', handleOpenModal)
   }, [])
 
-  // AUTO-CENTERING LOGIC
+  // AUTO-CENTERING & AUTO-SCALING LOGIC
   useEffect(() => {
     if (positionedMembers.length > 0 && containerRef.current) {
       const minX = Math.min(...positionedMembers.map(m => m.canvasX ?? 0))
       const maxX = Math.max(...positionedMembers.map(m => m.canvasX ?? 0))
+      
+      // Calculate width with padding (approx 400px per node on edges)
+      const treeWidth = (maxX - minX) + 400 
       const treeCenterX = (minX + maxX) / 2
 
       const root = positionedMembers.find(m => m.generation === 0) || positionedMembers[0]
       const rect = containerRef.current.getBoundingClientRect()
       
-      const targetX = (rect.width / 2) - treeCenterX
-      // Center vertically, or push it down a bit so the tree grows upwards
-      const targetY = (rect.height / 2) - root.canvasY + (positionedMembers.length === 1 ? 0 : 200)
+      // Scale down if tree is wider than available space
+      let autoScale = 1
+      if (treeWidth > rect.width && treeWidth > 0) {
+        // Leave 5% margin on sides
+        autoScale = Math.max(0.3, (rect.width * 0.9) / treeWidth)
+      }
+      
+      const targetX = (rect.width / 2) - (treeCenterX * autoScale)
+      // Center vertically, adjusting for scale
+      const targetY = (rect.height / 2) - (root.canvasY * autoScale) + (positionedMembers.length === 1 ? 0 : 150)
 
+      // Only apply on initial load or if explicitly changing offset
       if ((offset.x === 0 && offset.y === 0) || positionedMembers.length === 1) {
+        setScale(autoScale)
         setOffset({ x: targetX, y: targetY })
       }
     }
@@ -176,109 +189,120 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
       {/* Shadow Overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,46,26,0.2)', pointerEvents: 'none', zIndex: 5 }} />
 
-      {/* SVG CONNECTIONS */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 10 }}>
-        {positionedMembers.map((child) => {
-          const parentIds = child.parents || []
-          if (parentIds.length === 0) return null
+      {/* PAN & ZOOM WRAPPER */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+        transformOrigin: '0 0',
+        pointerEvents: 'none' // Let dragging work on the container behind it
+      }}>
+        {/* SVG CONNECTIONS */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}>
+          {positionedMembers.map((child) => {
+            const parentIds = child.parents || []
+            if (parentIds.length === 0) return null
 
-          let parents = positionedMembers.filter(p => parentIds.includes(p.id))
-          if (parents.length === 0) return null
+            let parents = positionedMembers.filter(p => parentIds.includes(p.id))
+            if (parents.length === 0) return null
 
-          // Visual fallback: if child only has 1 parent registered, but that parent has a spouse, draw line from center of the couple
-          if (parents.length === 1) {
-            const knownParent = parents[0]
-            const spouseRel = relationships.find(rel => 
-              rel.relationship === 'spouse' && 
-              (rel.member1Id === knownParent.id || rel.member2Id === knownParent.id)
-            )
-            if (spouseRel) {
-              const spouseId = spouseRel.member1Id === knownParent.id ? spouseRel.member2Id : spouseRel.member1Id
-              const spouseNode = positionedMembers.find(p => p.id === spouseId)
-              if (spouseNode) {
-                parents.push(spouseNode)
+            // Visual fallback: if child only has 1 parent registered, but that parent has a spouse, draw line from center of the couple
+            if (parents.length === 1) {
+              const knownParent = parents[0]
+              const spouseRel = relationships.find(rel => 
+                rel.relationship === 'spouse' && 
+                (rel.member1Id === knownParent.id || rel.member2Id === knownParent.id)
+              )
+              if (spouseRel) {
+                const spouseId = spouseRel.member1Id === knownParent.id ? spouseRel.member2Id : spouseRel.member1Id
+                const spouseNode = positionedMembers.find(p => p.id === spouseId)
+                if (spouseNode) {
+                  parents.push(spouseNode)
+                }
               }
             }
-          }
 
-          const midX = parents.reduce((sum, p) => sum + (p.canvasX ?? 0), 0) / parents.length
-          const midY = parents.reduce((sum, p) => sum + (p.canvasY ?? 0), 0) / parents.length
+            const midX = parents.reduce((sum, p) => sum + (p.canvasX ?? 0), 0) / parents.length
+            const midY = parents.reduce((sum, p) => sum + (p.canvasY ?? 0), 0) / parents.length
 
-          // SEGURIDAD: Solo dibujar si el hijo es de una generación superior (Y menor en canvas)
-          if (child.canvasY >= midY) return null
+            // SEGURIDAD: Solo dibujar si el hijo es de una generación superior (Y menor en canvas)
+            if (child.canvasY >= midY) return null
 
-          const x1 = midX + offset.x
-          const y1 = midY + offset.y + 100 // Exactamente desde la línea de la pareja
-          const x2 = (child.canvasX ?? 0) + offset.x
-          const y2 = (child.canvasY ?? 0) + offset.y + 200 // Hasta la base del hijo
+            // NO offset added here anymore since wrapper handles it
+            const x1 = midX
+            const y1 = midY + 100 // Exactamente desde la línea de la pareja
+            const x2 = (child.canvasX ?? 0)
+            const y2 = (child.canvasY ?? 0) + 200 // Hasta la base del hijo
 
-          return (
-            <path
-              key={`path-trunk-${child.id}`}
-              d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
-              fill="none"
-              stroke="#D4AF37"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              opacity={0.5}
-            />
-          )
-        })}
+            return (
+              <path
+                key={`path-trunk-${child.id}`}
+                d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
+                fill="none"
+                stroke="#D4AF37"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                opacity={0.5}
+              />
+            )
+          })}
 
-        {/* Spouse Lines (Direct) */}
-        {positionedMembers.map((m1) => {
-          return relationships
-            .filter(rel => rel.relationship === 'spouse' && (rel.member1Id === m1.id || rel.member2Id === m1.id))
-            .map(rel => {
-              const otherId = rel.member1Id === m1.id ? rel.member2Id : rel.member1Id
-              const m2 = positionedMembers.find(m => m.id === otherId)
-              if (!m2 || m1.id > m2.id) return null // Draw once per pair
-              
-              const x1 = m1.canvasX + offset.x
-              const y1 = m1.canvasY + offset.y + 100 // Center of node
-              const x2 = m2.canvasX + offset.x
-              const y2 = m2.canvasY + offset.y + 100 // Center of node
-              
-              return (
-                <line
-                  key={`spouse-line-${rel.id}`}
-                  x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke="#D4AF37"
-                  strokeWidth={1.5}
-                  strokeDasharray="4, 4"
-                  strokeLinecap="round"
-                  opacity={0.6}
-                />
-              )
-            })
-        })}
-      </svg>
+          {/* Spouse Lines (Direct) */}
+          {positionedMembers.map((m1) => {
+            return relationships
+              .filter(rel => rel.relationship === 'spouse' && (rel.member1Id === m1.id || rel.member2Id === m1.id))
+              .map(rel => {
+                const otherId = rel.member1Id === m1.id ? rel.member2Id : rel.member1Id
+                const m2 = positionedMembers.find(m => m.id === otherId)
+                if (!m2 || m1.id > m2.id) return null // Draw once per pair
+                
+                // NO offset added here anymore
+                const x1 = m1.canvasX
+                const y1 = m1.canvasY + 100 // Center of node
+                const x2 = m2.canvasX
+                const y2 = m2.canvasY + 100 // Center of node
+                
+                return (
+                  <line
+                    key={`spouse-line-${rel.id}`}
+                    x1={x1} y1={y1} x2={x2} y2={y2}
+                    stroke="#D4AF37"
+                    strokeWidth={1.5}
+                    strokeDasharray="4, 4"
+                    strokeLinecap="round"
+                    opacity={0.6}
+                  />
+                )
+              })
+          })}
+        </svg>
 
-      {/* Nodes Layer */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
-        {positionedMembers.map((member) => (
-          <div
-            key={member.id}
-            className="apple-node-clickable"
-            onMouseEnter={() => {
-              if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-              setHoveredMemberId(member.id)
-            }}
-            onMouseLeave={() => {
-              hoverTimeoutRef.current = setTimeout(() => {
-                setHoveredMemberId(null)
-              }, 400)
-            }}
-            style={{
-              position: 'absolute',
-              left: member.canvasX + offset.x - 100, 
-              top: member.canvasY + offset.y,
-              zIndex: hoveredMemberId === member.id ? 2000 : 50,
-              pointerEvents: 'auto',
-              padding: '20px',
-              margin: '-20px'
-            }}
-          >
+        {/* Nodes Layer */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
+          {positionedMembers.map((member) => (
+            <div
+              key={member.id}
+              className="apple-node-clickable"
+              onMouseEnter={() => {
+                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+                setHoveredMemberId(member.id)
+              }}
+              onMouseLeave={() => {
+                hoverTimeoutRef.current = setTimeout(() => {
+                  setHoveredMemberId(null)
+                }, 400)
+              }}
+              style={{
+                position: 'absolute',
+                // NO offset added here anymore since wrapper handles it
+                left: member.canvasX - 100, 
+                top: member.canvasY,
+                zIndex: hoveredMemberId === member.id ? 2000 : 50,
+                pointerEvents: 'auto',
+                padding: '20px',
+                margin: '-20px'
+              }}
+            >
             <AppleNode
               member={member}
               isHovered={hoveredMemberId === member.id}
@@ -316,6 +340,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             )}
           </div>
         ))}
+        </div>
       </div>
 
       {/* ADD MEMBER MODAL LAYER */}
