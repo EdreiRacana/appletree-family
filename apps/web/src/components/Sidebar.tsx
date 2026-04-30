@@ -40,20 +40,20 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
         }
       `}</style>
 
-      {/* 1. Icon Rail (COLOR: #FAEFBC) */}
-      <nav style={{
-        width: '110px',
-        backgroundColor: '#FAEFBC', 
-        borderRadius: '24px',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '30px 0',
-        border: '2px solid #2C1810',
-        overflowY: 'auto'
-      }}>
-        <div>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '15px' }}>
+        {/* 1. Icon Rail (COLOR: #FAEFBC) */}
+        <nav style={{
+          width: '110px',
+          backgroundColor: '#FAEFBC', 
+          borderRadius: '24px',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '30px 0',
+          border: '2px solid #2C1810',
+          overflowY: 'auto',
+          flex: 1
+        }}>
           {menuItems.map((item) => (
             <div
               key={item.label}
@@ -84,18 +84,17 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
               </span>
             </div>
           ))}
-        </div>
+        </nav>
 
-        {/* SECURE SYSTEM LEGEND (Moved to bottom of sidebar) */}
+        {/* SECURE SYSTEM LEGEND (Below container) */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '6px',
-          padding: '15px 5px',
-          margin: '0 10px',
-          borderRadius: '12px',
-          border: '1px solid rgba(0, 255, 65, 0.3)',
+          padding: '12px 5px',
+          borderRadius: '16px',
+          border: '2px solid rgba(0, 255, 65, 0.3)',
           backgroundColor: '#0F1A0F'
         }}>
           <div style={{ 
@@ -118,7 +117,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
             SECURE<br/>SYSTEM
           </span>
         </div>
-      </nav>
+      </div>
 
       {/* 2. Floating Content Panel (COLOR: #FAEFBC) */}
       {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && activeTab !== 'Photo Albums' && (
