@@ -51,10 +51,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   // AUTO-CENTERING LOGIC
   useEffect(() => {
     if (positionedMembers.length > 0 && containerRef.current) {
+      const minX = Math.min(...positionedMembers.map(m => m.canvasX ?? 0))
+      const maxX = Math.max(...positionedMembers.map(m => m.canvasX ?? 0))
+      const treeCenterX = (minX + maxX) / 2
+
       const root = positionedMembers.find(m => m.generation === 0) || positionedMembers[0]
       const rect = containerRef.current.getBoundingClientRect()
       
-      const targetX = (rect.width / 2) - root.canvasX
+      const targetX = (rect.width / 2) - treeCenterX
       // Center vertically, or push it down a bit so the tree grows upwards
       const targetY = (rect.height / 2) - root.canvasY + (positionedMembers.length === 1 ? 0 : 200)
 
@@ -178,8 +182,24 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           const parentIds = child.parents || []
           if (parentIds.length === 0) return null
 
-          const parents = positionedMembers.filter(p => parentIds.includes(p.id))
+          let parents = positionedMembers.filter(p => parentIds.includes(p.id))
           if (parents.length === 0) return null
+
+          // Visual fallback: if child only has 1 parent registered, but that parent has a spouse, draw line from center of the couple
+          if (parents.length === 1) {
+            const knownParent = parents[0]
+            const spouseRel = relationships.find(rel => 
+              rel.relationship === 'spouse' && 
+              (rel.member1Id === knownParent.id || rel.member2Id === knownParent.id)
+            )
+            if (spouseRel) {
+              const spouseId = spouseRel.member1Id === knownParent.id ? spouseRel.member2Id : spouseRel.member1Id
+              const spouseNode = positionedMembers.find(p => p.id === spouseId)
+              if (spouseNode) {
+                parents.push(spouseNode)
+              }
+            }
+          }
 
           const midX = parents.reduce((sum, p) => sum + (p.canvasX ?? 0), 0) / parents.length
           const midY = parents.reduce((sum, p) => sum + (p.canvasY ?? 0), 0) / parents.length
