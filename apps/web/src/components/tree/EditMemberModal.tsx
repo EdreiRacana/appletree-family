@@ -337,9 +337,9 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
           </div>
 
           {/* PARENT MANAGEMENT */}
-          {parentsInfo.length > 1 && (
+          {parentsInfo.length > 0 && (
             <div style={{ backgroundColor: 'rgba(139,69,19,0.05)', padding: '16px', borderRadius: '16px', border: '1px dashed rgba(139,69,19,0.2)' }}>
-              <label style={{ ...labelStyle, color: '#B22222' }}>HIJO DE OTRA RELACIÓN (Desvincular Padres)</label>
+              <label style={{ ...labelStyle, color: '#B22222' }}>PADRES REGISTRADOS</label>
               <p style={{ fontSize: '11px', opacity: 0.6, marginTop: '-4px', marginBottom: '12px' }}>
                 Si {formData.firstName} es hijo/a de una relación anterior, puedes desvincular al cónyuge actual aquí.
               </p>
