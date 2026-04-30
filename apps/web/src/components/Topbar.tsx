@@ -150,7 +150,45 @@ export default function Topbar({
         </div>
       </div>
 
+      <style>{`
+        @keyframes matrixPulse {
+          0% { opacity: 0.4; text-shadow: 0 0 2px rgba(0, 255, 65, 0.4); }
+          50% { opacity: 1; text-shadow: 0 0 8px rgba(0, 255, 65, 0.8); }
+          100% { opacity: 0.4; text-shadow: 0 0 2px rgba(0, 255, 65, 0.4); }
+        }
+      `}</style>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+        
+        {/* SECURE SYSTEM LEGEND */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '4px 12px',
+          borderRadius: '20px',
+          border: '1px solid rgba(0, 255, 65, 0.2)',
+          backgroundColor: 'rgba(0, 20, 0, 0.3)'
+        }}>
+          <div style={{ 
+            width: '6px', 
+            height: '6px', 
+            borderRadius: '50%', 
+            backgroundColor: '#00FF41',
+            animation: 'matrixPulse 2s infinite'
+          }} />
+          <span style={{
+            color: '#00FF41',
+            fontFamily: 'monospace',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            letterSpacing: '1px',
+            animation: 'matrixPulse 2s infinite'
+          }}>
+            SECURE SYSTEM
+          </span>
+        </div>
+
         {showStartTreeBtn && (
           <button 
             onClick={onStartMyTree}
