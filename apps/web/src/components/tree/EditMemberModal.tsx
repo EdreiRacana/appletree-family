@@ -30,6 +30,7 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
   })
   const [isSaving, setIsSaving] = useState(false)
   const [parentsInfo, setParentsInfo] = useState<{id: string, name: string}[]>([])
+  const [potentialParents, setPotentialParents] = useState<{id: string, name: string}[]>([])
 
   React.useEffect(() => {
     if (formData.parents.length > 0) {
@@ -41,6 +42,18 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
       setParentsInfo([])
     }
   }, [formData.parents])
+
+  React.useEffect(() => {
+    supabase.from('members')
+      .select('id, first_name, last_name')
+      .eq('tree_id', member.treeId)
+      .neq('id', member.id)
+      .then(({ data }) => {
+        if (data) {
+          setPotentialParents(data.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` })))
+        }
+      })
+  }, [member.treeId, member.id])
 
   const handleRemoveParent = (parentIdToRemove: string) => {
     if (confirm('¿Desvincular a este padre/madre? (Ideal para marcar hijos de relaciones anteriores)')) {
@@ -337,12 +350,13 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
           </div>
 
           {/* PARENT MANAGEMENT */}
-          {parentsInfo.length > 0 && (
-            <div style={{ backgroundColor: 'rgba(139,69,19,0.05)', padding: '16px', borderRadius: '16px', border: '1px dashed rgba(139,69,19,0.2)' }}>
-              <label style={{ ...labelStyle, color: '#B22222' }}>PADRES REGISTRADOS</label>
-              <p style={{ fontSize: '11px', opacity: 0.6, marginTop: '-4px', marginBottom: '12px' }}>
-                Si {formData.firstName} es hijo/a de una relación anterior, puedes desvincular al cónyuge actual aquí.
-              </p>
+          <div style={{ backgroundColor: 'rgba(139,69,19,0.05)', padding: '16px', borderRadius: '16px', border: '1px dashed rgba(139,69,19,0.2)' }}>
+            <label style={{ ...labelStyle, color: '#B22222' }}>PADRES REGISTRADOS</label>
+            <p style={{ fontSize: '11px', opacity: 0.6, marginTop: '-4px', marginBottom: '12px' }}>
+              Si {formData.firstName} es de otra relación o le falta un padre, vincúlalo o desvincúlalo aquí.
+            </p>
+            
+            {parentsInfo.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {parentsInfo.map(p => (
                   <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: '8px', border: '1px solid rgba(139,69,19,0.1)' }}>
@@ -356,8 +370,30 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p style={{ fontSize: '12px', color: '#8B4513', fontStyle: 'italic', margin: '0 0 12px 0' }}>No hay padres vinculados.</p>
+            )}
+
+            {formData.parents.length < 2 && (
+              <div style={{ marginTop: '12px' }}>
+                <select 
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setFormData({ ...formData, parents: [...formData.parents, e.target.value] })
+                      e.target.value = ''
+                    }
+                  }}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid rgba(139,69,19,0.3)', backgroundColor: 'rgba(255,255,255,0.9)', fontSize: '13px', color: '#8B4513', fontWeight: 'bold', cursor: 'pointer', outline: 'none' }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>+ Vincular padre o madre...</option>
+                  {potentialParents.filter(p => !formData.parents.includes(p.id)).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
 
         </div>
 
