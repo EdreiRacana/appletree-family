@@ -32,6 +32,7 @@ export default function AppleTreeDashboard() {
   const [activeTab, setActiveTab] = useState<string | null>('My Tree')
   const [viewFocus, setViewFocus] = useState<'all' | 'paternal' | 'maternal'>('all')
   const [isTermsOpen, setIsTermsOpen] = useState(false)
+  const [userProfileAvatar, setUserProfileAvatar] = useState<string | null>(null)
 
   // MOCK LOGIN STATE
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -109,7 +110,26 @@ export default function AppleTreeDashboard() {
       }
     }
   }, [isLoggedIn, loginInputUser])
-
+  // Fetch User Profile Avatar (Francisco Jr)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('members')
+          .select('avatar_url')
+          .ilike('first_name', '%francisco%jr%')
+          .not('avatar_url', 'is', null)
+          .limit(1)
+        
+        if (data && data.length > 0) {
+          setUserProfileAvatar(data[0].avatar_url)
+        }
+      } catch (err) {
+        console.error('Error fetching profile avatar:', err)
+      }
+    }
+    fetchProfile()
+  }, [])
   // LINEAGE FILTERING LOGIC
   const { filteredMembers, filteredRelationships } = useMemo(() => {
     if (viewFocus === 'all' || treeData.members.length === 0) {
@@ -322,14 +342,7 @@ export default function AppleTreeDashboard() {
         onStartMyTree={handleStartMyTree}
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
-        userAvatarUrl={
-          // Prioridad 1: Francisco Jr con foto
-          treeData.members.find(m => m.firstName.toLowerCase().includes('francisco jr') && m.avatarUrl)?.avatarUrl ||
-          // Prioridad 2: Cualquier Francisco con foto
-          treeData.members.find(m => m.firstName.toLowerCase().includes('francisco') && m.avatarUrl)?.avatarUrl ||
-          // Respaldo: El primer Francisco que encuentre
-          treeData.members.find(m => m.firstName.toLowerCase().includes('francisco'))?.avatarUrl
-        }
+        userAvatarUrl={userProfileAvatar || treeData.members.find(m => m.firstName.toLowerCase().includes('francisco'))?.avatarUrl}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
