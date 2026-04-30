@@ -11,6 +11,7 @@ import EditMemberModal from '@/components/tree/EditMemberModal'
 import InviteMemberModal from '@/components/tree/InviteMemberModal'
 import PhotoAlbums from '@/components/PhotoAlbums'
 import HomeDashboard from '@/components/HomeDashboard'
+import TermsModal from '@/components/TermsModal'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
 
@@ -30,6 +31,7 @@ export default function AppleTreeDashboard() {
   const [storyActor, setStoryActor] = useState<Member | null>(null)
   const [activeTab, setActiveTab] = useState<string | null>('My Tree')
   const [viewFocus, setViewFocus] = useState<'all' | 'paternal' | 'maternal'>('all')
+  const [isTermsOpen, setIsTermsOpen] = useState(false)
 
   // MOCK LOGIN STATE
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -316,8 +318,10 @@ export default function AppleTreeDashboard() {
         onViewFocusChange={setViewFocus} 
         onAdd={() => {}} 
         notificationCount={notificationCount} 
+        onClearNotifications={() => setNotificationCount(0)}
         onStartMyTree={handleStartMyTree}
         onShowTutorial={handleShowTutorial}
+        onShowTerms={() => setIsTermsOpen(true)}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
@@ -366,6 +370,8 @@ export default function AppleTreeDashboard() {
         )}
 
         {isStoryModalOpen && <AddStoryModal treeId={currentTreeId} onClose={() => { setIsStoryModalOpen(false); setStoryActor(null); }} onSave={fetchFamilyData} />}
+
+        {isTermsOpen && <TermsModal onClose={() => setIsTermsOpen(false)} />}
 
         {loading && treeData.members.length === 0 && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
