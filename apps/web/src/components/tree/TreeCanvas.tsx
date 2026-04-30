@@ -112,7 +112,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   }, [isDragging, handleMouseMove, handleTouchMove])
 
   const handleWheel = (e: React.WheelEvent) => {
-    setOffset(prev => ({ ...prev, y: prev.y - e.deltaY * 0.5 }))
+    setOffset(prev => ({ 
+      x: prev.x - e.deltaX * 0.8,
+      y: prev.y - e.deltaY * 0.8 
+    }))
   }
 
   const handleDeleteMember = async (member: Member) => {
@@ -181,7 +184,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         position: 'absolute',
         inset: 0,
         transform: `translate(${offset.x}px, ${offset.y}px)`,
-        pointerEvents: 'none' // Let dragging work on the container behind it
+        pointerEvents: 'none', // Let dragging work on the container behind it
+        zIndex: 50 // Creates stacking context ABOVE the background
       }}>
         {/* SVG CONNECTIONS */}
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', zIndex: 10 }}>
