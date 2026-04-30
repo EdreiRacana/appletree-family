@@ -208,18 +208,9 @@ export default function Topbar({
             display: 'flex', alignItems: 'center', justifyContent: 'center', 
             border: 'none', cursor: 'pointer',
             overflow: 'hidden',
-            padding: userAvatarUrl ? '0' : '0'
           }}
         >
-          {userAvatarUrl ? (
-            <img 
-              src={userAvatarUrl} 
-              alt="User" 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-            />
-          ) : (
-            <User size={28} color="#F5E6C8" />
-          )}
+          <UserIconWrapper url={userAvatarUrl} />
         </button>
         <button 
           className="topbar-btn"
@@ -240,4 +231,19 @@ export default function Topbar({
       </div>
     </header>
   )
+}
+
+function UserIconWrapper({ url }: { url?: string }) {
+  const [error, setError] = React.useState(false)
+  if (url && !error) {
+    return (
+      <img 
+        src={url} 
+        alt="User" 
+        onError={() => setError(true)}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+      />
+    )
+  }
+  return <User size={28} color="#F5E6C8" />
 }
