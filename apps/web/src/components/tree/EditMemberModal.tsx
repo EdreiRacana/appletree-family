@@ -25,9 +25,28 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
     occupation: member.occupation || '',
     birthPlace: member.birthPlace || '',
     nickname: member.nickname || '',
-    maidenName: member.maidenName || ''
+    maidenName: member.maidenName || '',
+    parents: member.parents || []
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [parentsInfo, setParentsInfo] = useState<{id: string, name: string}[]>([])
+
+  React.useEffect(() => {
+    if (formData.parents.length > 0) {
+      supabase.from('members').select('id, first_name, last_name').in('id', formData.parents)
+        .then(({ data }) => {
+          if (data) setParentsInfo(data.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` })))
+        })
+    } else {
+      setParentsInfo([])
+    }
+  }, [formData.parents])
+
+  const handleRemoveParent = (parentIdToRemove: string) => {
+    if (confirm('¿Desvincular a este padre/madre? (Ideal para marcar hijos de relaciones anteriores)')) {
+      setFormData({ ...formData, parents: formData.parents.filter(id => id !== parentIdToRemove) })
+    }
+  }
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -46,7 +65,8 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         occupation: formData.occupation || null,
         birth_place: formData.birthPlace || null,
         nickname: formData.nickname || null,
-        maiden_name: formData.maidenName || null
+        maiden_name: formData.maidenName || null,
+        parents: formData.parents
       }
 
       const { error } = await supabase
@@ -315,6 +335,30 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
               </div>
             </div>
           </div>
+
+          {/* PARENT MANAGEMENT */}
+          {parentsInfo.length > 1 && (
+            <div style={{ backgroundColor: 'rgba(139,69,19,0.05)', padding: '16px', borderRadius: '16px', border: '1px dashed rgba(139,69,19,0.2)' }}>
+              <label style={{ ...labelStyle, color: '#B22222' }}>HIJO DE OTRA RELACIÓN (Desvincular Padres)</label>
+              <p style={{ fontSize: '11px', opacity: 0.6, marginTop: '-4px', marginBottom: '12px' }}>
+                Si {formData.firstName} es hijo/a de una relación anterior, puedes desvincular al cónyuge actual aquí.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {parentsInfo.map(p => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: '8px', border: '1px solid rgba(139,69,19,0.1)' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{p.name}</span>
+                    <button 
+                      onClick={() => handleRemoveParent(p.id)} 
+                      style={{ background: 'none', border: 'none', color: '#B22222', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', padding: '4px 8px' }}
+                    >
+                      X Desvincular
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Footer Actions */}
