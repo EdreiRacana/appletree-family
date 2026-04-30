@@ -374,7 +374,7 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
               <p style={{ fontSize: '12px', color: '#8B4513', fontStyle: 'italic', margin: '0 0 12px 0' }}>No hay padres vinculados.</p>
             )}
 
-            {formData.parents.length < 2 && (
+            {parentsInfo.length < 2 && potentialParents.filter(p => !formData.parents.includes(p.id)).length > 0 && (
               <div style={{ marginTop: '12px' }}>
                 <select 
                   onChange={(e) => {
