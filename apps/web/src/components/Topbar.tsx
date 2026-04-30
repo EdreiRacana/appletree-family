@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, Bell, User, Plus, Share2, Settings, HelpCircle } from 'lucide-react'
+import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield } from 'lucide-react'
 
 interface TopbarProps {
   onAdd?: () => void
@@ -10,6 +10,8 @@ interface TopbarProps {
   notificationCount?: number
   onStartMyTree?: () => void
   onShowTutorial?: () => void
+  onShowTerms?: () => void
+  onClearNotifications?: () => void
   showStartTreeBtn?: boolean
 }
 
@@ -20,6 +22,8 @@ export default function Topbar({
   notificationCount = 1, 
   onStartMyTree, 
   onShowTutorial,
+  onShowTerms,
+  onClearNotifications,
   showStartTreeBtn = false 
 }: TopbarProps) {
   return (
@@ -172,32 +176,50 @@ export default function Topbar({
         <button 
           className="topbar-btn" 
           onClick={onAdd}
-          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}
+          title="Añadir Familiar"
+          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
         >
-          <Plus size={30} color="#F5E6C8" />
+          <Plus size={28} color="#F5E6C8" />
         </button>
         <button 
           className="topbar-btn" 
           onClick={onShowTutorial}
           title="Ver Tutorial"
-          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}
+          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
         >
-          <HelpCircle size={30} color="#F5E6C8" />
+          <HelpCircle size={28} color="#F5E6C8" />
         </button>
-        <button className="topbar-btn" style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px' }}>
-          <User size={30} color="#F5E6C8" />
+        <button 
+          className="topbar-btn" 
+          onClick={onShowTerms}
+          title="Términos y Condiciones"
+          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+        >
+          <Shield size={28} color="#F5E6C8" />
         </button>
-        <div style={{ position: 'relative' }}>
+        <button 
+          className="topbar-btn" 
+          title="Perfil de Usuario"
+          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+        >
+          <User size={28} color="#F5E6C8" />
+        </button>
+        <button 
+          className="topbar-btn"
+          onClick={onClearNotifications}
+          style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
           <Bell size={32} color="#D4AF37" />
           {notificationCount > 0 && (
             <div style={{ 
               position: 'absolute', top: '-5px', right: '-5px', 
-              width: '16px', height: '16px', background: '#FF4B2B', 
+              width: '18px', height: '18px', background: '#FF4B2B', 
               borderRadius: '50%', color: 'white', fontSize: '10px', 
-              fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              fontWeight: '950', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '2px solid #0F1A0F'
             }}>{notificationCount}</div>
           )}
-        </div>
+        </button>
       </div>
     </header>
   )
