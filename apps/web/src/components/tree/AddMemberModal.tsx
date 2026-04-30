@@ -26,7 +26,8 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
     avatarUrl: '',
     gender: 'male',
     appleType: 'red',
-    isBaby: false
+    isBaby: false,
+    isOnlyChild: false
   })
   
   const [isSaving, setIsSaving] = useState(false)
@@ -47,7 +48,7 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
           rel.relationship === 'spouse' && 
           (rel.member1Id === targetMember.id || rel.member2Id === targetMember.id)
         )
-        if (spouseRel) {
+        if (spouseRel && !formData.isOnlyChild) {
           const spouseId = spouseRel.member1Id === targetMember.id ? spouseRel.member2Id : spouseRel.member1Id
           parentIds.push(spouseId)
         }
@@ -192,6 +193,39 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
                 <input type="date" value={formData.dateOfDeath} onChange={e => setFormData({...formData, dateOfDeath: e.target.value})} style={inputStyle} />
               </div>
             </div>
+
+            {relType === 'child' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(242,210,65,0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #F2D241' }}>
+                <div>
+                  <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#8B4513', display: 'block' }}>OTRA RELACIÓN (Madre/Padre diferente)</span>
+                  <span style={{ fontSize: '11px', opacity: 0.6 }}>Activa si no es hijo/a de la pareja actual de {targetMember.firstName}.</span>
+                </div>
+                <button
+                  onClick={() => setFormData({...formData, isOnlyChild: !formData.isOnlyChild})}
+                  style={{
+                    width: '44px',
+                    height: '24px',
+                    borderRadius: '12px',
+                    backgroundColor: formData.isOnlyChild ? '#8B4513' : '#D1D5DB',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    border: 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    backgroundColor: '#FFF',
+                    position: 'absolute',
+                    top: '3px',
+                    left: formData.isOnlyChild ? '23px' : '3px',
+                    transition: 'all 0.2s ease'
+                  }} />
+                </button>
+              </div>
+            )}
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(242,210,65,0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #F2D241' }}>
               <div>
