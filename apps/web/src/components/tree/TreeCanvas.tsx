@@ -111,12 +111,24 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     }
   }, [isDragging, handleMouseMove, handleTouchMove])
 
-  const handleWheel = (e: React.WheelEvent) => {
-    setOffset(prev => ({ 
-      x: prev.x - e.deltaX * 0.8,
-      y: prev.y - e.deltaY * 0.8 
-    }))
-  }
+  // Premium Wheel Handler: Must be native non-passive to call preventDefault()
+  // This physically blocks the browser from interpreting trackpad swipes as "go back" gestures.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const handleNativeWheel = (e: WheelEvent) => {
+      e.preventDefault() // Stop browser history swipe
+      setOffset(prev => ({ 
+        x: prev.x - e.deltaX * 0.8,
+        y: prev.y - e.deltaY * 0.8 
+      }))
+    }
+
+    // passive: false allows preventDefault to work
+    el.addEventListener('wheel', handleNativeWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleNativeWheel)
+  }, [])
 
   const handleDeleteMember = async (member: Member) => {
     if (!window.confirm(`¿Estás seguro de que quieres eliminar a ${member.firstName} ${member.lastName}? Esta acción no se puede deshacer.`)) {
@@ -151,7 +163,6 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
       ref={containerRef}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      onWheel={handleWheel}
       style={{
         width: '100%',
         height: '100%',
