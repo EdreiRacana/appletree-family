@@ -322,6 +322,7 @@ export default function AppleTreeDashboard() {
         onStartMyTree={handleStartMyTree}
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
+        userAvatarUrl={treeData.members.find(m => m.firstName.toLowerCase() === 'francisco')?.avatarUrl}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
