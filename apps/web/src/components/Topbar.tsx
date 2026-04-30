@@ -12,7 +12,7 @@ interface TopbarProps {
   onShowTutorial?: () => void
   onShowTerms?: () => void
   onClearNotifications?: () => void
-  userAvatarUrl?: string
+  userAvatarUrl?: string | null
   showStartTreeBtn?: boolean
 }
 
