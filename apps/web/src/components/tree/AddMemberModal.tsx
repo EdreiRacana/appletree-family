@@ -298,7 +298,8 @@ const overlayStyle: React.CSSProperties = {
 const modalStyle: React.CSSProperties = {
   backgroundColor: '#FAEFBC', width: '100%', maxWidth: '540px', borderRadius: '32px',
   padding: '40px', position: 'relative', border: '2px solid #F2D241', color: '#2C1810',
-  boxShadow: '0 30px 60px -12px rgba(0,0,0,0.6)', animation: 'modalFadeIn 0.3s ease-out'
+  boxShadow: '0 30px 60px -12px rgba(0,0,0,0.6)', animation: 'modalFadeIn 0.3s ease-out',
+  maxHeight: '90vh', overflowY: 'auto'
 }
 
 const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }
