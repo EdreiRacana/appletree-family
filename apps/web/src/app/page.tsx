@@ -96,6 +96,18 @@ export default function AppleTreeDashboard() {
     fetchFamilyData()
   }, [fetchFamilyData])
 
+  // CRITICAL AUTO-RECOVERY: Restore Francisco's 24-member tree if it was accidentally overwritten
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isLoggedIn) {
+      const goodTreeId = '4508d01c-2cdf-43eb-80d5-2d0d40989c63';
+      const currentLocal = window.localStorage.getItem('apple_user_tree_id');
+      if (currentLocal && currentLocal !== goodTreeId && currentLocal !== DEMO_TREE_ID && loginInputUser.toLowerCase() === 'francisco') {
+        window.localStorage.setItem('apple_user_tree_id', goodTreeId);
+        setCurrentTreeId(goodTreeId);
+      }
+    }
+  }, [isLoggedIn, loginInputUser])
+
   // LINEAGE FILTERING LOGIC
   const { filteredMembers, filteredRelationships } = useMemo(() => {
     if (viewFocus === 'all' || treeData.members.length === 0) {
@@ -225,6 +237,16 @@ export default function AppleTreeDashboard() {
 
   const handleStartMyTree = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        const existingTreeId = window.localStorage.getItem('apple_user_tree_id')
+        if (existingTreeId && existingTreeId !== DEMO_TREE_ID) {
+          // If the user already has a tree, just load it
+          setCurrentTreeId(existingTreeId)
+          setTutorialStep(0)
+          return
+        }
+      }
+
       const newTreeId = crypto.randomUUID()
       
       // 1. Create the tree first (required for foreign key constraint)
@@ -269,8 +291,22 @@ export default function AppleTreeDashboard() {
   }
 
   const handleShowTutorial = () => {
+    // Save current tree if it's not the demo tree before switching
+    if (currentTreeId !== DEMO_TREE_ID && typeof window !== 'undefined') {
+      window.localStorage.setItem('apple_user_tree_id', currentTreeId)
+    }
     setCurrentTreeId(DEMO_TREE_ID)
     setTutorialStep(1)
+  }
+
+  const handleReturnToMyTree = () => {
+    if (typeof window !== 'undefined') {
+      const savedTreeId = window.localStorage.getItem('apple_user_tree_id')
+      if (savedTreeId) {
+        setCurrentTreeId(savedTreeId)
+      }
+    }
+    setTutorialStep(0)
   }
 
   return (
@@ -379,7 +415,11 @@ export default function AppleTreeDashboard() {
                 <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>El Siguiente Paso</h3>
                 <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Puedes explorar el árbol de ejemplo para ver todo el potencial, o si estás listo, ¡crear el tuyo ahora mismo!</p>
                 <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                  <button onClick={() => handleStartMyTree()} style={{ padding: '14px', backgroundColor: '#D4AF37', color: '#0F1A0F', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)' }}>✨ Empezar Mi Propio Árbol</button>
+                  {typeof window !== 'undefined' && window.localStorage.getItem('apple_user_tree_id') ? (
+                    <button onClick={handleReturnToMyTree} style={{ padding: '14px', backgroundColor: '#D4AF37', color: '#0F1A0F', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)' }}>✨ Volver a Mi Árbol</button>
+                  ) : (
+                    <button onClick={handleStartMyTree} style={{ padding: '14px', backgroundColor: '#D4AF37', color: '#0F1A0F', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer', fontSize: '15px', boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)' }}>✨ Empezar Mi Propio Árbol</button>
+                  )}
                   <button onClick={() => setTutorialStep(0)} style={{ padding: '12px', backgroundColor: 'transparent', color: '#8B4513', border: '2px solid #D4822A', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Explorar Ejemplo</button>
                   <button 
                     onClick={() => {
