@@ -33,10 +33,14 @@ export default function AppleNode({ member, isHovered, onHover, onLeave }: Apple
     if (isBaby) {
       return member.gender === 'female' ? '/assets/baby-girl.png' : '/assets/baby-boy.png'
     }
+    if (!member.avatarUrl) {
+      // Use initials if no custom avatar is provided. Random avatars cause gender confusion.
+      return `https://api.dicebear.com/7.x/initials/svg?seed=${member.firstName}&backgroundColor=d4af37&fontFamily=Playfair%20Display`
+    }
     if (imgHasError) {
       return `https://api.dicebear.com/7.x/initials/svg?seed=${member.firstName}&backgroundColor=d4af37&fontFamily=Playfair%20Display`
     }
-    return member.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`
+    return member.avatarUrl
   }
 
   const birthYear = member.dateOfBirth?.split('-')[0] || ''
