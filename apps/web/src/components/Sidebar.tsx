@@ -32,6 +32,14 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
   return (
     <div style={{ position: 'fixed', top: '140px', left: '40px', display: 'flex', gap: '25px', zIndex: 1000, height: 'calc(100vh - 200px)' }}>
       
+      <style>{`
+        @keyframes matrixPulse {
+          0% { opacity: 0.4; text-shadow: 0 0 2px rgba(0, 255, 65, 0.4); }
+          50% { opacity: 1; text-shadow: 0 0 8px rgba(0, 255, 65, 0.8); }
+          100% { opacity: 0.4; text-shadow: 0 0 2px rgba(0, 255, 65, 0.4); }
+        }
+      `}</style>
+
       {/* 1. Icon Rail (COLOR: #FAEFBC) */}
       <nav style={{
         width: '110px',
@@ -40,40 +48,76 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
         boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
         padding: '30px 0',
         border: '2px solid #2C1810',
         overflowY: 'auto'
       }}>
-        {menuItems.map((item) => (
-          <div
-            key={item.label}
-            onClick={() => onTabChange(item.label)}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: '22px 0',
-              cursor: 'pointer',
-              backgroundColor: activeTab === item.label ? 'rgba(0, 0, 0, 0.08)' : 'transparent',
-              transition: 'all 0.3s ease',
-              borderLeft: activeTab === item.label ? '5px solid #2C1810' : 'none'
-            }}
-          >
-            <div style={{ color: '#2C1810', opacity: activeTab === item.label ? 1 : 0.7, marginBottom: '8px' }}>
-              {item.icon}
+        <div>
+          {menuItems.map((item) => (
+            <div
+              key={item.label}
+              onClick={() => onTabChange(item.label)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '22px 0',
+                cursor: 'pointer',
+                backgroundColor: activeTab === item.label ? 'rgba(0, 0, 0, 0.08)' : 'transparent',
+                transition: 'all 0.3s ease',
+                borderLeft: activeTab === item.label ? '5px solid #2C1810' : 'none'
+              }}
+            >
+              <div style={{ color: '#2C1810', opacity: activeTab === item.label ? 1 : 0.7, marginBottom: '8px' }}>
+                {item.icon}
+              </div>
+              <span style={{ 
+                fontSize: '10px', 
+                fontWeight: '950', 
+                color: '#2C1810',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em'
+              }}>
+                {item.label}
+              </span>
             </div>
-            <span style={{ 
-              fontSize: '10px', 
-              fontWeight: '950', 
-              color: '#2C1810',
-              textAlign: 'center',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em'
-            }}>
-              {item.label}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* SECURE SYSTEM LEGEND (Moved to bottom of sidebar) */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '15px 5px',
+          margin: '0 10px',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 255, 65, 0.3)',
+          backgroundColor: '#0F1A0F'
+        }}>
+          <div style={{ 
+            width: '6px', 
+            height: '6px', 
+            borderRadius: '50%', 
+            backgroundColor: '#00FF41',
+            animation: 'matrixPulse 2s infinite'
+          }} />
+          <span style={{
+            color: '#00FF41',
+            fontFamily: 'monospace',
+            fontSize: '9px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            lineHeight: 1.2,
+            letterSpacing: '1px',
+            animation: 'matrixPulse 2s infinite'
+          }}>
+            SECURE<br/>SYSTEM
+          </span>
+        </div>
       </nav>
 
       {/* 2. Floating Content Panel (COLOR: #FAEFBC) */}
