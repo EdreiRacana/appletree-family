@@ -160,7 +160,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         backgroundColor: '#1B2E1B', 
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
-        touchAction: 'none'
+        touchAction: 'none',
+        overscrollBehavior: 'none'
       }}
     >
       {/* 1. BACKGROUND IMAGE LAYER */}
