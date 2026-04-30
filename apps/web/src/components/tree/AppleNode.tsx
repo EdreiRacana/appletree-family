@@ -10,6 +10,10 @@ interface AppleNodeProps {
 
 export default function AppleNode({ member, isHovered, onHover, onLeave }: AppleNodeProps) {
   const [imgHasError, setImgHasError] = useState(false)
+
+  React.useEffect(() => {
+    setImgHasError(false)
+  }, [member.avatarUrl])
   const isBabyMode = () => {
     if (member.isBaby) return true
     if (!member.dateOfBirth) return false
