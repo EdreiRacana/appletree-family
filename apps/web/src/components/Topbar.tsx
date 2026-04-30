@@ -234,7 +234,7 @@ export default function Topbar({
   )
 }
 
-function UserIconWrapper({ url }: { url?: string }) {
+function UserIconWrapper({ url }: { url?: string | null }) {
   const [error, setError] = React.useState(false)
   if (url && !error) {
     return (
