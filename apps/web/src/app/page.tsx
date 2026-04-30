@@ -323,11 +323,11 @@ export default function AppleTreeDashboard() {
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
         userAvatarUrl={
-          treeData.members.find(m => {
-            const full = `${m.firstName} ${m.lastName}`.toLowerCase();
-            return full.includes('francisco jr') && m.avatarUrl;
-          })?.avatarUrl ||
+          // Prioridad 1: Francisco Jr con foto
+          treeData.members.find(m => m.firstName.toLowerCase().includes('francisco jr') && m.avatarUrl)?.avatarUrl ||
+          // Prioridad 2: Cualquier Francisco con foto
           treeData.members.find(m => m.firstName.toLowerCase().includes('francisco') && m.avatarUrl)?.avatarUrl ||
+          // Respaldo: El primer Francisco que encuentre
           treeData.members.find(m => m.firstName.toLowerCase().includes('francisco'))?.avatarUrl
         }
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
