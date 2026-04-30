@@ -28,7 +28,7 @@ export default function AppleTreeDashboard() {
   const [invitingMember, setInvitingMember] = useState<Member | null>(null)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
   const [storyActor, setStoryActor] = useState<Member | null>(null)
-  const [activeTab, setActiveTab] = useState<string | null>('Home')
+  const [activeTab, setActiveTab] = useState<string | null>('My Tree')
   const [viewFocus, setViewFocus] = useState<'all' | 'paternal' | 'maternal'>('all')
 
   // MOCK LOGIN STATE
