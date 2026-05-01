@@ -259,20 +259,24 @@ export default function AppleTreeDashboard() {
             width: '120px', 
             height: '120px', 
             marginBottom: '24px', 
-            filter: 'drop-shadow(0 10px 15px rgba(139,69,19,0.2))',
+            filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.3))',
             transition: 'transform 0.3s ease'
           }} className="hover:scale-105">
-            <img src="/assets/Logo.png" alt="AppleTree Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src="/assets/logo.png" alt="AppleTree Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
 
           <h1 style={{ 
             fontFamily: 'var(--font-display)', 
-            color: '#2C1810', 
+            background: 'linear-gradient(180deg, #E8DAB2 0%, #C5A059 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             margin: '0 0 8px', 
-            fontSize: '34px',
-            fontWeight: '700',
-            letterSpacing: '-0.02em'
-          }}>AppleTree Family</h1>
+            fontSize: '38px',
+            fontWeight: '900',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+          }}>AppleFamily Tree</h1>
           
           <p style={{ 
             color: '#8B4513', 
