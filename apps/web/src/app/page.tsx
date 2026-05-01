@@ -214,45 +214,183 @@ export default function AppleTreeDashboard() {
 
   if (!isLoggedIn) {
     return (
-      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1B2E1B', position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.1, backgroundImage: 'url(/assets/image_19.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        background: 'radial-gradient(circle at center, #2D5016 0%, #1B2E1B 100%)', 
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Background Image with Overlay */}
+        <div style={{ 
+          position: 'absolute', 
+          inset: 0, 
+          opacity: 0.15, 
+          backgroundImage: 'url(/assets/image_19.png)', 
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center',
+          filter: 'blur(2px)'
+        }} />
         
-        <div style={{ zIndex: 10, backgroundColor: '#FAEFBC', padding: '50px', borderRadius: '32px', border: '3px solid #F2D241', width: '90%', maxWidth: '400px', boxShadow: '0 30px 60px rgba(0,0,0,0.5)', textAlign: 'center' }}>
-          <div style={{ width: '80px', height: '80px', margin: '0 auto 20px', borderRadius: '50%', backgroundColor: '#8B4513', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '40px' }}>🍏</span>
+        {/* Animated Orbs for Depth */}
+        <div style={{ position: 'absolute', top: '10%', left: '15%', width: '300px', height: '300px', background: 'rgba(212, 130, 42, 0.1)', filter: 'blur(100px)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: '15%', right: '10%', width: '400px', height: '400px', background: 'rgba(74, 124, 47, 0.15)', filter: 'blur(120px)', borderRadius: '50%' }} />
+
+        <div style={{ 
+          zIndex: 10, 
+          backgroundColor: 'rgba(250, 239, 188, 0.85)', 
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          padding: '60px 40px', 
+          borderRadius: '40px', 
+          border: '1px solid rgba(255, 255, 255, 0.3)', 
+          width: '90%', 
+          maxWidth: '420px', 
+          boxShadow: '0 40px 100px rgba(0,0,0,0.4), inset 0 0 20px rgba(255,255,255,0.2)', 
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+          <div style={{ 
+            width: '120px', 
+            height: '120px', 
+            marginBottom: '24px', 
+            filter: 'drop-shadow(0 10px 15px rgba(139,69,19,0.2))',
+            transition: 'transform 0.3s ease'
+          }} className="hover:scale-105">
+            <img src="/assets/Logo.png" alt="AppleTree Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
-          <h1 style={{ fontFamily: 'serif', color: '#2C1810', margin: '0 0 10px', fontSize: '28px' }}>AppleTree Family</h1>
-          <p style={{ color: '#8B4513', opacity: 0.8, marginBottom: '30px', fontWeight: 'bold', fontSize: '14px' }}>Acceso Privado Familiar</p>
+
+          <h1 style={{ 
+            fontFamily: 'var(--font-display)', 
+            color: '#2C1810', 
+            margin: '0 0 8px', 
+            fontSize: '34px',
+            fontWeight: '700',
+            letterSpacing: '-0.02em'
+          }}>AppleTree Family</h1>
           
-          <input 
-            type="text" 
-            placeholder="Usuario" 
-            value={loginInputUser}
-            onChange={e => setLoginInputUser(e.target.value)}
-            style={{ width: '100%', padding: '16px', marginBottom: '16px', borderRadius: '16px', border: '2px solid rgba(139,69,19,0.2)', outline: 'none', backgroundColor: '#FFF', fontSize: '15px', color: '#2C1810' }} 
-          />
-          <input 
-            type="password" 
-            placeholder="Contraseña" 
-            value={loginInputPass}
-            onChange={e => setLoginInputPass(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') handleLogin()
-            }}
-            style={{ width: '100%', padding: '16px', marginBottom: '8px', borderRadius: '16px', border: '2px solid rgba(139,69,19,0.2)', outline: 'none', backgroundColor: '#FFF', fontSize: '15px', color: '#2C1810' }} 
-          />
+          <p style={{ 
+            color: '#8B4513', 
+            opacity: 0.7, 
+            marginBottom: '40px', 
+            fontWeight: '600', 
+            fontSize: '14px',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase'
+          }}>Acceso Privado Familiar</p>
           
-          <div style={{ minHeight: '24px', marginBottom: '16px' }}>
-            {loginError && <p style={{ color: '#B22222', fontSize: '13px', margin: 0, fontWeight: 'bold' }}>{loginError}</p>}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="text" 
+                placeholder="Usuario" 
+                value={loginInputUser}
+                onChange={e => setLoginInputUser(e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '18px 24px', 
+                  borderRadius: '20px', 
+                  border: '1.5px solid rgba(139,69,19,0.15)', 
+                  outline: 'none', 
+                  backgroundColor: 'rgba(255,255,255,0.9)', 
+                  fontSize: '16px', 
+                  color: '#2C1810',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)'
+                }} 
+                className="focus:border-[#D4822A] focus:ring-4 focus:ring-[#D4822A1A]"
+              />
+            </div>
+
+            <div style={{ position: 'relative' }}>
+              <input 
+                type="password" 
+                placeholder="Contraseña" 
+                value={loginInputPass}
+                onChange={e => setLoginInputPass(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleLogin()
+                }}
+                style={{ 
+                  width: '100%', 
+                  padding: '18px 24px', 
+                  borderRadius: '20px', 
+                  border: '1.5px solid rgba(139,69,19,0.15)', 
+                  outline: 'none', 
+                  backgroundColor: 'rgba(255,255,255,0.9)', 
+                  fontSize: '16px', 
+                  color: '#2C1810',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)'
+                }} 
+                className="focus:border-[#D4822A] focus:ring-4 focus:ring-[#D4822A1A]"
+              />
+            </div>
+          </div>
+          
+          <div style={{ minHeight: '28px', marginTop: '12px', marginBottom: '12px' }}>
+            {loginError && (
+              <p style={{ 
+                color: '#B22222', 
+                fontSize: '14px', 
+                margin: 0, 
+                fontWeight: '600',
+                animation: 'shake 0.4s ease-in-out'
+              }}>
+                {loginError}
+              </p>
+            )}
           </div>
 
           <button 
             onClick={handleLogin}
-            style={{ width: '100%', padding: '16px', backgroundColor: '#8B4513', color: '#FAEFBC', borderRadius: '16px', border: 'none', fontSize: '16px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 20px rgba(139,69,19,0.3)' }}
+            style={{ 
+              width: '100%', 
+              padding: '18px', 
+              background: 'linear-gradient(135deg, #D4822A 0%, #B8691A 100%)', 
+              color: '#FFF', 
+              borderRadius: '20px', 
+              border: 'none', 
+              fontSize: '17px', 
+              fontWeight: '800', 
+              cursor: 'pointer', 
+              boxShadow: '0 12px 24px rgba(212, 130, 42, 0.3)',
+              transition: 'all 0.3s ease',
+              marginTop: '10px'
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'translateY(-2px)'
+              e.currentTarget.style.boxShadow = '0 15px 30px rgba(212, 130, 42, 0.4)'
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 12px 24px rgba(212, 130, 42, 0.3)'
+            }}
           >
             Entrar al Legado
           </button>
+          
+          <p style={{ marginTop: '30px', fontSize: '12px', color: '#8B4513', opacity: 0.5 }}>
+            &copy; 2024 AppleTree Family Legacy. Todos los derechos reservados.
+          </p>
         </div>
+
+        <style jsx>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+          }
+          input:focus {
+            border-color: #D4822A !important;
+            box-shadow: 0 0 0 4px rgba(212, 130, 42, 0.1) !important;
+          }
+        `}</style>
       </div>
     )
   }
