@@ -241,15 +241,15 @@ export default function AppleTreeDashboard() {
 
         <div style={{ 
           zIndex: 10, 
-          backgroundColor: 'rgba(250, 239, 188, 0.85)', 
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          backgroundColor: 'rgba(15, 26, 15, 0.9)', 
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           padding: '60px 40px', 
           borderRadius: '40px', 
-          border: '1px solid rgba(255, 255, 255, 0.3)', 
+          border: '1px solid rgba(212, 175, 55, 0.3)', 
           width: '90%', 
           maxWidth: '420px', 
-          boxShadow: '0 40px 100px rgba(0,0,0,0.4), inset 0 0 20px rgba(255,255,255,0.2)', 
+          boxShadow: '0 40px 100px rgba(0,0,0,0.6), inset 0 0 20px rgba(212, 175, 55, 0.05)', 
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -259,7 +259,7 @@ export default function AppleTreeDashboard() {
             width: '120px', 
             height: '120px', 
             marginBottom: '24px', 
-            filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.3))',
+            filter: 'drop-shadow(0 0 15px rgba(212, 175, 55, 0.4))',
             transition: 'transform 0.3s ease'
           }} className="hover:scale-105">
             <img src="/assets/logo.png" alt="AppleTree Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -267,7 +267,7 @@ export default function AppleTreeDashboard() {
 
           <h1 style={{ 
             fontFamily: 'var(--font-display)', 
-            background: 'linear-gradient(180deg, #E8DAB2 0%, #C5A059 100%)',
+            background: 'linear-gradient(180deg, #F5E6C8 0%, #D4AF37 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             margin: '0 0 8px', 
@@ -275,16 +275,16 @@ export default function AppleTreeDashboard() {
             fontWeight: '900',
             letterSpacing: '0.04em',
             textTransform: 'uppercase',
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))'
           }}>AppleFamily Tree</h1>
           
           <p style={{ 
-            color: '#8B4513', 
-            opacity: 0.7, 
+            color: '#D4AF37', 
+            opacity: 0.8, 
             marginBottom: '40px', 
             fontWeight: '600', 
-            fontSize: '14px',
-            letterSpacing: '0.1em',
+            fontSize: '13px',
+            letterSpacing: '0.15em',
             textTransform: 'uppercase'
           }}>Acceso Privado Familiar</p>
           
@@ -299,15 +299,15 @@ export default function AppleTreeDashboard() {
                   width: '100%', 
                   padding: '18px 24px', 
                   borderRadius: '20px', 
-                  border: '1.5px solid rgba(139,69,19,0.15)', 
+                  border: '1.5px solid rgba(212, 175, 55, 0.2)', 
                   outline: 'none', 
-                  backgroundColor: 'rgba(255,255,255,0.9)', 
+                  backgroundColor: 'rgba(255,255,255,0.05)', 
                   fontSize: '16px', 
-                  color: '#2C1810',
+                  color: '#F5E6C8',
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)'
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
                 }} 
-                className="focus:border-[#D4822A] focus:ring-4 focus:ring-[#D4822A1A]"
+                className="focus:border-[#D4AF37] focus:ring-4 focus:ring-[#D4AF371A]"
               />
             </div>
 
@@ -324,15 +324,15 @@ export default function AppleTreeDashboard() {
                   width: '100%', 
                   padding: '18px 24px', 
                   borderRadius: '20px', 
-                  border: '1.5px solid rgba(139,69,19,0.15)', 
+                  border: '1.5px solid rgba(212, 175, 55, 0.2)', 
                   outline: 'none', 
-                  backgroundColor: 'rgba(255,255,255,0.9)', 
+                  backgroundColor: 'rgba(255,255,255,0.05)', 
                   fontSize: '16px', 
-                  color: '#2C1810',
+                  color: '#F5E6C8',
                   transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)'
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
                 }} 
-                className="focus:border-[#D4822A] focus:ring-4 focus:ring-[#D4822A1A]"
+                className="focus:border-[#D4AF37] focus:ring-4 focus:ring-[#D4AF371A]"
               />
             </div>
           </div>
@@ -340,7 +340,7 @@ export default function AppleTreeDashboard() {
           <div style={{ minHeight: '28px', marginTop: '12px', marginBottom: '12px' }}>
             {loginError && (
               <p style={{ 
-                color: '#B22222', 
+                color: '#FF6B6B', 
                 fontSize: '14px', 
                 margin: 0, 
                 fontWeight: '600',
@@ -356,30 +356,30 @@ export default function AppleTreeDashboard() {
             style={{ 
               width: '100%', 
               padding: '18px', 
-              background: 'linear-gradient(135deg, #D4822A 0%, #B8691A 100%)', 
-              color: '#FFF', 
+              background: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)', 
+              color: '#0F1A0F', 
               borderRadius: '20px', 
               border: 'none', 
               fontSize: '17px', 
-              fontWeight: '800', 
+              fontWeight: '900', 
               cursor: 'pointer', 
-              boxShadow: '0 12px 24px rgba(212, 130, 42, 0.3)',
+              boxShadow: '0 12px 24px rgba(212, 175, 55, 0.3)',
               transition: 'all 0.3s ease',
               marginTop: '10px'
             }}
             onMouseOver={e => {
               e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 15px 30px rgba(212, 130, 42, 0.4)'
+              e.currentTarget.style.boxShadow = '0 15px 30px rgba(212, 175, 55, 0.5)'
             }}
             onMouseOut={e => {
               e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 12px 24px rgba(212, 130, 42, 0.3)'
+              e.currentTarget.style.boxShadow = '0 12px 24px rgba(212, 175, 55, 0.3)'
             }}
           >
             Entrar al Legado
           </button>
           
-          <p style={{ marginTop: '30px', fontSize: '12px', color: '#8B4513', opacity: 0.5 }}>
+          <p style={{ marginTop: '30px', fontSize: '12px', color: '#F5E6C8', opacity: 0.4 }}>
             &copy; 2024 AppleTree Family Legacy. Todos los derechos reservados.
           </p>
         </div>
