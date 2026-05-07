@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import type { Member } from '@/lib/types'
-import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X, PieChart, Info, Star } from 'lucide-react'
+import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X } from 'lucide-react'
+import NetworkPanel from '@/components/NetworkPanel'
 
 interface SidebarProps {
   bgOpacity: number
@@ -10,9 +11,10 @@ interface SidebarProps {
   members: Member[]
   activeTab: string | null
   onTabChange: (tab: string | null) => void
+  onInviteMember: (member: Member) => void
 }
 
-export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab, onTabChange }: SidebarProps) {
+export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab, onTabChange, onInviteMember }: SidebarProps) {
 
   const menuItems = [
     { icon: <Home size={34} />, label: 'Home' },
@@ -116,7 +118,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
       </div>
 
       {/* 2. Floating Content Panel (COLOR: #FAEFBC) */}
-      {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && activeTab !== 'Photo Albums' && (
+      {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && activeTab !== 'Photo Albums' && activeTab !== 'Network' && (
         <div style={{
           width: '320px',
           backgroundColor: '#FAEFBC',
@@ -180,50 +182,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
                </div>
              )}
 
-             {/* 🔗 NETWORK */}
-             {activeTab === 'Network' && (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                 <input 
-                   type="text" 
-                   placeholder="Search family name..." 
-                   style={{
-                     width: '100%', padding: '12px 15px', borderRadius: '12px',
-                     border: '1.5px solid rgba(44,24,16,0.2)', backgroundColor: 'rgba(44,24,16,0.03)',
-                     color: '#2C1810', fontSize: '13px', fontWeight: '700', outline: 'none'
-                   }}
-                 />
-                 <div>
-                   <h4 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#2C1810', opacity: 0.6, marginBottom: '15px' }}>
-                     Tree Collaborators
-                   </h4>
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                     {[
-                       { name: 'Elena Racana', role: 'Editor', status: 'Online', avatar: 'https://i.pravatar.cc/150?u=elena' },
-                       { name: 'Carlos Perez', role: 'Viewer', status: 'Away', avatar: 'https://i.pravatar.cc/150?u=carlos' }
-                     ].map((user, i) => (
-                       <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px', backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: '14px', border: '1px solid rgba(44,24,16,0.05)' }}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                           <div style={{ width: '35px', height: '35px', borderRadius: '50%', border: '2px solid #2C1810', overflow: 'hidden' }}>
-                             <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                           </div>
-                           <div>
-                             <p style={{ margin: 0, fontSize: '13px', fontWeight: '900', color: '#2C1810' }}>{user.name}</p>
-                             <p style={{ margin: 0, fontSize: '10px', color: '#2C1810', opacity: 0.6 }}>{user.role}</p>
-                           </div>
-                         </div>
-                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: user.status === 'Online' ? '#4CAF50' : '#FFC107' }} />
-                       </div>
-                     ))}
-                   </div>
-                 </div>
-                 <div style={{ padding: '15px', backgroundColor: '#2C1810', borderRadius: '15px', color: '#FAEFBC' }}>
-                    <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '800' }}>Uncle Roberto wants to connect his tree.</p>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button style={{ flex: 1, padding: '6px', borderRadius: '8px', backgroundColor: '#FAEFBC', color: '#2C1810', border: 'none', fontSize: '11px', fontWeight: '950', cursor: 'pointer' }}>Accept</button>
-                    </div>
-                 </div>
-               </div>
-             )}
+             {/* 🔗 NETWORK — intentionally empty here, rendered outside the panel below */}
 
              {/* ⚙️ SETTINGS */}
              {activeTab === 'Settings' && (
@@ -298,6 +257,35 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
                  </button>
                </div>
              )}
+          </div>
+        </div>
+      )}
+
+      {/* 🔗 NETWORK — Dedicated wide panel */}
+      {activeTab === 'Network' && (
+        <div style={{
+          width: '320px',
+          backgroundColor: '#FAEFBC',
+          borderRadius: '24px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          padding: '25px 28px 28px',
+          border: '2px solid #2C1810',
+          animation: 'slideIn 0.3s ease-out',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: 'calc(100vh - 200px)',
+          overflow: 'hidden',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '950', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
+              Red Familiar
+            </h3>
+            <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              <X size={22} color="#2C1810" style={{ opacity: 0.7 }} />
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <NetworkPanel members={members} onInviteMember={onInviteMember} />
           </div>
         </div>
       )}
