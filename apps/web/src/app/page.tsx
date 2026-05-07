@@ -380,7 +380,7 @@ export default function AppleTreeDashboard() {
           </button>
           
           <p style={{ marginTop: '30px', fontSize: '12px', color: '#F5E6C8', opacity: 0.4 }}>
-            &copy; 2024 AppleTree Family Legacy. Todos los derechos reservados.
+            &copy; 2025 AppleTree Family Legacy. Todos los derechos reservados.
           </p>
         </div>
 
@@ -549,6 +549,7 @@ export default function AppleTreeDashboard() {
             members={treeData.members}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            onInviteMember={(m) => { setInvitingMember(m); setActiveTab(null); }}
           />
         </div>
 
