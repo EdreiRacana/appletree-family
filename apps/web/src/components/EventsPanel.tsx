@@ -70,6 +70,16 @@ function decodeDesc(desc: string): DecodedDesc {
   }
 }
 
+// Maps our UI event types to valid Supabase activity_type enum values
+// Valid: birthday | anniversary | achievement | greeting | photo_upload | new_member | memorial
+const TYPE_TO_DB: Record<FamilyEventType, string> = {
+  birthday:    'birthday',
+  anniversary: 'anniversary',
+  memorial:    'memorial',
+  reunion:     'achievement',  // closest valid enum
+  custom:      'greeting',     // closest valid enum
+}
+
 // ── EventCard ─────────────────────────────────────────────────────────────────
 
 interface EventCardProps {
@@ -208,7 +218,7 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
         const { error: dbErr } = await supabase
           .from('activities')
           .update({
-            type: eventType,
+            type: TYPE_TO_DB[eventType],
             title: title.trim(),
             description: fullDescription,
           })
@@ -217,7 +227,7 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
       } else {
         const { error: dbErr } = await supabase.from('activities').insert({
           tree_id: treeId,
-          type: eventType,
+          type: TYPE_TO_DB[eventType],
           title: title.trim(),
           description: fullDescription,
           privacy: 'core',
@@ -239,13 +249,14 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
       position: 'fixed', inset: 0, zIndex: 9999,
       backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px',
     }}>
       <div style={{
-        backgroundColor: '#FAEFBC', borderRadius: '28px', padding: '32px',
-        border: '2px solid #2C1810', width: '380px', maxWidth: '92vw',
+        backgroundColor: '#FAEFBC', borderRadius: '24px', padding: '24px 24px 20px',
+        border: '2px solid #2C1810', width: '100%', maxWidth: '370px',
         boxShadow: '0 30px 70px rgba(0,0,0,0.4)',
-        display: 'flex', flexDirection: 'column', gap: '16px',
-        maxHeight: '90vh', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: '12px',
+        maxHeight: 'calc(100vh - 32px)', overflowY: 'auto',
       }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -260,15 +271,15 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
         {/* Type selector */}
         <div>
           <label style={labelStyle}>Tipo de evento</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '7px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
             {(Object.entries(EVENT_COLORS) as [FamilyEventType, typeof EVENT_COLORS[FamilyEventType]][]).map(([key, cfg]) => (
               <button key={key} onClick={() => setEventType(key)} style={{
-                padding: '10px 4px',
+                padding: '8px 4px',
                 backgroundColor: eventType === key ? cfg.accent : 'rgba(44,24,16,0.07)',
                 color: eventType === key ? '#fff' : '#2C1810',
-                borderRadius: '12px', border: 'none', cursor: 'pointer',
-                fontSize: '11px', fontWeight: 900,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                borderRadius: '10px', border: 'none', cursor: 'pointer',
+                fontSize: '10px', fontWeight: 900,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
                 transition: 'all 0.18s',
               }}>
                 <span>{cfg.icon}</span>
@@ -318,7 +329,7 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
             onChange={e => setNote(e.target.value)}
             rows={2}
             placeholder="Agrega un detalle o recordatorio..."
-            style={{ ...inputStyle, resize: 'none', height: 'auto' }}
+            style={{ ...inputStyle, resize: 'none', height: '56px' }}
           />
         </div>
 
@@ -396,7 +407,7 @@ export default function EventsPanel({ members, treeId }: EventsPanelProps) {
         .from('activities')
         .select('*')
         .eq('tree_id', treeId)
-        .in('type', ['birthday', 'anniversary', 'memorial', 'reunion', 'custom'])
+        .in('type', ['birthday', 'anniversary', 'memorial', 'achievement', 'greeting'])
         .order('created_at', { ascending: false })
         .limit(60)
 
