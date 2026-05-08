@@ -93,3 +93,18 @@ export interface FeedActivity {
   privacy: PrivacyLevel
   createdAt: string
 }
+
+export type FamilyEventType = 'birthday' | 'anniversary' | 'memorial' | 'reunion' | 'custom'
+
+export interface FamilyEvent {
+  id: string
+  treeId: string
+  title: string
+  description?: string | null
+  eventType: FamilyEventType
+  eventDate: string   // ISO date string (YYYY-MM-DD)
+  memberId?: string | null
+  imageUrl?: string | null
+  privacy: PrivacyLevel
+  createdAt?: string
+}
