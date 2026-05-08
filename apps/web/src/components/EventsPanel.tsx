@@ -157,17 +157,19 @@ function CreateEventModal({ treeId, members, onClose, onSave }: CreateEventModal
 
     setSaving(true)
     try {
+      // Encode eventDate + memberId into description since 'metadata' column doesn't exist
+      // Format: [EVDATE:YYYY-MM-DD][EVTYPE:type][EVMEM:memberId] Optional note
+      const prefix = `[EVDATE:${eventDate}][EVTYPE:${eventType}]${memberId ? `[EVMEM:${memberId}]` : ''}`
+      const fullDescription = description.trim()
+        ? `${prefix} ${description.trim()}`
+        : prefix
+
       const { error: dbErr } = await supabase.from('activities').insert({
         tree_id: treeId,
         type: eventType,
         title: title.trim(),
-        description: description.trim() || null,
+        description: fullDescription,
         privacy: 'family',
-        metadata: {
-          eventDate,
-          memberId: memberId || null,
-          eventType,
-        },
       })
       if (dbErr) throw dbErr
       onSave()
@@ -324,20 +326,32 @@ export default function EventsPanel({ members, treeId }: EventsPanelProps) {
 
       if (error) throw error
 
+      // Parse encoded fields from description: [EVDATE:YYYY-MM-DD][EVTYPE:type][EVMEM:id] note
       const mapped: FamilyEvent[] = (data || [])
-        .filter((a: any) => a.metadata?.eventDate)
-        .map((a: any) => ({
-          id: a.id,
-          treeId: a.tree_id,
-          title: a.title,
-          description: a.description,
-          eventType: (a.metadata?.eventType || a.type) as FamilyEventType,
-          eventDate: a.metadata?.eventDate as string,
-          memberId: a.metadata?.memberId || null,
-          imageUrl: a.image_url || null,
-          privacy: a.privacy || 'family',
-          createdAt: a.created_at,
-        }))
+        .filter((a: any) => {
+          const desc = a.description || ''
+          return desc.includes('[EVDATE:')
+        })
+        .map((a: any) => {
+          const desc = a.description || ''
+          const dateMatch = desc.match(/\[EVDATE:(\d{4}-\d{2}-\d{2})\]/)
+          const typeMatch = desc.match(/\[EVTYPE:([a-z]+)\]/)
+          const memMatch  = desc.match(/\[EVMEM:([^\]]+)\]/)
+          // Strip encoded prefix to get user's note
+          const note = desc.replace(/\[EV[A-Z]+:[^\]]*\]/g, '').trim() || null
+          return {
+            id: a.id,
+            treeId: a.tree_id,
+            title: a.title,
+            description: note,
+            eventType: ((typeMatch?.[1] || a.type) as FamilyEventType),
+            eventDate: dateMatch?.[1] ?? a.created_at.substring(0, 10),
+            memberId: memMatch?.[1] || null,
+            imageUrl: a.image_url || null,
+            privacy: a.privacy || 'family',
+            createdAt: a.created_at,
+          } as FamilyEvent
+        })
 
       setEvents(mapped)
     } catch (e) {
