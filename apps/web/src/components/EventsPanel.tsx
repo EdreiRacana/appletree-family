@@ -220,7 +220,7 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
           type: eventType,
           title: title.trim(),
           description: fullDescription,
-          privacy: 'family',
+          privacy: 'core',
         })
         if (dbErr) throw dbErr
       }
