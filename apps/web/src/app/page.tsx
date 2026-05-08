@@ -547,6 +547,7 @@ export default function AppleTreeDashboard() {
             bgOpacity={bgOpacity} 
             onOpacityChange={setBgOpacity} 
             members={treeData.members}
+            treeId={currentTreeId}
             activeTab={activeTab}
             onTabChange={setActiveTab}
             onInviteMember={(m) => { setInvitingMember(m); setActiveTab(null); }}
