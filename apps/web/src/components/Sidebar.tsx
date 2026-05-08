@@ -4,17 +4,19 @@ import React, { useState } from 'react'
 import type { Member } from '@/lib/types'
 import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X } from 'lucide-react'
 import NetworkPanel from '@/components/NetworkPanel'
+import EventsPanel from '@/components/EventsPanel'
 
 interface SidebarProps {
   bgOpacity: number
   onOpacityChange: (val: number) => void
   members: Member[]
+  treeId: string
   activeTab: string | null
   onTabChange: (tab: string | null) => void
   onInviteMember: (member: Member) => void
 }
 
-export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab, onTabChange, onInviteMember }: SidebarProps) {
+export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, activeTab, onTabChange, onInviteMember }: SidebarProps) {
 
   const menuItems = [
     { icon: <Home size={34} />, label: 'Home' },
@@ -118,7 +120,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
       </div>
 
       {/* 2. Floating Content Panel (COLOR: #FAEFBC) */}
-      {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && activeTab !== 'Photo Albums' && activeTab !== 'Network' && (
+      {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && activeTab !== 'Photo Albums' && activeTab !== 'Network' && activeTab !== 'Events' && (
         <div style={{
           width: '320px',
           backgroundColor: '#FAEFBC',
@@ -161,26 +163,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
                </div>
              )}
 
-             {/* 📅 EVENTS */}
-             {activeTab === 'Events' && (
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                 {[
-                   { date: 'Oct 24', name: 'Grandma Maria', type: 'Birthday' },
-                   { date: 'Nov 12', name: 'Perez Family', type: 'Anniversary' }
-                 ].map((event, i) => (
-                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 0', borderBottom: '1px solid rgba(44,24,16,0.1)' }}>
-                     <div style={{ backgroundColor: '#2C1810', color: '#FAEFBC', padding: '8px', borderRadius: '8px', minWidth: '50px', textAlign: 'center' }}>
-                        <p style={{ margin: 0, fontSize: '10px', fontWeight: '900' }}>{event.date.split(' ')[0]}</p>
-                        <p style={{ margin: 0, fontSize: '14px', fontWeight: '900' }}>{event.date.split(' ')[1]}</p>
-                     </div>
-                     <div>
-                       <p style={{ margin: 0, fontSize: '14px', fontWeight: '900', color: '#2C1810' }}>{event.name}</p>
-                       <p style={{ margin: 0, fontSize: '11px', color: '#2C1810', opacity: 0.6 }}>{event.type}</p>
-                     </div>
-                   </div>
-                 ))}
-               </div>
-             )}
+             {/* 📅 EVENTS — rendered outside in dedicated panel */}
 
              {/* 🔗 NETWORK — intentionally empty here, rendered outside the panel below */}
 
@@ -257,6 +240,35 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, activeTab
                  </button>
                </div>
              )}
+          </div>
+        </div>
+      )}
+
+      {/* 📅 EVENTS — Dedicated panel */}
+      {activeTab === 'Events' && (
+        <div style={{
+          width: '320px',
+          backgroundColor: '#FAEFBC',
+          borderRadius: '24px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          padding: '25px 28px 28px',
+          border: '2px solid #2C1810',
+          animation: 'slideIn 0.3s ease-out',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: 'calc(100vh - 200px)',
+          overflow: 'hidden',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '950', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
+              Calendario Familiar
+            </h3>
+            <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+              <X size={22} color="#2C1810" style={{ opacity: 0.7 }} />
+            </button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <EventsPanel members={members} treeId={treeId} />
           </div>
         </div>
       )}
