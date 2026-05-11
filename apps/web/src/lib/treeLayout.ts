@@ -22,7 +22,7 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
   const sortedGens = Object.keys(gens).map(Number).sort((a,b) => a - b)
   
   // 2. DIMENSIONS (Calibrated for Top-Down view)
-  const HORIZONTAL_UNIT_GAP = 400 
+  const HORIZONTAL_UNIT_GAP = 280 
   const VERTICAL_GENERATION_GAP = 280 // More room for visual clarity
   const ROOT_Y = 900 // Grandparents (Roots) start at the bottom
   const CENTER_X = 960
