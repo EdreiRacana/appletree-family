@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Calendar, Heart, Trash2, Plus, MessageCircle, Edit3 } from 'lucide-react'
+import { Calendar, Heart, Trash2, Plus, MessageCircle, Edit3, BookOpen, ChevronRight, ChevronLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { FeedActivity } from '@/lib/types'
 import AddStoryModal from './AddStoryModal'
@@ -16,6 +16,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
   const [commentText, setCommentText] = useState<Record<string, string>>({})
   const [storyComments, setStoryComments] = useState<Record<string, any[]>>({})
   const [reactionCounts, setReactionCounts] = useState<Record<string, Record<string, number>>>({})
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   const fetchReactions = async () => {
     try {
@@ -151,7 +152,70 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
   }
 
   return (
-    <div style={panelStyle}>
+    <div style={{
+      position: 'fixed',
+      right: 0,
+      top: '160px',
+      bottom: '40px',
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      zIndex: 1000,
+      transform: isCollapsed ? 'translateX(300px)' : 'translateX(0)',
+      transition: 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+    }}>
+
+      {/* ── Vertical Tab (tongue) ─────────────────────────────────────────── */}
+      <button
+        onClick={() => setIsCollapsed(c => !c)}
+        title={isCollapsed ? 'Mostrar Family Stories' : 'Ocultar Family Stories'}
+        style={{
+          width: '32px',
+          backgroundColor: '#FAEFBC',
+          border: '2px solid #2C1810',
+          borderRight: 'none',
+          borderRadius: '16px 0 0 16px',
+          cursor: 'pointer',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '10px',
+          padding: '14px 0',
+          boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
+          flexShrink: 0,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f0e4a8')}
+        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FAEFBC')}
+      >
+        {/* Chevron icon */}
+        <span style={{ color: '#2C1810', opacity: 0.6, lineHeight: 1 }}>
+          {isCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </span>
+
+        {/* Rotated label */}
+        <span style={{
+          writingMode: 'vertical-rl',
+          transform: 'rotate(180deg)',
+          fontSize: '9px',
+          fontWeight: '900',
+          color: '#2C1810',
+          textTransform: 'uppercase',
+          letterSpacing: '0.12em',
+          opacity: 0.55,
+          userSelect: 'none',
+        }}>
+          Stories
+        </span>
+
+        {/* Icon */}
+        <span style={{ color: '#2C1810', opacity: 0.45, lineHeight: 1 }}>
+          <BookOpen size={13} />
+        </span>
+      </button>
+
+      {/* ── Panel Body ────────────────────────────────────────────────────── */}
+      <div style={panelStyle}>
       {/* Header */}
       <div style={headerStyle}>
         <div>
@@ -286,27 +350,36 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
         )}
       </div>
 
+      </div>
+
       {/* MODAL */}
       {(showAddModal || editingStory) && (
-        <AddStoryModal 
-          treeId={treeId} 
+        <AddStoryModal
+          treeId={treeId}
           initialData={editingStory}
           onClose={() => {
             setShowAddModal(false)
             setEditingStory(null)
-          }} 
-          onSave={fetchStories} 
+          }}
+          onSave={fetchStories}
         />
       )}
+    </div>
     </div>
   )
 }
 
 // STYLES
 const panelStyle: React.CSSProperties = {
-  position: 'fixed', right: '20px', top: '160px', bottom: '40px', width: '300px',
-  backgroundColor: '#FAEFBC', borderRadius: '32px', boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-  display: 'flex', flexDirection: 'column', zIndex: 1000, border: '2px solid #2C1810', overflow: 'hidden'
+  width: '300px',
+  backgroundColor: '#FAEFBC',
+  borderRadius: '0 0 0 0',
+  display: 'flex',
+  flexDirection: 'column',
+  border: '2px solid #2C1810',
+  borderLeft: 'none',
+  overflow: 'hidden',
+  boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
 }
 
 const headerStyle: React.CSSProperties = { 
