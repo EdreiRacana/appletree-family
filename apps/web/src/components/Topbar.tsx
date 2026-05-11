@@ -2,16 +2,19 @@
 
 import React from 'react'
 import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield } from 'lucide-react'
+import type { AppNotification } from '@/lib/useNotifications'
 
 interface TopbarProps {
   onAdd?: () => void
   viewFocus?: 'all' | 'paternal' | 'maternal'
   onViewFocusChange?: (focus: 'all' | 'paternal' | 'maternal') => void
   notificationCount?: number
+  notifications?: AppNotification[]
   onStartMyTree?: () => void
   onShowTutorial?: () => void
   onShowTerms?: () => void
   onClearNotifications?: () => void
+  onNotificationClick?: (action: AppNotification['action']) => void
   userAvatarUrl?: string | null
   showStartTreeBtn?: boolean
 }
@@ -20,21 +23,17 @@ export default function Topbar({
   onAdd, 
   viewFocus = 'all', 
   onViewFocusChange, 
-  notificationCount = 1, 
+  notificationCount = 0,
+  notifications = [],
   onStartMyTree, 
   onShowTutorial,
   onShowTerms,
   onClearNotifications,
+  onNotificationClick,
   userAvatarUrl,
   showStartTreeBtn = false 
 }: TopbarProps) {
   const [showNotifications, setShowNotifications] = React.useState(false)
-
-  const notifications = [
-    { id: 1, text: '✨ ¡Bienvenido Francisco Jr! Tu legado familiar te espera.', time: 'Ahora' },
-    { id: 2, text: '📸 Se ha añadido una nueva foto al álbum "Recuerdos 1990".', time: 'Hace 2h' },
-    { id: 3, text: '🎂 Mañana es el cumpleaños de Francisco Elias.', time: 'Próximamente' }
-  ]
   return (
     <header 
       className="topbar-container"
@@ -243,24 +242,51 @@ export default function Topbar({
 
           {showNotifications && (
             <div style={{
-              position: 'absolute', top: '50px', right: '0', width: '300px',
-              backgroundColor: '#FAEFBC', borderRadius: '16px', border: '2px solid #D4AF37',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.5)', zIndex: 3000, overflow: 'hidden',
+              position: 'absolute', top: '50px', right: '0', width: '320px',
+              backgroundColor: '#FAEFBC', borderRadius: '20px', border: '2px solid #D4AF37',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.5)', zIndex: 3000, overflow: 'hidden',
               animation: 'modalFadeIn 0.2s ease-out'
             }}>
-              <div style={{ padding: '15px', borderBottom: '1px solid rgba(212,175,55,0.2)', backgroundColor: '#D4AF37', color: '#0F1A0F', fontWeight: 'bold', fontSize: '14px' }}>
-                Notificaciones Familiares
+              {/* Header */}
+              <div style={{ padding: '14px 18px', backgroundColor: '#D4AF37', color: '#0F1A0F', fontWeight: '900', fontSize: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>🔔 Notificaciones</span>
+                {notificationCount > 0 && (
+                  <span style={{ fontSize: '11px', backgroundColor: '#0F1A0F', color: '#D4AF37', borderRadius: '20px', padding: '2px 8px', fontWeight: '900' }}>
+                    {notificationCount} nueva{notificationCount !== 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
-              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {notifications.map(n => (
-                  <div key={n.id} style={{ padding: '12px 15px', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#2C1810', lineHeight: '1.4' }}>{n.text}</p>
-                    <span style={{ fontSize: '10px', color: '#8B4513', opacity: 0.6 }}>{n.time}</span>
+
+              {/* List */}
+              <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '30px 18px', textAlign: 'center', color: '#2C1810', opacity: 0.45 }}>
+                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>🌿</div>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: '700' }}>Sin notificaciones nuevas</p>
                   </div>
-                ))}
-              </div>
-              <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: '#8B4513', backgroundColor: 'rgba(212,175,55,0.05)' }}>
-                Ver toda la actividad
+                ) : (
+                  notifications.map(n => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        onNotificationClick?.(n.action)
+                        setShowNotifications(false)
+                      }}
+                      style={{
+                        width: '100%', textAlign: 'left',
+                        padding: '13px 18px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+                        display: 'flex', flexDirection: 'column', gap: '4px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(212,175,55,0.15)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <p style={{ margin: 0, fontSize: '13px', color: '#2C1810', lineHeight: '1.45', fontWeight: '700' }}>{n.text}</p>
+                      <span style={{ fontSize: '10px', color: '#8B4513', opacity: 0.65, fontWeight: '700' }}>{n.time} · {n.action === 'open_events' ? 'Ver Eventos →' : 'Ver Historias →'}</span>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           )}

@@ -14,6 +14,7 @@ import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
+import { useNotifications } from '@/lib/useNotifications'
 
 // Build trigger: v4.1-professional-invites
 
@@ -40,7 +41,6 @@ export default function AppleTreeDashboard() {
   const [loginInputPass, setLoginInputPass] = useState('')
   const [loginError, setLoginError] = useState('')
   const [tutorialStep, setTutorialStep] = useState(0)
-  const [notificationCount, setNotificationCount] = useState(1)
 
   // THE MASTER TREE ID (DEMO)
   const DEMO_TREE_ID = '00000000-0000-0000-0000-000000000001'
@@ -83,9 +83,6 @@ export default function AppleTreeDashboard() {
       }))
 
       setTreeData(prev => {
-        if (prev.members.length > 0 && mappedMembers.length > prev.members.length) {
-          setNotificationCount(n => n + 1)
-        }
         return { members: mappedMembers, relationships: mappedRels }
       })
     } catch (err) {
@@ -94,6 +91,20 @@ export default function AppleTreeDashboard() {
       setLoading(false)
     }
   }, [currentTreeId])
+
+  // Real notification system
+  const { notifications, unreadCount, markAllRead } = useNotifications(currentTreeId, treeData.members)
+
+  // Handle bell click navigation
+  const handleNotificationClick = (action: 'open_events' | 'open_stories') => {
+    if (action === 'open_events') setActiveTab('Events')
+    else if (action === 'open_stories') {
+      // FeedPanel is always visible; just scroll it into view (it's fixed on the right)
+      // We mark all as read and let the user see Family Stories
+      setActiveTab(null)
+    }
+    markAllRead()
+  }
 
   useEffect(() => {
     fetchFamilyData()
@@ -446,7 +457,6 @@ export default function AppleTreeDashboard() {
       }
 
       setCurrentTreeId(newTreeId)
-      setNotificationCount(0)
       setTutorialStep(0)
     } catch (err) {
       console.error('Error starting new tree:', err)
@@ -479,8 +489,10 @@ export default function AppleTreeDashboard() {
         viewFocus={viewFocus} 
         onViewFocusChange={setViewFocus} 
         onAdd={() => {}} 
-        notificationCount={notificationCount} 
-        onClearNotifications={() => setNotificationCount(0)}
+        notificationCount={unreadCount}
+        notifications={notifications}
+        onClearNotifications={markAllRead}
+        onNotificationClick={handleNotificationClick}
         onStartMyTree={handleStartMyTree}
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
