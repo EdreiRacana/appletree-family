@@ -200,26 +200,49 @@ export default function AppleTreeDashboard() {
   }
 
   const handleLogin = () => {
-    if (loginInputUser.toLowerCase() === 'francisco' && loginInputPass === 'admin') {
+    // ── Family user registry ──────────────────────────────────────────────────
+    // To add a new member: { password, fullName, treeId (optional) }
+    // If treeId is set → user lands directly on that tree (no tutorial).
+    // If treeId is omitted → uses Francisco's localStorage flow (admin).
+    const FRANCISCO_TREE_ID = '4508d01c-2cdf-43eb-80d5-2d0d40989c63'
+    const FAMILY_USERS: Record<string, { password: string; fullName: string; treeId?: string }> = {
+      'francisco': { password: 'admin', fullName: 'Francisco' },
+      'eber':      { password: 'admin', fullName: 'Eber',  treeId: FRANCISCO_TREE_ID },
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const key = loginInputUser.toLowerCase().trim()
+    const matched = FAMILY_USERS[key]
+
+    if (matched && loginInputPass === matched.password) {
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('currentUser', 'Francisco');
-        const savedTreeId = window.localStorage.getItem('apple_user_tree_id');
-        const skippedTutorial = window.localStorage.getItem('apple_tutorial_skipped') === 'true';
-        
-        if (savedTreeId) {
-          setCurrentTreeId(savedTreeId);
-          setTutorialStep(0);
-        } else if (skippedTutorial) {
-          setTutorialStep(0);
+        window.localStorage.setItem('currentUser', matched.fullName)
+
+        if (matched.treeId) {
+          // Guest family member → go straight to the family tree, skip tutorial
+          window.localStorage.setItem('apple_user_tree_id', matched.treeId)
+          window.localStorage.setItem('apple_tutorial_skipped', 'true')
+          setCurrentTreeId(matched.treeId)
+          setTutorialStep(0)
         } else {
-          setTutorialStep(1);
+          // Francisco (admin) → original flow with tutorial & localStorage
+          const savedTreeId = window.localStorage.getItem('apple_user_tree_id')
+          const skippedTutorial = window.localStorage.getItem('apple_tutorial_skipped') === 'true'
+          if (savedTreeId) {
+            setCurrentTreeId(savedTreeId)
+            setTutorialStep(0)
+          } else if (skippedTutorial) {
+            setTutorialStep(0)
+          } else {
+            setTutorialStep(1)
+          }
         }
       } else {
-        setTutorialStep(1);
+        setTutorialStep(1)
       }
-      setIsLoggedIn(true);
+      setIsLoggedIn(true)
     } else {
-      setLoginError('Credenciales incorrectas');
+      setLoginError('Credenciales incorrectas')
     }
   }
 
