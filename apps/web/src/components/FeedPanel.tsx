@@ -365,7 +365,6 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
         />
       )}
     </div>
-    </div>
   )
 }
 
