@@ -31,6 +31,12 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
     }
   }
 
+  // Strip encoded event tags from description (safety net)
+  const cleanDescription = (desc: string | null | undefined): string | null => {
+    if (!desc) return null
+    return desc.replace(/\[EV[A-Z]+:[^\]]*\]/g, '').trim() || null
+  }
+
   const fetchStories = async () => {
     try {
       const { data, error } = await supabase
@@ -41,17 +47,20 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
 
       if (error) throw error
       
-      const mapped: FeedActivity[] = (data || []).map((a: any) => ({
-        id: a.id,
-        treeId: a.tree_id,
-        activityType: a.type,
-        title: a.title,
-        description: a.description,
-        imageUrl: a.image_url,
-        metadata: a.metadata || {},
-        privacy: a.privacy,
-        createdAt: a.created_at
-      }))
+      const mapped: FeedActivity[] = (data || [])
+        // Exclude activities that are Events (created by EventsPanel)
+        .filter((a: any) => !(a.description || '').includes('[EVDATE:'))
+        .map((a: any) => ({
+          id: a.id,
+          treeId: a.tree_id,
+          activityType: a.type,
+          title: a.title,
+          description: cleanDescription(a.description),
+          imageUrl: a.image_url,
+          metadata: a.metadata || {},
+          privacy: a.privacy,
+          createdAt: a.created_at
+        }))
 
       setStories(mapped)
       fetchReactions()
