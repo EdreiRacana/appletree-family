@@ -240,7 +240,7 @@ export default function AppleTreeDashboard() {
           position: 'absolute', 
           inset: 0, 
           opacity: 0.15, 
-          backgroundImage: 'url(/assets/image_19.png)', 
+          backgroundImage: 'url(/assets/arbol-base.png)', 
           backgroundSize: 'cover', 
           backgroundPosition: 'center',
           filter: 'blur(2px)'
