@@ -373,7 +373,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
 const panelStyle: React.CSSProperties = {
   width: '300px',
   backgroundColor: '#FAEFBC',
-  borderRadius: '0 0 0 0',
+  borderRadius: '0 32px 32px 0',
   display: 'flex',
   flexDirection: 'column',
   border: '2px solid #2C1810',
