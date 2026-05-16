@@ -94,18 +94,19 @@ function deriveGenerations(
   )
 
   // Siblings: same generation AND share at least one parent with focus
-  //           (fallback: same generation number when no parent data)
+  // If no parent data exists, only include the focus itself to avoid showing
+  // unrelated members as siblings.
   const parentSet = new Set(focus.parents ?? [])
   let siblings = members.filter(m => {
     if ((m.generation ?? 0) !== focusGen) return false
-    // Include focus itself always
+    // Always include focus itself
     if (m.id === focus.id) return true
     // Share a parent?
     if (parentSet.size > 0) {
       return (m.parents ?? []).some(pid => parentSet.has(pid))
     }
-    // Fallback: same generation
-    return true
+    // No parent data → don't assume membership, only show the focus
+    return false
   })
 
   // Sort siblings by first name for stable ordering
@@ -189,16 +190,18 @@ export default function MobileTreeView({
   const focusMember = members.find(m => m.id === focusMemberId)
   const siblingCount = siblings.length
 
-  // How many siblings to show on each side of the focus (max 2 per side)
+  // How many siblings to show on each side of the focus (max 2 per side).
+  // We use plain array slicing (no circular wrapping) so members never repeat.
   const MAX_SIDE = 2
   const visibleSiblings: { member: Member; variant: 'focus' | 'sibling' }[] = []
 
-  for (let i = focusIndex - MAX_SIDE; i <= focusIndex + MAX_SIDE; i++) {
-    const idx = ((i % siblingCount) + siblingCount) % siblingCount
-    if (siblingCount === 0) break
+  const startIdx = Math.max(0, focusIndex - MAX_SIDE)
+  const endIdx   = Math.min(siblingCount - 1, focusIndex + MAX_SIDE)
+
+  for (let i = startIdx; i <= endIdx; i++) {
     visibleSiblings.push({
-      member: siblings[idx],
-      variant: idx === focusIndex ? 'focus' : 'sibling',
+      member: siblings[i],
+      variant: i === focusIndex ? 'focus' : 'sibling',
     })
   }
 
