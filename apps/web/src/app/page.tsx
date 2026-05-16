@@ -12,6 +12,8 @@ import InviteMemberModal from '@/components/tree/InviteMemberModal'
 import PhotoAlbums from '@/components/PhotoAlbums'
 import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
+import MobileBottomSheet from '@/components/MobileBottomSheet'
+import MobileBottomNav from '@/components/MobileBottomNav'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
 import { useNotifications } from '@/lib/useNotifications'
@@ -31,6 +33,8 @@ export default function AppleTreeDashboard() {
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
   const [storyActor, setStoryActor] = useState<Member | null>(null)
   const [activeTab, setActiveTab] = useState<string | null>('My Tree')
+  const [mobileActiveTab, setMobileActiveTab] = useState<string>('My Tree')
+  const [mobileSheetMember, setMobileSheetMember] = useState<Member | null>(null)
   const [viewFocus, setViewFocus] = useState<'all' | 'paternal' | 'maternal'>('all')
   const [isTermsOpen, setIsTermsOpen] = useState(false)
   const [userProfileAvatar, setUserProfileAvatar] = useState<string | null>(null)
@@ -530,7 +534,15 @@ export default function AppleTreeDashboard() {
               members={filteredMembers} 
               relationships={filteredRelationships} 
               onRefresh={fetchFamilyData}
-              onViewProfile={setSelectedMember}
+              onViewProfile={(m) => {
+                // Mobile: open bottom sheet. Desktop: open side panel.
+                const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+                if (isMobile) {
+                  setMobileSheetMember(m)
+                } else {
+                  setSelectedMember(m)
+                }
+              }}
               onEditMember={setEditingMember}
               onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); }}
               bgOpacity={bgOpacity}
@@ -593,6 +605,43 @@ export default function AppleTreeDashboard() {
           <FeedPanel refreshTrigger={treeData.members.length} treeId={currentTreeId} />
         </div>
       </div>
+
+      {/* ── MOBILE BOTTOM SHEET ───────────────────────────────────────── */}
+      <MobileBottomSheet
+        member={mobileSheetMember}
+        focusMember={mobileSheetMember}
+        onClose={() => setMobileSheetMember(null)}
+        onEdit={(m) => { setEditingMember(m); setMobileSheetMember(null); }}
+        onAdd={(m) => { window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m })); setMobileSheetMember(null); }}
+        onDelete={async (m) => {
+          if (!window.confirm(`¿Eliminar a ${m.firstName} ${m.lastName}? Esta acción no se puede deshacer.`)) return
+          try {
+            await (await import('@/lib/supabase')).supabase
+              .from('relationships').delete()
+              .or(`member1_id.eq.${m.id},member2_id.eq.${m.id}`)
+            await (await import('@/lib/supabase')).supabase
+              .from('members').delete().eq('id', m.id)
+            fetchFamilyData()
+          } catch { /* handled by TreeCanvas */ }
+          setMobileSheetMember(null)
+        }}
+        onViewProfile={(m) => { setSelectedMember(m); setMobileSheetMember(null); }}
+        onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); setMobileSheetMember(null); }}
+      />
+
+      {/* ── MOBILE BOTTOM NAV ─────────────────────────────────────────── */}
+      <MobileBottomNav
+        activeTab={mobileActiveTab}
+        onTabChange={(tab) => {
+          setMobileActiveTab(tab)
+          // Mirror to desktop tab system where applicable
+          if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums') {
+            setActiveTab(tab)
+          } else {
+            setActiveTab(null)
+          }
+        }}
+      />
 
         {/* TUTORIAL OVERLAY */}
         {tutorialStep > 0 && (
