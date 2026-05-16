@@ -8,6 +8,19 @@ import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
 import EditMemberModal from './EditMemberModal'
 import AddMemberModal from './AddMemberModal'
+import MobileTreeView from './MobileTreeView'
+
+// ── Mobile detection hook ────────────────────────────────────────
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  return isMobile
+}
 
 interface TreeCanvasProps {
   members: Member[]
@@ -20,6 +33,7 @@ interface TreeCanvasProps {
 }
 
 export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity }: TreeCanvasProps) {
+  const isMobile = useIsMobile()
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -158,6 +172,29 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     }
   }
 
+  // ── MOBILE: delegate to dedicated mobile view ─────────────────
+  if (isMobile) {
+    return (
+      <>
+        <MobileTreeView
+          members={members}
+          relationships={relationships}
+          onMemberTap={onViewProfile}
+          onDeleteMember={async (member) => { await handleDeleteMember(member) }}
+        />
+        {addingToMember && (
+          <AddMemberModal
+            targetMember={addingToMember}
+            relationships={relationships}
+            onClose={() => { setAddingToMember(null) }}
+            onSave={onRefresh}
+          />
+        )}
+      </>
+    )
+  }
+
+  // ── DESKTOP: original render (zero changes below) ─────────────
   return (
     <div
       ref={containerRef}
