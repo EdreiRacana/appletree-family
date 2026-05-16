@@ -515,6 +515,35 @@ html, body {
   }
 }
 
+/* --- MOBILE TOPBAR OVERRIDE --- */
+@media (max-width: 768px) {
+  .topbar-container {
+    height: 60px !important;
+    padding: 0 14px !important;
+  }
+
+  /* Hide non-essential topbar elements on mobile */
+  .topbar-container .mobile-hide,
+  .topbar-container .topbar-btn {
+    display: none !important;
+  }
+
+  /* Shrink the logo on mobile */
+  .topbar-container .brand-logo-container {
+    height: 38px !important;
+  }
+
+  .topbar-container .brand-title {
+    font-size: 12px !important;
+  }
+
+  /* Make filter toggle smaller */
+  .topbar-container button[style] {
+    padding: 5px 10px !important;
+    font-size: 9px !important;
+  }
+}
+
 /* --- MOBILE TREE VIEW --- */
 @media (max-width: 768px) {
   .mobile-tree-container {
