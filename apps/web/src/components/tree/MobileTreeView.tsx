@@ -16,7 +16,6 @@ function getAvatarUrl(member: Member): string {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.firstName)}&backgroundColor=d4af37&fontFamily=Playfair%20Display`
 }
 
-// ── Derive first name (truncated) ─────────────────────────────────
 function shortName(member: Member): string {
   return member.firstName.length > 8
     ? member.firstName.slice(0, 7) + '…'
@@ -64,99 +63,89 @@ function MobileApple({
   )
 }
 
-// ── Build adjacency maps from the relationships array ────────────
-interface AdjacencyMaps {
-  parentOf: Map<string, Set<string>>   // parentId → Set of childIds
-  childOf:  Map<string, Set<string>>   // childId  → Set of parentIds
-  spouseOf: Map<string, Set<string>>   // memberId → Set of spouseIds
-  siblingOf: Map<string, Set<string>>  // memberId → Set of siblingIds (share ≥1 parent)
-}
+// ── Core data derivation ──────────────────────────────────────────
+// Uses member.parents[] and member.spouses[] (populated from DB)
+// as the primary source of truth, supplemented by the relationships table.
 
-function buildAdjacency(relationships: Relationship[]): AdjacencyMaps {
-  const parentOf  = new Map<string, Set<string>>()
-  const childOf   = new Map<string, Set<string>>()
-  const spouseOf  = new Map<string, Set<string>>()
-
-  const ensure = (map: Map<string, Set<string>>, key: string) => {
-    if (!map.has(key)) map.set(key, new Set())
-    return map.get(key)!
-  }
-
-  for (const rel of relationships) {
-    const { member1Id: m1, member2Id: m2, relationship: type } = rel
-
-    if (type === 'parent') {
-      // m1 is parent of m2
-      ensure(parentOf, m1).add(m2)
-      ensure(childOf,  m2).add(m1)
-    } else if (type === 'child') {
-      // m1 is child of m2
-      ensure(parentOf, m2).add(m1)
-      ensure(childOf,  m1).add(m2)
-    } else if (type === 'spouse') {
-      ensure(spouseOf, m1).add(m2)
-      ensure(spouseOf, m2).add(m1)
-    }
-  }
-
-  // Build sibling map: members who share ≥1 parent
-  const siblingOf = new Map<string, Set<string>>()
-  for (const [parentId, children] of parentOf.entries()) {
-    const childArr = [...children]
-    for (const c1 of childArr) {
-      for (const c2 of childArr) {
-        if (c1 !== c2) {
-          ensure(siblingOf, c1).add(c2)
-        }
-      }
-    }
-  }
-
-  return { parentOf, childOf, spouseOf, siblingOf }
-}
-
-// ── Derive what to show given a focused member ───────────────────
 interface GenerationView {
   parents:   Member[]
-  siblings:  Member[]   // includes the focus member itself
-  children:  Member[]
+  siblings:  Member[]   // includes focus member itself
   spouses:   Member[]
+  children:  Member[]
   focusIndex: number
 }
 
 function deriveView(
   focusId: string,
   members: Member[],
-  adj: AdjacencyMaps,
+  relationships: Relationship[],
 ): GenerationView {
   const byId = new Map(members.map(m => [m.id, m]))
+  const focus = byId.get(focusId)
+  if (!focus) return { parents: [], siblings: [members[0]].filter(Boolean), spouses: [], children: [], focusIndex: 0 }
 
-  const resolve = (ids: Set<string> | undefined): Member[] =>
-    [...(ids ?? [])].map(id => byId.get(id)).filter(Boolean) as Member[]
+  // ── Parents: from member.parents[] field ──────────────────────
+  const parents: Member[] = (focus.parents ?? [])
+    .map(pid => byId.get(pid))
+    .filter(Boolean) as Member[]
 
-  const parents  = resolve(adj.childOf.get(focusId))
-  const children = resolve(adj.parentOf.get(focusId))
-  const spouses  = resolve(adj.spouseOf.get(focusId))
+  // ── Children: members whose parents[] contains focusId ────────
+  const children: Member[] = members.filter(m =>
+    m.id !== focusId && (m.parents ?? []).includes(focusId)
+  )
 
-  // Siblings = members who share ≥1 parent with focus AND are not the focus itself
-  const siblingIds = adj.siblingOf.get(focusId) ?? new Set<string>()
-  const siblingsRaw = resolve(siblingIds)
+  // ── Spouses: from member.spouses[] field + relationships table ─
+  const spouseIdsFromField = new Set<string>(focus.spouses ?? [])
 
-  // Build the sibling row: [focus] + siblings, sorted by name, deduplicated
-  const seen = new Set<string>([focusId])
-  const focusMember = byId.get(focusId)
-  const siblings: Member[] = focusMember ? [focusMember] : []
-  for (const s of siblingsRaw.sort((a, b) => a.firstName.localeCompare(b.firstName))) {
-    if (!seen.has(s.id)) {
-      seen.add(s.id)
-      siblings.push(s)
+  // Also check the relationships table for 'spouse' type
+  for (const rel of relationships) {
+    if (rel.relationship === 'spouse') {
+      if (rel.member1Id === focusId) spouseIdsFromField.add(rel.member2Id)
+      if (rel.member2Id === focusId) spouseIdsFromField.add(rel.member1Id)
     }
   }
-  // Sort the whole row by name
+
+  const spouses: Member[] = [...spouseIdsFromField]
+    .map(sid => byId.get(sid))
+    .filter(Boolean) as Member[]
+
+  // ── Siblings: members who share ≥1 parent with focus ──────────
+  const focusParentSet = new Set(focus.parents ?? [])
+
+  let siblings: Member[] = []
+
+  if (focusParentSet.size > 0) {
+    // Proper sibling detection: share a parent via parents[] field
+    siblings = members.filter(m => {
+      if (m.id === focusId) return true  // always include focus
+      return (m.parents ?? []).some(pid => focusParentSet.has(pid))
+    })
+  } else {
+    // No parent info → focus is a root; show focus + spouses in "middle row"
+    siblings = [focus]
+  }
+
+  // Also include anyone with a 'sibling' relationship in the relationships table
+  for (const rel of relationships) {
+    if (rel.relationship === 'sibling') {
+      const sibId = rel.member1Id === focusId ? rel.member2Id
+                  : rel.member2Id === focusId ? rel.member1Id
+                  : null
+      if (sibId) {
+        const sib = byId.get(sibId)
+        if (sib && !siblings.find(s => s.id === sibId)) {
+          siblings.push(sib)
+        }
+      }
+    }
+  }
+
+  // Sort by name for stable ordering
   siblings.sort((a, b) => a.firstName.localeCompare(b.firstName))
+
   const focusIndex = Math.max(0, siblings.findIndex(m => m.id === focusId))
 
-  return { parents, siblings, children, spouses, focusIndex }
+  return { parents, siblings, spouses, children, focusIndex }
 }
 
 // ── Main component ────────────────────────────────────────────────
@@ -164,46 +153,43 @@ export default function MobileTreeView({
   members,
   relationships,
   onMemberTap,
-  onDeleteMember,
 }: MobileTreeViewProps) {
-  // Build adjacency once when data changes
-  const adj = useMemo(() => buildAdjacency(relationships), [relationships])
+  const byId = useMemo(() => new Map(members.map(m => [m.id, m])), [members])
 
-  // Choose initial focus: prefer generation=0, then first member with children, then first
-  const initialFocus = useMemo(() => {
-    if (members.length === 0) return null
-    // Try generation 0
+  // Initial focus: prefer generation 0, else member with most children, else first
+  const initialFocusId = useMemo(() => {
+    if (members.length === 0) return ''
     const gen0 = members.find(m => (m.generation ?? 0) === 0)
-    if (gen0) return gen0
-    // Try member that has children
-    const withChildren = members.find(m => (adj.parentOf.get(m.id)?.size ?? 0) > 0)
-    if (withChildren) return withChildren
-    return members[0]
-  }, [members, adj])
+    if (gen0) return gen0.id
+    const withKids = [...members].sort((a, b) => {
+      const ac = members.filter(m => (m.parents ?? []).includes(a.id)).length
+      const bc = members.filter(m => (m.parents ?? []).includes(b.id)).length
+      return bc - ac
+    })[0]
+    return withKids?.id ?? members[0]?.id ?? ''
+  }, [members])
 
-  const [focusMemberId, setFocusMemberId] = useState<string>(initialFocus?.id ?? '')
+  const [focusMemberId, setFocusMemberId] = useState<string>(initialFocusId)
 
-  // Sync if members list changes and current focus is gone
+  // Sync if members change and current focus no longer exists
   useEffect(() => {
     if (members.length === 0) return
-    if (!members.find(m => m.id === focusMemberId)) {
-      const fallback = members.find(m => (m.generation ?? 0) === 0) ?? members[0]
-      if (fallback) setFocusMemberId(fallback.id)
+    if (!byId.has(focusMemberId)) {
+      setFocusMemberId(initialFocusId)
     }
-  }, [members, focusMemberId])
+  }, [members, byId, focusMemberId, initialFocusId])
 
-  // Swipe state
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
 
-  const { parents, siblings, children, spouses, focusIndex } = useMemo(
-    () => deriveView(focusMemberId, members, adj),
-    [focusMemberId, members, adj],
+  const { parents, siblings, spouses, children, focusIndex } = useMemo(
+    () => deriveView(focusMemberId, members, relationships),
+    [focusMemberId, members, relationships],
   )
 
   const siblingCount = siblings.length
 
-  // Navigate to adjacent sibling (no wrap)
+  // Navigate to adjacent sibling — no circular wrap, so never repeats
   const goToSibling = useCallback((direction: 'left' | 'right') => {
     const nextIdx = direction === 'left'
       ? Math.max(0, focusIndex - 1)
@@ -226,9 +212,9 @@ export default function MobileTreeView({
 
   const handleMemberTap = (member: Member) => {
     if (member.id === focusMemberId) {
-      onMemberTap(member)
+      onMemberTap(member)   // second tap → open bottom sheet
     } else {
-      setFocusMemberId(member.id)
+      setFocusMemberId(member.id)  // first tap → re-focus
     }
   }
 
@@ -240,15 +226,14 @@ export default function MobileTreeView({
     )
   }
 
-  const focusMember = members.find(m => m.id === focusMemberId)
+  const focusMember = byId.get(focusMemberId)
 
-  // Visible siblings: up to 2 on each side of focus (no circular wrap → no repeats)
+  // Visible siblings: up to 2 on each side of focus, no circular wrapping → no repeats
   const MAX_SIDE = 2
   const startIdx = Math.max(0, focusIndex - MAX_SIDE)
   const endIdx   = Math.min(siblingCount - 1, focusIndex + MAX_SIDE)
   const visibleSiblings = siblings.slice(startIdx, endIdx + 1)
 
-  // Limit rows for readability
   const visibleParents  = parents.slice(0, 6)
   const visibleChildren = children.slice(0, 6)
   const visibleSpouses  = spouses.slice(0, 3)
@@ -274,23 +259,16 @@ export default function MobileTreeView({
           <p className="mobile-row-label">Hijos</p>
           <div className="mobile-gen-row">
             {visibleChildren.map(child => (
-              <MobileApple
-                key={child.id}
-                member={child}
-                variant="side"
-                onClick={() => handleMemberTap(child)}
-              />
+              <MobileApple key={child.id} member={child} variant="side" onClick={() => handleMemberTap(child)} />
             ))}
           </div>
           <svg className="mobile-gen-connector" viewBox="0 0 320 32" preserveAspectRatio="none">
-            <line x1="160" y1="0" x2="160" y2="32"
-              stroke="#D4AF37" strokeWidth="1.5" strokeOpacity="0.4"
-              strokeDasharray="3,3" />
+            <line x1="160" y1="0" x2="160" y2="32" stroke="#D4AF37" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="3,3" />
           </svg>
         </>
       )}
 
-      {/* ── ROW: SIBLINGS / FOCUS (MEDIO) ── */}
+      {/* ── ROW: FOCUS / SIBLINGS (MEDIO) ── */}
       <div className="mobile-gen-row" style={{ gap: '8px', padding: '6px 12px' }}>
         {visibleSiblings.map(member => (
           <MobileApple
@@ -301,23 +279,18 @@ export default function MobileTreeView({
           />
         ))}
 
-        {/* Spouse(s) shown next to focus with a small heart separator */}
+        {/* Spouse(s) next to focus */}
         {visibleSpouses.length > 0 && (
           <>
-            <span style={{ color: '#D4AF37', alignSelf: 'center', fontSize: 16, opacity: 0.6 }}>♡</span>
+            <span style={{ color: '#D4AF37', alignSelf: 'center', fontSize: 14, opacity: 0.55, flexShrink: 0 }}>♡</span>
             {visibleSpouses.map(spouse => (
-              <MobileApple
-                key={spouse.id}
-                member={spouse}
-                variant="side"
-                onClick={() => handleMemberTap(spouse)}
-              />
+              <MobileApple key={spouse.id} member={spouse} variant="side" onClick={() => handleMemberTap(spouse)} />
             ))}
           </>
         )}
       </div>
 
-      {/* Navigation dots (swipe indicator) */}
+      {/* Navigation dots */}
       {siblingCount > 1 && (
         <div className="mobile-nav-dots">
           {siblings.map((_, i) => (
@@ -333,9 +306,7 @@ export default function MobileTreeView({
       {/* Connector: focus → parents */}
       {visibleParents.length > 0 && (
         <svg className="mobile-gen-connector" viewBox="0 0 320 32" preserveAspectRatio="none">
-          <line x1="160" y1="0" x2="160" y2="32"
-            stroke="#D4AF37" strokeWidth="1.5" strokeOpacity="0.4"
-            strokeDasharray="3,3" />
+          <line x1="160" y1="0" x2="160" y2="32" stroke="#D4AF37" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="3,3" />
         </svg>
       )}
 
@@ -344,12 +315,7 @@ export default function MobileTreeView({
         <>
           <div className="mobile-gen-row">
             {visibleParents.map(parent => (
-              <MobileApple
-                key={parent.id}
-                member={parent}
-                variant="side"
-                onClick={() => handleMemberTap(parent)}
-              />
+              <MobileApple key={parent.id} member={parent} variant="side" onClick={() => handleMemberTap(parent)} />
             ))}
           </div>
           <p className="mobile-row-label" style={{ marginTop: 4 }}>Padres / Abuelos</p>
@@ -359,14 +325,9 @@ export default function MobileTreeView({
       {/* Hint */}
       {focusMember && (
         <p style={{
-          position: 'absolute',
-          bottom: 76,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: 10,
-          color: 'rgba(245,240,224,0.3)',
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none'
+          position: 'absolute', bottom: 76, left: '50%',
+          transform: 'translateX(-50%)', fontSize: 10,
+          color: 'rgba(245,240,224,0.3)', whiteSpace: 'nowrap', pointerEvents: 'none'
         }}>
           Toca {focusMember.firstName} de nuevo para ver opciones
         </p>
