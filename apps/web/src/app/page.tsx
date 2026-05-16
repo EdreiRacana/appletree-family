@@ -724,7 +724,10 @@ export default function AppleTreeDashboard() {
         body { margin: 0; padding: 0; background-color: #1B2E1B; overflow: hidden; }
         @media (max-width: 768px) {
           .hide-on-mobile { display: none !important; }
-          .main-layout { height: calc(100vh - 100px) !important; margin-top: 100px !important; }
+          .main-layout {
+            height: calc(100vh - 60px - 64px) !important;
+            margin-top: 60px !important;
+          }
         }
         @keyframes modalFadeIn {
           from { opacity: 0; transform: scale(0.95) translateY(10px) translate(-50%, -50%); }
