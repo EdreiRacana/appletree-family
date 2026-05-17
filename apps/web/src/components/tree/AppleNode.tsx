@@ -181,6 +181,7 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
           </div>
         )}
         </div>
+        </div>
       </div>
 
       {showNameBelow && (
