@@ -129,6 +129,22 @@ export default function MobileTreeView({
     msOverflowStyle: 'none'
   }
 
+  const labelStyle: React.CSSProperties = {
+    fontSize: '9px',
+    color: '#D4AF37',
+    letterSpacing: '0.15em',
+    textTransform: 'uppercase',
+    margin: '8px 0',
+    fontWeight: '600',
+    zIndex: 1
+  }
+
+  const Connector = () => (
+    <svg width="2" height="32" style={{ margin: '4px 0', opacity: 0.4, zIndex: 1 }}>
+      <line x1="1" y1="0" x2="1" y2="32" stroke="#D4AF37" strokeWidth="1.5" strokeDasharray="3,3" />
+    </svg>
+  )
+
   return (
     <div 
       className="mobile-tree-container"
@@ -141,7 +157,8 @@ export default function MobileTreeView({
         width: '100%',
         position: 'relative',
         overflow: 'hidden',
-        gap: '40px'
+        paddingTop: '20px',
+        paddingBottom: '20px'
       }}
     >
       <div style={{
@@ -153,19 +170,23 @@ export default function MobileTreeView({
 
       {/* ARRIBA: Hijos */}
       {childrenRow.length > 0 && (
-        <div style={{ ...rowStyle, zIndex: 1, justifyContent: childrenRow.length > 4 ? 'flex-start' : 'center' }}>
-          {childrenRow.map(m => (
-            <AppleNode 
-              key={`child-${m.id}`} 
-              member={m} 
-              isHovered={false} 
-              size={40} 
-              hideText={true} 
-              showNameBelow={true} 
-              onClick={() => handleTap(m)} 
-            />
-          ))}
-        </div>
+        <>
+          <p style={labelStyle}>Hijos</p>
+          <div style={{ ...rowStyle, zIndex: 1, justifyContent: childrenRow.length > 4 ? 'flex-start' : 'center' }}>
+            {childrenRow.map(m => (
+              <AppleNode 
+                key={`child-${m.id}`} 
+                member={m} 
+                isHovered={false} 
+                size={40} 
+                hideText={true} 
+                showNameBelow={true} 
+                onClick={() => handleTap(m)} 
+              />
+            ))}
+          </div>
+          <Connector />
+        </>
       )}
 
       {/* CENTRO: Nodo Central + Parejas y Puntos de Navegación */}
@@ -213,19 +234,23 @@ export default function MobileTreeView({
 
       {/* ABAJO: Padres */}
       {parentsRow.length > 0 && (
-        <div style={{ ...rowStyle, zIndex: 1, justifyContent: 'center' }}>
-          {parentsRow.map(p => (
-            <AppleNode 
-              key={`parent-${p.id}`} 
-              member={p} 
-              isHovered={false} 
-              size={40} 
-              hideText={true} 
-              showNameBelow={true} 
-              onClick={() => handleTap(p)} 
-            />
-          ))}
-        </div>
+        <>
+          <Connector />
+          <p style={labelStyle}>Padres / Abuelos</p>
+          <div style={{ ...rowStyle, zIndex: 1, justifyContent: 'center' }}>
+            {parentsRow.map(p => (
+              <AppleNode 
+                key={`parent-${p.id}`} 
+                member={p} 
+                isHovered={false} 
+                size={40} 
+                hideText={true} 
+                showNameBelow={true} 
+                onClick={() => handleTap(p)} 
+              />
+            ))}
+          </div>
+        </>
       )}
       
       <style>{`
