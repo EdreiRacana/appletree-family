@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import type { Member, Relationship } from '@/lib/types'
+import AppleNode from './AppleNode'
 
 interface MobileTreeViewProps {
   members: Member[]
@@ -10,145 +11,6 @@ interface MobileTreeViewProps {
   onDeleteMember: (member: Member) => void
 }
 
-// ── Avatar helper ─────────────────────────────────────────────────
-function getAvatarUrl(member: Member): string {
-  if (member.avatarUrl) return member.avatarUrl
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(member.firstName)}&backgroundColor=d4af37&fontFamily=Playfair%20Display`
-}
-
-function shortName(member: Member): string {
-  return member.firstName.length > 8
-    ? member.firstName.slice(0, 7) + '…'
-    : member.firstName
-}
-
-// ── Image with error fallback ─────────────────────────────────────
-function AppleImage({ src, alt }: { src: string; alt: string }) {
-  const [err, setErr] = useState(false)
-  const fallback = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(alt)}&backgroundColor=d4af37`
-  return (
-    <img
-      src={err ? fallback : src}
-      alt={alt}
-      className="mobile-apple-img"
-      onError={() => setErr(true)}
-    />
-  )
-}
-
-// ── Single apple node ─────────────────────────────────────────────
-function MobileApple({
-  member,
-  variant,
-  onClick,
-}: {
-  member: Member
-  variant: 'focus' | 'sibling' | 'side'
-  onClick: () => void
-}) {
-  const containerClass =
-    variant === 'focus'
-      ? 'mobile-apple-focus'
-      : variant === 'sibling'
-      ? 'mobile-apple-sibling'
-      : 'mobile-apple-side'
-
-  return (
-    <div className="mobile-apple-wrapper" onClick={onClick}>
-      <div className={containerClass}>
-        <AppleImage src={getAvatarUrl(member)} alt={member.firstName} />
-      </div>
-      <span className="mobile-apple-name">{shortName(member)}</span>
-    </div>
-  )
-}
-
-// ── Core data derivation ──────────────────────────────────────────
-// Uses member.parents[] and member.spouses[] (populated from DB)
-// as the primary source of truth, supplemented by the relationships table.
-
-interface GenerationView {
-  parents:   Member[]
-  siblings:  Member[]   // includes focus member itself
-  spouses:   Member[]
-  children:  Member[]
-  focusIndex: number
-}
-
-function deriveView(
-  focusId: string,
-  members: Member[],
-  relationships: Relationship[],
-): GenerationView {
-  const byId = new Map(members.map(m => [m.id, m]))
-  const focus = byId.get(focusId)
-  if (!focus) return { parents: [], siblings: [members[0]].filter(Boolean), spouses: [], children: [], focusIndex: 0 }
-
-  // ── Parents: from member.parents[] field ──────────────────────
-  const parents: Member[] = (focus.parents ?? [])
-    .map(pid => byId.get(pid))
-    .filter(Boolean) as Member[]
-
-  // ── Children: members whose parents[] contains focusId ────────
-  const children: Member[] = members.filter(m =>
-    m.id !== focusId && (m.parents ?? []).includes(focusId)
-  )
-
-  // ── Spouses: from member.spouses[] field + relationships table ─
-  const spouseIdsFromField = new Set<string>(focus.spouses ?? [])
-
-  // Also check the relationships table for 'spouse' type
-  for (const rel of relationships) {
-    if (rel.relationship === 'spouse') {
-      if (rel.member1Id === focusId) spouseIdsFromField.add(rel.member2Id)
-      if (rel.member2Id === focusId) spouseIdsFromField.add(rel.member1Id)
-    }
-  }
-
-  const spouses: Member[] = [...spouseIdsFromField]
-    .map(sid => byId.get(sid))
-    .filter(Boolean) as Member[]
-
-  // ── Siblings: members who share ≥1 parent with focus ──────────
-  const focusParentSet = new Set(focus.parents ?? [])
-
-  let siblings: Member[] = []
-
-  if (focusParentSet.size > 0) {
-    // Proper sibling detection: share a parent via parents[] field
-    siblings = members.filter(m => {
-      if (m.id === focusId) return true  // always include focus
-      return (m.parents ?? []).some(pid => focusParentSet.has(pid))
-    })
-  } else {
-    // No parent info → focus is a root; show focus + spouses in "middle row"
-    siblings = [focus]
-  }
-
-  // Also include anyone with a 'sibling' relationship in the relationships table
-  for (const rel of relationships) {
-    if (rel.relationship === 'sibling') {
-      const sibId = rel.member1Id === focusId ? rel.member2Id
-                  : rel.member2Id === focusId ? rel.member1Id
-                  : null
-      if (sibId) {
-        const sib = byId.get(sibId)
-        if (sib && !siblings.find(s => s.id === sibId)) {
-          siblings.push(sib)
-        }
-      }
-    }
-  }
-
-  // Sort by name for stable ordering
-  siblings.sort((a, b) => a.firstName.localeCompare(b.firstName))
-
-  const focusIndex = Math.max(0, siblings.findIndex(m => m.id === focusId))
-
-  return { parents, siblings, spouses, children, focusIndex }
-}
-
-// ── Main component ────────────────────────────────────────────────
 export default function MobileTreeView({
   members,
   relationships,
@@ -156,22 +18,17 @@ export default function MobileTreeView({
 }: MobileTreeViewProps) {
   const byId = useMemo(() => new Map(members.map(m => [m.id, m])), [members])
 
-  // Initial focus: prefer generation 0, else member with most children, else first
+  // Foco inicial: buscar alguien de la generación 0 o al primer integrante
   const initialFocusId = useMemo(() => {
     if (members.length === 0) return ''
     const gen0 = members.find(m => (m.generation ?? 0) === 0)
     if (gen0) return gen0.id
-    const withKids = [...members].sort((a, b) => {
-      const ac = members.filter(m => (m.parents ?? []).includes(a.id)).length
-      const bc = members.filter(m => (m.parents ?? []).includes(b.id)).length
-      return bc - ac
-    })[0]
-    return withKids?.id ?? members[0]?.id ?? ''
+    return members[0].id
   }, [members])
 
   const [focusMemberId, setFocusMemberId] = useState<string>(initialFocusId)
 
-  // Sync if members change and current focus no longer exists
+  // Sincronización de seguridad
   useEffect(() => {
     if (members.length === 0) return
     if (!byId.has(focusMemberId)) {
@@ -179,159 +36,202 @@ export default function MobileTreeView({
     }
   }, [members, byId, focusMemberId, initialFocusId])
 
-  const touchStartX = useRef(0)
-  const touchStartY = useRef(0)
-
-  const { parents, siblings, spouses, children, focusIndex } = useMemo(
-    () => deriveView(focusMemberId, members, relationships),
-    [focusMemberId, members, relationships],
-  )
-
-  const siblingCount = siblings.length
-
-  // Navigate to adjacent sibling — no circular wrap, so never repeats
-  const goToSibling = useCallback((direction: 'left' | 'right') => {
-    const nextIdx = direction === 'left'
-      ? Math.max(0, focusIndex - 1)
-      : Math.min(siblingCount - 1, focusIndex + 1)
-    if (siblings[nextIdx]) setFocusMemberId(siblings[nextIdx].id)
-  }, [focusIndex, siblingCount, siblings])
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-  }
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current
-    const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY.current)
-    if (Math.abs(deltaX) > 50 && deltaY < 60) {
-      goToSibling(deltaX < 0 ? 'right' : 'left')
-    }
-  }
-
-  const handleMemberTap = (member: Member) => {
-    if (member.id === focusMemberId) {
-      onMemberTap(member)   // second tap → open bottom sheet
-    } else {
-      setFocusMemberId(member.id)  // first tap → re-focus
-    }
-  }
-
   if (members.length === 0) {
     return (
-      <div className="mobile-tree-container" style={{ justifyContent: 'center' }}>
+      <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ color: 'rgba(245,240,224,0.5)', fontSize: 13 }}>No hay integrantes aún.</p>
       </div>
     )
   }
 
   const focusMember = byId.get(focusMemberId)
+  if (!focusMember) return null
 
-  // Visible siblings: up to 2 on each side of focus, no circular wrapping → no repeats
-  const MAX_SIDE = 2
-  const startIdx = Math.max(0, focusIndex - MAX_SIDE)
-  const endIdx   = Math.min(siblingCount - 1, focusIndex + MAX_SIDE)
-  const visibleSiblings = siblings.slice(startIdx, endIdx + 1)
+  // Utilidad para extraer cónyuges
+  const getSpouses = (memberId: string): Member[] => {
+    const m = byId.get(memberId)
+    if (!m) return []
+    const spouseIds = new Set<string>(m.spouses || [])
+    for (const rel of relationships) {
+      if (rel.relationship === 'spouse' && rel.isActive !== false) {
+        if (rel.member1Id === memberId) spouseIds.add(rel.member2Id)
+        if (rel.member2Id === memberId) spouseIds.add(rel.member1Id)
+      }
+    }
+    return Array.from(spouseIds).map(id => byId.get(id)).filter(Boolean) as Member[]
+  }
 
-  const visibleParents  = parents.slice(0, 6)
-  const visibleChildren = children.slice(0, 6)
-  const visibleSpouses  = spouses.slice(0, 3)
+  // ── REGLA 1: ORDEN FIJO Y DATOS ──
+
+  // 1. FILA CENTRAL (Nodo Focus + sus cónyuges)
+  const middleRowSpouses = getSpouses(focusMemberId)
+
+  // 2. FILA SUPERIOR (Hijos directos + sus cónyuges)
+  let bloodChildren = members.filter(m => (m.parents || []).includes(focusMemberId))
+  
+  // BUG 2 RESUELTO: Excluir explícitamente de los hijos a cualquier cónyuge que ya esté en la fila central
+  bloodChildren = bloodChildren.filter(m => !middleRowSpouses.some(sp => sp.id === m.id))
+  
+  bloodChildren.sort((a, b) => {
+    if (!a.dateOfBirth) return 1
+    if (!b.dateOfBirth) return -1
+    return new Date(a.dateOfBirth).getTime() - new Date(b.dateOfBirth).getTime()
+  })
+
+  const childrenRow: Member[] = []
+  for (const child of bloodChildren) {
+    childrenRow.push(child)
+    const childSpouses = getSpouses(child.id)
+    for (const sp of childSpouses) {
+      // Evitar que el cónyuge de un hijo se duplique si por error también fue detectado como hijo
+      if (!childrenRow.find(x => x.id === sp.id)) {
+        childrenRow.push(sp)
+      }
+    }
+  }
+
+  // 3. FILA INFERIOR (Padres)
+  const parentsRow = (focusMember.parents || []).map(id => byId.get(id)).filter(Boolean) as Member[]
+  parentsRow.sort((a, b) => {
+    if (a.gender === 'male' && b.gender !== 'male') return -1
+    if (b.gender === 'male' && a.gender !== 'male') return 1
+    return 0
+  })
+
+  // 4. LÓGICA DE HERMANOS PARA DOTS
+  const focusParentSet = new Set(focusMember.parents || [])
+  let siblings = members.filter(m => {
+    if (m.id === focusMemberId) return true
+    return (m.parents || []).some(pid => focusParentSet.has(pid))
+  })
+  if (focusParentSet.size === 0) siblings = [focusMember]
+  siblings.sort((a, b) => a.firstName.localeCompare(b.firstName))
+  const focusIndex = siblings.findIndex(m => m.id === focusMemberId)
+
+
+  // ── NAVEGACIÓN ──
+  const handleTap = (member: Member) => {
+    if (member.id === focusMemberId) {
+      onMemberTap(member)
+    } else {
+      setFocusMemberId(member.id)
+    }
+  }
+
+  const rowStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    width: '100%',
+    overflowX: 'auto',
+    padding: '10px 20px',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none'
+  }
 
   return (
-    <div
+    <div 
       className="mobile-tree-container"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      style={{ touchAction: 'pan-y' }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+        gap: '40px'
+      }}
     >
-      {/* Background tree image */}
       <div style={{
         position: 'absolute', inset: 0,
         backgroundImage: 'url("/assets/arbol-base.png")',
         backgroundSize: 'cover', backgroundPosition: 'center bottom',
-        opacity: 0.12, pointerEvents: 'none'
+        opacity: 0.12, pointerEvents: 'none', zIndex: 0
       }} />
 
-      {/* ── ROW: CHILDREN (ARRIBA) ── */}
-      {visibleChildren.length > 0 && (
-        <>
-          <p className="mobile-row-label">Hijos</p>
-          <div className="mobile-gen-row">
-            {visibleChildren.map(child => (
-              <MobileApple key={child.id} member={child} variant="side" onClick={() => handleMemberTap(child)} />
-            ))}
-          </div>
-          <svg className="mobile-gen-connector" viewBox="0 0 320 32" preserveAspectRatio="none">
-            <line x1="160" y1="0" x2="160" y2="32" stroke="#D4AF37" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="3,3" />
-          </svg>
-        </>
-      )}
-
-      {/* ── ROW: FOCUS / SIBLINGS (MEDIO) ── */}
-      <div className="mobile-gen-row" style={{ gap: '8px', padding: '6px 12px' }}>
-        {visibleSiblings.map(member => (
-          <MobileApple
-            key={member.id}
-            member={member}
-            variant={member.id === focusMemberId ? 'focus' : 'sibling'}
-            onClick={() => handleMemberTap(member)}
-          />
-        ))}
-
-        {/* Spouse(s) next to focus */}
-        {visibleSpouses.length > 0 && (
-          <>
-            <span style={{ color: '#D4AF37', alignSelf: 'center', fontSize: 14, opacity: 0.55, flexShrink: 0 }}>♡</span>
-            {visibleSpouses.map(spouse => (
-              <MobileApple key={spouse.id} member={spouse} variant="side" onClick={() => handleMemberTap(spouse)} />
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* Navigation dots */}
-      {siblingCount > 1 && (
-        <div className="mobile-nav-dots">
-          {siblings.map((_, i) => (
-            <div
-              key={i}
-              className={`mobile-nav-dot-item${i === focusIndex ? ' active' : ''}`}
-              onClick={() => setFocusMemberId(siblings[i].id)}
+      {/* ARRIBA: Hijos */}
+      {childrenRow.length > 0 && (
+        <div style={{ ...rowStyle, zIndex: 1, justifyContent: childrenRow.length > 4 ? 'flex-start' : 'center' }}>
+          {childrenRow.map(m => (
+            <AppleNode 
+              key={`child-${m.id}`} 
+              member={m} 
+              isHovered={false} 
+              size={40} 
+              hideText={true} 
+              showNameBelow={true} 
+              onClick={() => handleTap(m)} 
             />
           ))}
         </div>
       )}
 
-      {/* Connector: focus → parents */}
-      {visibleParents.length > 0 && (
-        <svg className="mobile-gen-connector" viewBox="0 0 320 32" preserveAspectRatio="none">
-          <line x1="160" y1="0" x2="160" y2="32" stroke="#D4AF37" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="3,3" />
-        </svg>
-      )}
+      {/* CENTRO: Nodo Central + Parejas y Puntos de Navegación */}
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'center', zIndex: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+          <AppleNode 
+            member={focusMember} 
+            isHovered={false} 
+            size={52} 
+            hideText={true} 
+            showNameBelow={true} 
+            onClick={() => handleTap(focusMember)} 
+          />
+          {middleRowSpouses.map(sp => (
+            <AppleNode 
+              key={`spouse-${sp.id}`} 
+              member={sp} 
+              isHovered={false} 
+              size={52} 
+              hideText={true} 
+              showNameBelow={true} 
+              onClick={() => handleTap(sp)} 
+            />
+          ))}
+        </div>
 
-      {/* ── ROW: PARENTS (ABAJO) ── */}
-      {visibleParents.length > 0 && (
-        <>
-          <div className="mobile-gen-row">
-            {visibleParents.map(parent => (
-              <MobileApple key={parent.id} member={parent} variant="side" onClick={() => handleMemberTap(parent)} />
+        {siblings.length > 1 && (
+          <div style={{ display: 'flex', gap: '6px', marginTop: '16px' }}>
+            {siblings.map((sib, i) => (
+              <div
+                key={sib.id}
+                onClick={() => setFocusMemberId(sib.id)}
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: i === focusIndex ? '#D4AF37' : 'rgba(212, 175, 55, 0.3)',
+                  cursor: 'pointer'
+                }}
+              />
             ))}
           </div>
-          <p className="mobile-row-label" style={{ marginTop: 4 }}>Padres / Abuelos</p>
-        </>
-      )}
+        )}
+      </div>
 
-      {/* Hint */}
-      {focusMember && (
-        <p style={{
-          position: 'absolute', bottom: 76, left: '50%',
-          transform: 'translateX(-50%)', fontSize: 10,
-          color: 'rgba(245,240,224,0.3)', whiteSpace: 'nowrap', pointerEvents: 'none'
-        }}>
-          Toca {focusMember.firstName} de nuevo para ver opciones
-        </p>
+      {/* ABAJO: Padres */}
+      {parentsRow.length > 0 && (
+        <div style={{ ...rowStyle, zIndex: 1, justifyContent: 'center' }}>
+          {parentsRow.map(p => (
+            <AppleNode 
+              key={`parent-${p.id}`} 
+              member={p} 
+              isHovered={false} 
+              size={40} 
+              hideText={true} 
+              showNameBelow={true} 
+              onClick={() => handleTap(p)} 
+            />
+          ))}
+        </div>
       )}
+      
+      <style>{`
+        .mobile-tree-container::-webkit-scrollbar { display: none; }
+        .mobile-tree-container > div::-webkit-scrollbar { display: none; }
+      `}</style>
     </div>
   )
 }
