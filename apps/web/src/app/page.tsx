@@ -14,6 +14,7 @@ import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
 import MobileBottomSheet from '@/components/MobileBottomSheet'
 import MobileBottomNav from '@/components/MobileBottomNav'
+import MobileLayout from '@/components/MobileLayout'
 import { supabase } from '@/lib/supabase'
 import type { Member, Relationship } from '@/lib/types'
 import { useNotifications } from '@/lib/useNotifications'
@@ -45,6 +46,14 @@ export default function AppleTreeDashboard() {
   const [loginInputPass, setLoginInputPass] = useState('')
   const [loginError, setLoginError] = useState('')
   const [tutorialStep, setTutorialStep] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // THE MASTER TREE ID (DEMO)
   const DEMO_TREE_ID = '00000000-0000-0000-0000-000000000001'
@@ -508,6 +517,31 @@ export default function AppleTreeDashboard() {
       }
     }
     setTutorialStep(0)
+  }
+
+  if (isMobile) {
+    return (
+      <MobileLayout 
+        members={treeData.members}
+        relationships={treeData.relationships}
+        activeTab={mobileActiveTab}
+        onTabChange={setMobileActiveTab}
+        currentUser={loginInputUser}
+        currentTreeId={currentTreeId}
+        onViewProfile={(m) => setMobileSheetMember(m)}
+        onEditMember={(m) => setEditingMember(m)}
+        onAddMember={(m) => window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m }))}
+        onDeleteMember={async (m) => {
+          if (!window.confirm(`¿Eliminar a ${m.firstName} ${m.lastName}? Esta acción no se puede deshacer.`)) return
+          try {
+            await supabase.from('relationships').delete().or(`member1_id.eq.${m.id},member2_id.eq.${m.id}`)
+            await supabase.from('members').delete().eq('id', m.id)
+            fetchFamilyData()
+          } catch { /* ignored */ }
+        }}
+        onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); }}
+      />
+    )
   }
 
   return (
