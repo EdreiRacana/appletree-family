@@ -6,8 +6,8 @@ import type { Member, Relationship } from '@/lib/types'
 export interface MobileLayoutProps {
   members: Member[]
   relationships: Relationship[]
-  activeTab: string | null
-  onTabChange: (tab: string | null) => void
+  activeTab: string
+  onTabChange: (tab: string) => void
   currentUser: string
   currentTreeId: string
   
