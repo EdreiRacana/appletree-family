@@ -134,26 +134,33 @@ export default function AppleTreeDashboard() {
       }
     }
   }, [isLoggedIn, loginInputUser])
-  // Fetch User Profile Avatar (Francisco Jr)
+  // Fetch User Profile Avatar dynamically based on logged in user
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!isLoggedIn && typeof window !== 'undefined') {
+        const storedUser = window.localStorage.getItem('currentUser')
+        if (!storedUser) return;
+      }
+      const userName = loginInputUser || (typeof window !== 'undefined' ? window.localStorage.getItem('currentUser') : '') || 'francisco';
       try {
         const { data, error } = await supabase
           .from('members')
           .select('avatar_url')
-          .ilike('first_name', '%francisco%jr%')
+          .ilike('first_name', `%${userName}%`)
           .not('avatar_url', 'is', null)
           .limit(1)
         
         if (data && data.length > 0) {
           setUserProfileAvatar(data[0].avatar_url)
+        } else {
+          setUserProfileAvatar(null)
         }
       } catch (err) {
         console.error('Error fetching profile avatar:', err)
       }
     }
     fetchProfile()
-  }, [])
+  }, [isLoggedIn, loginInputUser])
   // LINEAGE FILTERING LOGIC
   const { filteredMembers, filteredRelationships } = useMemo(() => {
     if (viewFocus === 'all' || treeData.members.length === 0) {
@@ -557,7 +564,7 @@ export default function AppleTreeDashboard() {
         onStartMyTree={handleStartMyTree}
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
-        userAvatarUrl={userProfileAvatar || treeData.members.find(m => m.firstName.toLowerCase().includes('francisco'))?.avatarUrl}
+        userAvatarUrl={userProfileAvatar || treeData.members.find(m => m.firstName.toLowerCase().includes((loginInputUser || 'francisco').toLowerCase()))?.avatarUrl}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
