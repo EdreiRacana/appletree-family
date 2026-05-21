@@ -38,7 +38,7 @@ export default function AppleTreeDashboard() {
   const [mobileSheetMember, setMobileSheetMember] = useState<Member | null>(null)
   const [viewFocus, setViewFocus] = useState<'all' | 'paternal' | 'maternal'>('all')
   const [isTermsOpen, setIsTermsOpen] = useState(false)
-  const [userProfileAvatar, setUserProfileAvatar] = useState<string | null>(null)
+
 
   // MOCK LOGIN STATE
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -134,33 +134,16 @@ export default function AppleTreeDashboard() {
       }
     }
   }, [isLoggedIn, loginInputUser])
-  // Fetch User Profile Avatar dynamically based on logged in user
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!isLoggedIn && typeof window !== 'undefined') {
-        const storedUser = window.localStorage.getItem('currentUser')
-        if (!storedUser) return;
-      }
-      const userName = loginInputUser || (typeof window !== 'undefined' ? window.localStorage.getItem('currentUser') : '') || 'francisco';
-      try {
-        const { data, error } = await supabase
-          .from('members')
-          .select('avatar_url')
-          .ilike('first_name', `%${userName}%`)
-          .not('avatar_url', 'is', null)
-          .limit(1)
-        
-        if (data && data.length > 0) {
-          setUserProfileAvatar(data[0].avatar_url)
-        } else {
-          setUserProfileAvatar(null)
-        }
-      } catch (err) {
-        console.error('Error fetching profile avatar:', err)
-      }
-    }
-    fetchProfile()
-  }, [isLoggedIn, loginInputUser])
+  // Derive the logged-in user's avatar from the already-loaded tree members
+  // (same source used by the apple nodes — no extra DB query needed)
+  const userProfileAvatar = React.useMemo(() => {
+    if (!isLoggedIn || treeData.members.length === 0) return null
+    const name = loginInputUser.toLowerCase()
+    const match = treeData.members.find(
+      m => m.avatarUrl && m.firstName.toLowerCase().includes(name)
+    )
+    return match?.avatarUrl ?? null
+  }, [isLoggedIn, loginInputUser, treeData.members])
   // LINEAGE FILTERING LOGIC
   const { filteredMembers, filteredRelationships } = useMemo(() => {
     if (viewFocus === 'all' || treeData.members.length === 0) {
@@ -564,7 +547,7 @@ export default function AppleTreeDashboard() {
         onStartMyTree={handleStartMyTree}
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
-        userAvatarUrl={userProfileAvatar || treeData.members.find(m => m.firstName.toLowerCase().includes((loginInputUser || 'francisco').toLowerCase()))?.avatarUrl}
+        userAvatarUrl={userProfileAvatar}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
