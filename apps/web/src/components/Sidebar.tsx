@@ -19,12 +19,12 @@ interface SidebarProps {
 export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, activeTab, onTabChange, onInviteMember }: SidebarProps) {
 
   const menuItems = [
-    { icon: <Home size={34} />, label: 'Home' },
-    { icon: <TreePine size={34} />, label: 'My Tree' },
-    { icon: <Users size={34} />, label: 'Network' },
-    { icon: <ImageIcon size={34} />, label: 'Photo Albums' },
-    { icon: <Calendar size={34} />, label: 'Events' },
-    { icon: <SettingsIcon size={34} />, label: 'Settings' }
+    { icon: <Home size={20} />, label: 'Home' },
+    { icon: <TreePine size={20} />, label: 'My Tree' },
+    { icon: <Users size={20} />, label: 'Network' },
+    { icon: <ImageIcon size={20} />, label: 'Photo Albums' },
+    { icon: <Calendar size={20} />, label: 'Events' },
+    { icon: <SettingsIcon size={20} />, label: 'Settings' }
   ]
 
   const albums = [
@@ -34,27 +34,29 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
   ]
 
   return (
-    <div style={{ position: 'fixed', top: '140px', left: '40px', display: 'flex', gap: '25px', zIndex: 1000, height: 'calc(100vh - 200px)' }}>
+    <div style={{ position: 'fixed', top: '92px', left: '28px', display: 'flex', gap: '18px', zIndex: 1000, height: 'calc(100vh - 116px)' }}>
       
       <style>{`
         @keyframes matrixPulse {
-          0% { opacity: 0.4; text-shadow: 0 0 2px rgba(0, 255, 65, 0.4); }
-          50% { opacity: 1; text-shadow: 0 0 8px rgba(0, 255, 65, 0.8); }
-          100% { opacity: 0.4; text-shadow: 0 0 2px rgba(0, 255, 65, 0.4); }
+          0% { opacity: 0.35; }
+          50% { opacity: 0.75; }
+          100% { opacity: 0.35; }
         }
       `}</style>
 
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '15px' }}>
         {/* 1. Icon Rail (COLOR: #FAEFBC) */}
         <nav style={{
-          width: '110px',
-          backgroundColor: '#FAEFBC', 
-          borderRadius: '24px',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          width: '76px',
+          backgroundColor: 'rgba(15,26,15,0.72)',
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          borderRadius: '20px',
+          boxShadow: '0 14px 40px rgba(0,0,0,0.45)',
           display: 'flex',
           flexDirection: 'column',
-          padding: '30px 0',
-          border: '2px solid #2C1810',
+          padding: '14px 0',
+          border: '1px solid rgba(212,175,55,0.22)',
           overflowY: 'auto',
           flex: 1
         }}>
@@ -66,20 +68,20 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '22px 0',
+                padding: '13px 0',
                 cursor: 'pointer',
-                backgroundColor: activeTab === item.label ? 'rgba(0, 0, 0, 0.08)' : 'transparent',
+                backgroundColor: activeTab === item.label ? 'rgba(212,175,55,0.16)' : 'transparent',
                 transition: 'all 0.3s ease',
-                borderLeft: activeTab === item.label ? '5px solid #2C1810' : 'none'
+                borderLeft: activeTab === item.label ? '3px solid #D4AF37' : '3px solid transparent'
               }}
             >
-              <div style={{ color: '#2C1810', opacity: activeTab === item.label ? 1 : 0.7, marginBottom: '8px' }}>
+              <div style={{ color: '#E8DAB2', opacity: activeTab === item.label ? 1 : 0.65, marginBottom: '6px' }}>
                 {item.icon}
               </div>
               <span style={{ 
-                fontSize: '10px', 
-                fontWeight: '950', 
-                color: '#2C1810',
+                fontSize: '9px', 
+                fontWeight: '600', 
+                color: '#E8DAB2',
                 textAlign: 'center',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em'
@@ -103,16 +105,16 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
             width: '6px', 
             height: '6px', 
             borderRadius: '50%', 
-            backgroundColor: '#00FF41',
-            animation: 'matrixPulse 2s infinite'
+            backgroundColor: 'rgba(212,175,55,0.8)',
+            animation: 'matrixPulse 2.4s infinite'
           }} />
           <span style={{
-            color: '#00FF41',
+            color: 'rgba(232,218,183,0.55)',
             fontFamily: 'monospace',
-            fontSize: '11px',
+            fontSize: '9px',
             fontWeight: 'bold',
-            letterSpacing: '1px',
-            animation: 'matrixPulse 2s infinite'
+            letterSpacing: '1.5px',
+            animation: 'matrixPulse 2.4s infinite'
           }}>
             SECURE SYSTEM
           </span>
@@ -123,17 +125,19 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
       {activeTab && activeTab !== 'My Tree' && activeTab !== 'Home' && activeTab !== 'Photo Albums' && activeTab !== 'Network' && activeTab !== 'Events' && (
         <div style={{
           width: '320px',
-          backgroundColor: '#FAEFBC',
-          borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          backgroundColor: 'rgba(250,239,188,0.96)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '20px',
+          boxShadow: '0 16px 44px rgba(0,0,0,0.35)',
           padding: '35px',
-          border: '2px solid #2C1810',
+          border: '1px solid rgba(212,175,55,0.3)',
           animation: 'slideIn 0.3s ease-out',
           display: 'flex',
           flexDirection: 'column'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '22px', fontWeight: '950', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>{activeTab}</h3>
+            <h3 style={{ fontSize: '22px', fontWeight: '700', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>{activeTab}</h3>
             <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
               <X size={24} color="#2C1810" style={{ opacity: 0.7 }} />
             </button>
@@ -248,11 +252,13 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
       {activeTab === 'Events' && (
         <div style={{
           width: '320px',
-          backgroundColor: '#FAEFBC',
-          borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          backgroundColor: 'rgba(250,239,188,0.96)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '20px',
+          boxShadow: '0 16px 44px rgba(0,0,0,0.35)',
           padding: '25px 28px 28px',
-          border: '2px solid #2C1810',
+          border: '1px solid rgba(212,175,55,0.3)',
           animation: 'slideIn 0.3s ease-out',
           display: 'flex',
           flexDirection: 'column',
@@ -260,7 +266,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
           overflow: 'hidden',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '950', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
               Calendario Familiar
             </h3>
             <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -277,11 +283,13 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
       {activeTab === 'Network' && (
         <div style={{
           width: '320px',
-          backgroundColor: '#FAEFBC',
-          borderRadius: '24px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          backgroundColor: 'rgba(250,239,188,0.96)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: '20px',
+          boxShadow: '0 16px 44px rgba(0,0,0,0.35)',
           padding: '25px 28px 28px',
-          border: '2px solid #2C1810',
+          border: '1px solid rgba(212,175,55,0.3)',
           animation: 'slideIn 0.3s ease-out',
           display: 'flex',
           flexDirection: 'column',
@@ -289,7 +297,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
           overflow: 'hidden',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '950', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
               Red Familiar
             </h3>
             <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
