@@ -62,10 +62,12 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
   }
 
   const isProtected = isMinor()
+  const isDeceased = !!member.dateOfDeath
 
   // FILTERED MENU: Remove contact options for protected members (minors/babies)
+  // and for deceased members (no se puede chatear ni saludar a quien ya falleció).
   const filteredItems = menuItems.filter(item => {
-    if (isProtected && item.isContact) return false
+    if ((isProtected || isDeceased) && item.isContact) return false
     return true
   })
 
