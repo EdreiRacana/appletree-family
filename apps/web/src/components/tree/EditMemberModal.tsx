@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Save, User as UserIcon, Calendar, ImageIcon, MapPin, Briefcase, BookOpen, Star } from 'lucide-react'
+import { X, Save, User as UserIcon, Calendar, ImageIcon, MapPin, Briefcase, BookOpen, Star, Upload } from 'lucide-react'
+import { fileToDownscaledDataUrl } from '@/lib/imageUtils'
 import { supabase } from '@/lib/supabase'
 import type { Member } from '@/lib/types'
 
@@ -28,6 +29,24 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
     maidenName: member.maidenName || '',
     parents: member.parents || []
   })
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { alert('Selecciona un archivo de imagen.'); return }
+    setUploadingPhoto(true)
+    try {
+      const dataUrl = await fileToDownscaledDataUrl(file, 320, 0.72)
+      setFormData(prev => ({ ...prev, avatarUrl: dataUrl }))
+    } catch (err) {
+      console.error('Error procesando imagen:', err)
+      alert('No se pudo procesar la imagen.')
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ''
+    }
+  }
   const [isSaving, setIsSaving] = useState(false)
   const [parentsInfo, setParentsInfo] = useState<{id: string, name: string}[]>([])
   const [potentialParents, setPotentialParents] = useState<{id: string, name: string}[]>([])
@@ -178,9 +197,9 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
               </label>
               <input 
                 type="text"
-                value={formData.avatarUrl}
+                value={formData.avatarUrl.startsWith('data:') ? '' : formData.avatarUrl}
                 onChange={(e) => setFormData({...formData, avatarUrl: e.target.value})}
-                placeholder="https://..."
+                placeholder={formData.avatarUrl.startsWith('data:') ? 'Imagen subida ✓' : 'Pega un enlace https://...'}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -190,6 +209,26 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
                   fontSize: '14px'
                 }}
               />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                <label style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  padding: '8px 14px', borderRadius: '8px', cursor: uploadingPhoto ? 'wait' : 'pointer',
+                  backgroundColor: '#8B4513', color: '#FFF', fontSize: '12px', fontWeight: 'bold',
+                  opacity: uploadingPhoto ? 0.6 : 1, transition: 'opacity 0.2s ease'
+                }}>
+                  <Upload size={14} /> {uploadingPhoto ? 'Procesando…' : 'Subir imagen'}
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} style={{ display: 'none' }} />
+                </label>
+                {formData.avatarUrl && (
+                  <button type="button" onClick={() => setFormData({...formData, avatarUrl: ''})}
+                    style={{ background: 'none', border: 'none', color: '#8B4513', fontSize: '11px', cursor: 'pointer', opacity: 0.7, textDecoration: 'underline' }}>
+                    Quitar
+                  </button>
+                )}
+              </div>
+              <span style={{ fontSize: '10px', opacity: 0.55, display: 'block', marginTop: '5px' }}>
+                Pega un enlace o sube una foto. Se optimiza automáticamente (máx. 320px) para no saturar el árbol.
+              </span>
             </div>
           </div>
 
