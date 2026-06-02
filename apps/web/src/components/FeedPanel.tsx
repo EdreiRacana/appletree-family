@@ -242,7 +242,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           stories.map(story => (
             <div key={story.id} style={{...cardStyle, overflow: 'visible', marginBottom: '10px'}}>
               {story.imageUrl && (
-                <div style={{...imageContainerStyle, height: '118px', borderRadius: '16px 16px 0 0', backgroundImage: `url(${story.imageUrl})`}}>
+                <div style={{...imageContainerStyle, height: '94px', borderRadius: '13px 13px 0 0', backgroundImage: `url(${story.imageUrl})`}}>
                   <div style={badgeStyle}>
                     {typeof story.metadata?.year === 'string' || typeof story.metadata?.year === 'number' 
                       ? String(story.metadata.year) 
@@ -251,7 +251,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
                 </div>
               )}
               
-              <div style={{...cardBodyStyle, backgroundColor: '#FFF', borderRadius: story.imageUrl ? '0 0 20px 20px' : '20px', borderTop: '1px solid rgba(0,0,0,0.05)'}}>
+              <div style={{...cardBodyStyle, borderRadius: story.imageUrl ? '0 0 13px 13px' : '13px', borderTop: '1px solid rgba(212,175,55,0.18)'}}>
                 <div style={cardHeaderStyle}>
                   <h4 style={cardTitleStyle}>{story.title || 'Historia Familiar'}</h4>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -274,7 +274,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
                 </div>
                 
                 <div style={{ marginBottom: '15px' }}>
-                  <p style={{...cardDescStyle, fontSize: '14px', margin: 0}}>{story.description || 'Compartiendo un momento especial...'}</p>
+                  <p style={{...cardDescStyle, fontSize: '12.5px', margin: 0}}>{story.description || 'Compartiendo un momento especial...'}</p>
                 </div>
                 
                 <div style={{...cardFooterStyle, borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '12px'}}>
@@ -373,7 +373,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
 // STYLES
 const panelStyle: React.CSSProperties = {
   width: '262px',
-  backgroundColor: 'rgba(250,239,188,0.42)',
+  backgroundColor: 'rgba(250,239,188,0.28)',
   backdropFilter: 'blur(26px) saturate(140%)',
   WebkitBackdropFilter: 'blur(26px) saturate(140%)',
   borderRadius: '0 20px 20px 0',
@@ -404,8 +404,8 @@ const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '40
 const emptyButtonStyle: React.CSSProperties = { background: 'none', border: '1px solid #2C1810', padding: '8px 16px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', marginTop: '10px' }
 
 const cardStyle: React.CSSProperties = {
-  backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(44,24,16,0.1)',
-  boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+  backgroundColor: 'rgba(255,250,236,0.22)', borderRadius: '13px', overflow: 'hidden', border: '1px solid rgba(212,175,55,0.28)',
+  boxShadow: '0 6px 18px rgba(0,0,0,0.18)'
 }
 
 const imageContainerStyle: React.CSSProperties = {
@@ -417,9 +417,9 @@ const badgeStyle: React.CSSProperties = {
   borderRadius: '10px', fontSize: '10px', fontWeight: '900', color: '#2C1810', boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
 }
 
-const cardBodyStyle: React.CSSProperties = { padding: '16px' }
+const cardBodyStyle: React.CSSProperties = { padding: '12px 13px', backgroundColor: 'rgba(255,250,236,0.4)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }
 const cardHeaderStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }
-const cardTitleStyle: React.CSSProperties = { margin: 0, fontSize: '16px', fontWeight: '900', color: '#2C1810', flex: 1 }
+const cardTitleStyle: React.CSSProperties = { margin: 0, fontSize: '14px', fontWeight: '700', color: '#2C1810', flex: 1 }
 const deleteBtnStyle: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#FF4444', opacity: 0.4, padding: '2px' }
 const editBtnStyle: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#2C1810', opacity: 0.4, padding: '2px' }
 
