@@ -260,7 +260,7 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
       }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 950, color: '#2C1810', fontFamily: 'Playfair Display, serif' }}>
+          <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 950, color: '#2C1810', fontFamily: 'Cormorant Garamond, serif' }}>
             {isEditing ? 'Editar Evento' : 'Nuevo Evento'}
           </h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>

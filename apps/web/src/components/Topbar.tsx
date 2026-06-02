@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield } from 'lucide-react'
+import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut } from 'lucide-react'
 import type { AppNotification } from '@/lib/useNotifications'
 
 interface TopbarProps {
@@ -16,6 +16,8 @@ interface TopbarProps {
   onClearNotifications?: () => void
   onNotificationClick?: (action: AppNotification['action']) => void
   userAvatarUrl?: string | null
+  currentUser?: string
+  onLogout?: () => void
   showStartTreeBtn?: boolean
 }
 
@@ -31,9 +33,12 @@ export default function Topbar({
   onClearNotifications,
   onNotificationClick,
   userAvatarUrl,
+  currentUser,
+  onLogout,
   showStartTreeBtn = false 
 }: TopbarProps) {
   const [showNotifications, setShowNotifications] = React.useState(false)
+  const [showUserMenu, setShowUserMenu] = React.useState(false)
   return (
     <header 
       className="topbar-container"
@@ -86,7 +91,7 @@ export default function Topbar({
               background: 'linear-gradient(180deg, #E8DAB2 0%, #C5A059 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              fontFamily: 'Playfair Display, serif',
+              fontFamily: 'Cormorant Garamond, serif',
               margin: 0,
               letterSpacing: '0.16em',
               lineHeight: 1,
@@ -205,21 +210,54 @@ export default function Topbar({
         >
           <Shield size={18} color="#F5E6C8" />
         </button>
-        <button 
-          className="topbar-btn" 
-          title="Perfil de Usuario"
-          style={{ 
-            width: '38px', height: '38px', 
-            backgroundColor: 'rgba(232,218,183,0.08)', 
-            borderRadius: '10px', 
-            border: '1px solid rgba(212,175,55,0.18)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-            cursor: 'pointer',
-            overflow: 'hidden',
-          }}
-        >
-          <UserIconWrapper url={userAvatarUrl} />
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button 
+            className="topbar-btn" 
+            title="Perfil de Usuario"
+            onClick={() => setShowUserMenu(v => !v)}
+            style={{ 
+              width: '38px', height: '38px', 
+              backgroundColor: showUserMenu ? 'rgba(212,175,55,0.22)' : 'rgba(232,218,183,0.08)', 
+              borderRadius: '10px', 
+              border: '1px solid rgba(212,175,55,0.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              cursor: 'pointer',
+              overflow: 'hidden',
+            }}
+          >
+            <UserIconWrapper url={userAvatarUrl} />
+          </button>
+
+          {showUserMenu && (
+            <>
+              <div onClick={() => setShowUserMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 2900 }} />
+              <div style={{
+                position: 'absolute', top: '46px', right: 0, width: '210px',
+                backgroundColor: '#FAEFBC', borderRadius: '16px', border: '1px solid rgba(212,175,55,0.4)',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.5)', zIndex: 3000, overflow: 'hidden',
+                animation: 'modalFadeIn 0.2s ease-out'
+              }}>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(44,24,16,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#2C1810', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <UserIconWrapper url={userAvatarUrl} />
+                  </div>
+                  <div style={{ overflow: 'hidden' }}>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#2C1810', textTransform: 'capitalize', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUser || 'Mi cuenta'}</p>
+                    <p style={{ margin: '1px 0 0', fontSize: '10px', color: '#2C1810', opacity: 0.55 }}>Sesión activa</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowUserMenu(false); onLogout?.() }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 16px', background: 'none', border: 'none', cursor: 'pointer', color: '#8B2C1C', fontSize: '13px', fontWeight: 700, textAlign: 'left' }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(139,44,28,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <LogOut size={16} /> Cerrar sesión
+                </button>
+              </div>
+            </>
+          )}
+        </div>
         <div style={{ position: 'relative' }}>
           <button 
             className="topbar-btn"

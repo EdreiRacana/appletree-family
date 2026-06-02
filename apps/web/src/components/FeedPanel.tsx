@@ -161,7 +161,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
       flexDirection: 'row',
       alignItems: 'stretch',
       zIndex: 1000,
-      transform: isCollapsed ? 'translateX(300px)' : 'translateX(0)',
+      transform: isCollapsed ? 'translateX(262px)' : 'translateX(0)',
       transition: 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
     }}>
 
@@ -242,7 +242,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           stories.map(story => (
             <div key={story.id} style={{...cardStyle, overflow: 'visible', marginBottom: '10px'}}>
               {story.imageUrl && (
-                <div style={{...imageContainerStyle, height: '140px', borderRadius: '20px 20px 0 0', backgroundImage: `url(${story.imageUrl})`}}>
+                <div style={{...imageContainerStyle, height: '118px', borderRadius: '16px 16px 0 0', backgroundImage: `url(${story.imageUrl})`}}>
                   <div style={badgeStyle}>
                     {typeof story.metadata?.year === 'string' || typeof story.metadata?.year === 'number' 
                       ? String(story.metadata.year) 
@@ -372,11 +372,11 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
 
 // STYLES
 const panelStyle: React.CSSProperties = {
-  width: '300px',
-  backgroundColor: 'rgba(250,239,188,0.96)',
-  backdropFilter: 'blur(16px)',
-  WebkitBackdropFilter: 'blur(16px)',
-  borderRadius: '0 22px 22px 0',
+  width: '262px',
+  backgroundColor: 'rgba(250,239,188,0.42)',
+  backdropFilter: 'blur(26px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(26px) saturate(140%)',
+  borderRadius: '0 20px 20px 0',
   display: 'flex',
   flexDirection: 'column',
   border: '1px solid rgba(212,175,55,0.3)',
@@ -386,10 +386,10 @@ const panelStyle: React.CSSProperties = {
 }
 
 const headerStyle: React.CSSProperties = { 
-  padding: '16px 22px', borderBottom: '1px solid rgba(212,175,55,0.18)', 
+  padding: '14px 18px', borderBottom: '1px solid rgba(212,175,55,0.2)', 
   display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
 }
-const titleStyle: React.CSSProperties = { margin: 0, fontFamily: 'Playfair Display, serif', fontSize: '18px', color: '#2C1810', fontWeight: '700', letterSpacing: '0.01em' }
+const titleStyle: React.CSSProperties = { margin: 0, fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#2C1810', fontWeight: '600', letterSpacing: '0.01em' }
 const subtitleStyle: React.CSSProperties = { margin: '2px 0 0', fontSize: '11px', color: '#2C1810', opacity: 0.6, fontWeight: '700' }
 
 const addButtonStyle: React.CSSProperties = {
@@ -398,7 +398,7 @@ const addButtonStyle: React.CSSProperties = {
   boxShadow: '0 4px 10px rgba(0,0,0,0.2)', transition: 'all 0.2s ease'
 }
 
-const scrollAreaStyle: React.CSSProperties = { flex: 1, overflowY: 'auto', padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }
+const scrollAreaStyle: React.CSSProperties = { flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '15px' }
 const statusTextStyle: React.CSSProperties = { textAlign: 'center', fontSize: '13px', opacity: 0.6, marginTop: '20px' }
 const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '40px 20px', opacity: 0.7 }
 const emptyButtonStyle: React.CSSProperties = { background: 'none', border: '1px solid #2C1810', padding: '8px 16px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', marginTop: '10px' }
@@ -409,7 +409,7 @@ const cardStyle: React.CSSProperties = {
 }
 
 const imageContainerStyle: React.CSSProperties = {
-  width: '100%', height: '160px', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative'
+  width: '100%', height: '130px', backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative'
 }
 
 const badgeStyle: React.CSSProperties = {

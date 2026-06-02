@@ -137,7 +137,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
           flexDirection: 'column'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '22px', fontWeight: '700', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>{activeTab}</h3>
+            <h3 style={{ fontSize: '22px', fontWeight: '700', color: '#2C1810', fontFamily: 'Cormorant Garamond, serif', margin: 0 }}>{activeTab}</h3>
             <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
               <X size={24} color="#2C1810" style={{ opacity: 0.7 }} />
             </button>
@@ -266,7 +266,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
           overflow: 'hidden',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#2C1810', fontFamily: 'Cormorant Garamond, serif', margin: 0 }}>
               Calendario Familiar
             </h3>
             <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -297,7 +297,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
           overflow: 'hidden',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '18px', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#2C1810', fontFamily: 'Playfair Display, serif', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#2C1810', fontFamily: 'Cormorant Garamond, serif', margin: 0 }}>
               Red Familiar
             </h3>
             <button onClick={() => onTabChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
