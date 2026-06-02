@@ -38,7 +38,7 @@ export default function Topbar({
     <header 
       className="topbar-container"
       style={{
-        height: '140px',
+        height: '76px',
         width: '100%',
         position: 'fixed',
         top: 0,
@@ -48,18 +48,18 @@ export default function Topbar({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 30px', 
+        padding: '0 22px',
         zIndex: 2000,
-        boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-        borderBottom: '3px solid #D4AF37'
+        boxShadow: '0 6px 28px rgba(0,0,0,0.4)',
+        borderBottom: '1px solid rgba(212,175,55,0.3)'
       }}
     >
       {/* 1. ICON-FIRST BRANDING - LEFT ALIGNED & SYMMETRICAL */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
         <div 
           className="brand-logo-container"
           style={{ 
-            height: '70px',
+            height: '44px',
             width: 'auto',
             display: 'flex', 
             alignItems: 'center', 
@@ -81,14 +81,14 @@ export default function Topbar({
           <h1 
             className="brand-title"
             style={{ 
-              fontSize: '18px', 
-              fontWeight: '900', 
+              fontSize: '17px', 
+              fontWeight: '600', 
               background: 'linear-gradient(180deg, #E8DAB2 0%, #C5A059 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               fontFamily: 'Playfair Display, serif',
               margin: 0,
-              letterSpacing: '0.04em',
+              letterSpacing: '0.16em',
               lineHeight: 1,
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
               textAlign: 'center',
@@ -101,7 +101,7 @@ export default function Topbar({
       </div>
 
       {/* 2. Global Navigation / Search & Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         {/* Toggle Switch */}
         <div style={{ 
           display: 'flex', 
@@ -119,13 +119,13 @@ export default function Topbar({
               key={opt.id}
               onClick={() => onViewFocusChange?.(opt.id as any)}
               style={{
-                padding: '8px 16px',
+                padding: '7px 14px',
                 borderRadius: '8px',
                 border: 'none',
                 backgroundColor: viewFocus === opt.id ? '#D4AF37' : 'transparent',
                 color: viewFocus === opt.id ? '#0F1A0F' : '#E8DAB2',
-                fontSize: '11px',
-                fontWeight: '900',
+                fontSize: '10px',
+                fontWeight: '700',
                 textTransform: 'uppercase',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
@@ -139,15 +139,15 @@ export default function Topbar({
         <div 
           className="mobile-hide"
           style={{ 
-            width: '400px', 
-            height: '48px',
+            width: '300px', 
+            height: '38px',
             backgroundColor: 'rgba(232, 218, 183, 0.12)',
             backdropFilter: 'blur(20px)',
-            borderRadius: '14px',
+            borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
             padding: '0 20px',
-            border: '2px solid rgba(212, 175, 55, 0.25)'
+            border: '1px solid rgba(212,175,55,0.22)'
           }}
         >
           <Search size={18} color="#F5E6C8" style={{ opacity: 0.6 }} />
@@ -156,24 +156,24 @@ export default function Topbar({
             placeholder="Search family..." 
             style={{
               background: 'none', border: 'none', outline: 'none', color: '#F5E6C8',
-              fontSize: '14px', marginLeft: '12px', width: '100%', fontWeight: '700'
+              fontSize: '13px', marginLeft: '12px', width: '100%', fontWeight: '600'
             }}
           />
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         {showStartTreeBtn && (
           <button 
             onClick={onStartMyTree}
             style={{ 
-              padding: '12px 24px', 
+              padding: '9px 18px', 
               backgroundColor: '#D4AF37', 
               color: '#0F1A0F', 
-              borderRadius: '12px', 
+              borderRadius: '10px', 
               border: 'none', 
-              fontWeight: '900', 
-              fontSize: '14px', 
+              fontWeight: '700', 
+              fontSize: '12px', 
               cursor: 'pointer',
               boxShadow: '0 4px 15px rgba(212, 175, 55, 0.4)'
             }}
@@ -185,35 +185,36 @@ export default function Topbar({
           className="topbar-btn" 
           onClick={onAdd}
           title="Añadir Familiar"
-          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+          style={{ width: '38px', height: '38px', backgroundColor: 'rgba(232,218,183,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212,175,55,0.18)', cursor: 'pointer' }}
         >
-          <Plus size={28} color="#F5E6C8" />
+          <Plus size={18} color="#F5E6C8" />
         </button>
         <button 
           className="topbar-btn" 
           onClick={onShowTutorial}
           title="Ver Tutorial"
-          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+          style={{ width: '38px', height: '38px', backgroundColor: 'rgba(232,218,183,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212,175,55,0.18)', cursor: 'pointer' }}
         >
-          <HelpCircle size={28} color="#F5E6C8" />
+          <HelpCircle size={18} color="#F5E6C8" />
         </button>
         <button 
           className="topbar-btn" 
           onClick={onShowTerms}
           title="Términos y Condiciones"
-          style={{ width: '50px', height: '50px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+          style={{ width: '38px', height: '38px', backgroundColor: 'rgba(232,218,183,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212,175,55,0.18)', cursor: 'pointer' }}
         >
-          <Shield size={28} color="#F5E6C8" />
+          <Shield size={18} color="#F5E6C8" />
         </button>
         <button 
           className="topbar-btn" 
           title="Perfil de Usuario"
           style={{ 
-            width: '50px', height: '50px', 
-            backgroundColor: 'rgba(255,255,255,0.1)', 
-            borderRadius: '15px', 
+            width: '38px', height: '38px', 
+            backgroundColor: 'rgba(232,218,183,0.08)', 
+            borderRadius: '10px', 
+            border: '1px solid rgba(212,175,55,0.18)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', 
-            border: 'none', cursor: 'pointer',
+            cursor: 'pointer',
             overflow: 'hidden',
           }}
         >
@@ -228,7 +229,7 @@ export default function Topbar({
             }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Bell size={32} color="#D4AF37" />
+            <Bell size={20} color="#D4AF37" />
             {notificationCount > 0 && (
               <div style={{ 
                 position: 'absolute', top: '-5px', right: '-5px', 
@@ -242,7 +243,7 @@ export default function Topbar({
 
           {showNotifications && (
             <div style={{
-              position: 'absolute', top: '50px', right: '0', width: '320px',
+              position: 'absolute', top: '40px', right: '0', width: '320px',
               backgroundColor: '#FAEFBC', borderRadius: '20px', border: '2px solid #D4AF37',
               boxShadow: '0 16px 40px rgba(0,0,0,0.5)', zIndex: 3000, overflow: 'hidden',
               animation: 'modalFadeIn 0.2s ease-out'
@@ -308,5 +309,5 @@ function UserIconWrapper({ url }: { url?: string | null }) {
       />
     )
   }
-  return <User size={28} color="#F5E6C8" />
+  return <User size={18} color="#F5E6C8" />
 }
