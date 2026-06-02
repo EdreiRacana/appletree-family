@@ -5,6 +5,16 @@ import type { Member, Relationship } from './types'
  * Uses deterministic sorting to prevent layout jumps.
  */
 
+// ── LAYOUT CONSTANTS · single source of truth ──────────────────────
+// NODE_SIZE controls the apple diameter AND every spacing value below it.
+// Because all gaps are derived from NODE_SIZE, the tree keeps proportional
+// breathing room and apples never overlap, no matter how large the family grows.
+// To resize the whole tree, change ONLY this number.
+export const NODE_SIZE = 140                       // apple diameter in px (was 200)
+export const SPOUSE_SPACING = NODE_SIZE * 1.05     // horizontal slot per person inside a couple
+export const UNIT_GAP = NODE_SIZE * 1.6            // min horizontal gap between separate family units
+export const GENERATION_GAP = NODE_SIZE * 1.7      // vertical gap between generations
+
 export function computeTreeLayout(members: Member[] = [], relationships: Relationship[] = []) {
   if (!members || members.length === 0) return []
 
@@ -22,8 +32,8 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
   const sortedGens = Object.keys(gens).map(Number).sort((a,b) => a - b)
   
   // 2. DIMENSIONS (Calibrated for Top-Down view)
-  const HORIZONTAL_UNIT_GAP = 280 
-  const VERTICAL_GENERATION_GAP = 280 // More room for visual clarity
+  const HORIZONTAL_UNIT_GAP = UNIT_GAP
+  const VERTICAL_GENERATION_GAP = GENERATION_GAP
   const ROOT_Y = 900 // Grandparents (Roots) start at the bottom
   const CENTER_X = 960
 
@@ -117,7 +127,7 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     })
 
     // Calculate row container width to center it dynamically based on unit sizes
-    const unitWidths = units.map(u => Math.max(HORIZONTAL_UNIT_GAP, u.length * 200))
+    const unitWidths = units.map(u => Math.max(HORIZONTAL_UNIT_GAP, u.length * SPOUSE_SPACING))
     const totalRowWidth = unitWidths.reduce((sum, width) => sum + width, 0)
     let startX = CENTER_X - (totalRowWidth / 2)
     const currentY = ROOT_Y - (g * VERTICAL_GENERATION_GAP)
@@ -126,10 +136,10 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
       const uWidth = unitWidths[idx]
       const centerX = startX + uWidth / 2
       const L = unit.length
-      const startOffset = -((L - 1) * 200) / 2
+      const startOffset = -((L - 1) * SPOUSE_SPACING) / 2
       
       unit.forEach((member, i) => {
-        levelMembers.push({ ...member, canvasX: centerX + startOffset + i * 200, canvasY: currentY })
+        levelMembers.push({ ...member, canvasX: centerX + startOffset + i * SPOUSE_SPACING, canvasY: currentY })
       })
       
       startX += uWidth
