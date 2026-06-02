@@ -3,7 +3,7 @@
    Design System: Earthy greens, warm ambers, Lux Gold
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* --- CSS TOKENS --- */
@@ -40,7 +40,7 @@
 
   /* Fonts */
   --font-body:    'Outfit', sans-serif;
-  --font-display: 'Playfair Display', serif;
+  --font-display: 'Cormorant Garamond', serif;
 
   /* Dimensions */
   --sidebar-width: 240px;
@@ -468,7 +468,7 @@ html, body {
     font-weight: 800;
     color: #f5f0e0;
     margin: 0 0 2px;
-    font-family: 'Playfair Display', serif;
+    font-family: 'Cormorant Garamond', serif;
   }
 
   .mobile-sheet-meta {
