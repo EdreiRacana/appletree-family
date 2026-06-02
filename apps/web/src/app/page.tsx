@@ -334,10 +334,10 @@ export default function AppleTreeDashboard() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             margin: '0 0 6px', 
-            fontSize: '27px',
+            fontSize: '28px',
             fontWeight: '600',
-            letterSpacing: '0.10em',
-            textTransform: 'uppercase',
+            letterSpacing: '0.03em',
+            textTransform: 'none',
             filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))'
           }}>AppleFamily Tree</h1>
           
