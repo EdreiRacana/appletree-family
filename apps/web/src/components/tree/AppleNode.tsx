@@ -155,12 +155,13 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
             pointerEvents: 'none'
           }}>
             <p style={{
-              fontSize: '8.5px',
+              fontFamily: "'Inter', sans-serif",
+              fontSize: '9px',
               fontWeight: '600',
               color: '#FFF',
-              lineHeight: '1',
+              lineHeight: '1.05',
               margin: 0,
-              textShadow: '0 1px 3px rgba(0,0,0,1)',
+              textShadow: '0 1px 3px rgba(0,0,0,0.95)',
               textTransform: 'uppercase',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -170,8 +171,9 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
               {member.firstName} {member.lastName}
             </p>
             <p style={{
+              fontFamily: "'Inter', sans-serif",
               fontSize: '7.5px',
-              fontWeight: '600',
+              fontWeight: '500',
               color: '#F5E6C8',
               margin: '3px 0 0',
               textShadow: '0 1px 2px rgba(0,0,0,1)'
@@ -188,6 +190,7 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
         <span style={{
           marginTop: '6px',
           maxWidth: '70px',
+          fontFamily: "'Inter', sans-serif",
           fontSize: fontSize,
           color: '#FFF',
           textAlign: 'center',
