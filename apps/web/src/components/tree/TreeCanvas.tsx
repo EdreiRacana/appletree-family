@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
-import { computeTreeLayout } from '@/lib/treeLayout'
+import { computeTreeLayout, NODE_SIZE } from '@/lib/treeLayout'
 import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
 import EditMemberModal from './EditMemberModal'
@@ -256,9 +256,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             if (child.canvasY >= midY) return null
 
             const x1 = midX
-            const y1 = midY + 100 // Exactamente desde la línea de la pareja
+            const y1 = midY + NODE_SIZE / 2 // Exactamente desde la línea de la pareja
             const x2 = (child.canvasX ?? 0)
-            const y2 = (child.canvasY ?? 0) + 200 // Hasta la base del hijo
+            const y2 = (child.canvasY ?? 0) + NODE_SIZE // Hasta la base del hijo
 
             return (
               <path
@@ -283,9 +283,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 if (!m2 || m1.id > m2.id) return null // Draw once per pair
                 
                 const x1 = m1.canvasX
-                const y1 = m1.canvasY + 100 // Center of node
+                const y1 = m1.canvasY + NODE_SIZE / 2 // Center of node
                 const x2 = m2.canvasX
-                const y2 = m2.canvasY + 100 // Center of node
+                const y2 = m2.canvasY + NODE_SIZE / 2 // Center of node
                 
                 return (
                   <line
@@ -319,7 +319,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               }}
               style={{
                 position: 'absolute',
-                left: member.canvasX - 100, 
+                left: member.canvasX - NODE_SIZE / 2, 
                 top: member.canvasY,
                 zIndex: hoveredMemberId === member.id ? 2000 : 50,
                 pointerEvents: 'auto',
@@ -329,6 +329,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             >
             <AppleNode
               member={member}
+              size={NODE_SIZE}
               isHovered={hoveredMemberId === member.id}
               onHover={() => {}}
               onLeave={() => {}}
