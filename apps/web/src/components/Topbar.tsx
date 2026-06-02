@@ -64,7 +64,7 @@ export default function Topbar({
         <div 
           className="brand-logo-container"
           style={{ 
-            height: '44px',
+            height: '56px',
             width: 'auto',
             display: 'flex', 
             alignItems: 'center', 
@@ -86,18 +86,18 @@ export default function Topbar({
           <h1 
             className="brand-title"
             style={{ 
-              fontSize: '17px', 
+              fontSize: '21px', 
               fontWeight: '600', 
               background: 'linear-gradient(180deg, #E8DAB2 0%, #C5A059 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               fontFamily: 'Cormorant Garamond, serif',
               margin: 0,
-              letterSpacing: '0.16em',
+              letterSpacing: '0.04em',
               lineHeight: 1,
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
               textAlign: 'center',
-              textTransform: 'uppercase'
+              textTransform: 'none'
             }}
           >
             AppleFamily Tree
