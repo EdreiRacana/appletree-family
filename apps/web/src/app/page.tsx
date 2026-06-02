@@ -59,6 +59,19 @@ export default function AppleTreeDashboard() {
   const DEMO_TREE_ID = '00000000-0000-0000-0000-000000000001'
   const [currentTreeId, setCurrentTreeId] = useState<string>(DEMO_TREE_ID)
 
+  // ── Restaurar sesión: mantener al usuario dentro como en una web normal ──
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const savedUser = window.localStorage.getItem('apple_session_user')
+    if (savedUser) {
+      setLoginInputUser(savedUser)
+      const savedTreeId = window.localStorage.getItem('apple_user_tree_id')
+      if (savedTreeId) setCurrentTreeId(savedTreeId)
+      setTutorialStep(0)
+      setIsLoggedIn(true)
+    }
+  }, [])
+
   const fetchFamilyData = React.useCallback(async () => {
     try {
       const { data: membersData, error: mError } = await supabase.from('members').select('*').eq('tree_id', currentTreeId)
@@ -220,6 +233,7 @@ export default function AppleTreeDashboard() {
     if (matched && loginInputPass === matched.password) {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('currentUser', matched.fullName)
+        window.localStorage.setItem('apple_session_user', key)
 
         if (matched.treeId) {
           // Guest family member → go straight to the family tree, skip tutorial
@@ -247,6 +261,18 @@ export default function AppleTreeDashboard() {
     } else {
       setLoginError('Credenciales incorrectas')
     }
+  }
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('apple_session_user')
+      window.localStorage.removeItem('currentUser')
+    }
+    setIsLoggedIn(false)
+    setLoginInputUser('')
+    setLoginInputPass('')
+    setLoginError('')
+    setTutorialStep(0)
   }
 
   if (!isLoggedIn) {
@@ -548,6 +574,8 @@ export default function AppleTreeDashboard() {
         onShowTutorial={handleShowTutorial}
         onShowTerms={() => setIsTermsOpen(true)}
         userAvatarUrl={userProfileAvatar}
+        currentUser={loginInputUser}
+        onLogout={handleLogout}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
