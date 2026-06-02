@@ -155,7 +155,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
     <div style={{
       position: 'fixed',
       right: 0,
-      top: '160px',
+      top: '92px',
       bottom: '40px',
       display: 'flex',
       flexDirection: 'row',
@@ -170,9 +170,11 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
         onClick={() => setIsCollapsed(c => !c)}
         title={isCollapsed ? 'Mostrar Family Stories' : 'Ocultar Family Stories'}
         style={{
-          width: '32px',
-          backgroundColor: '#FAEFBC',
-          border: '2px solid #2C1810',
+          width: '30px',
+          backgroundColor: 'rgba(15,26,15,0.72)',
+          backdropFilter: 'blur(18px)',
+          WebkitBackdropFilter: 'blur(18px)',
+          border: '1px solid rgba(212,175,55,0.22)',
           borderRight: 'none',
           borderRadius: '16px 0 0 16px',
           cursor: 'pointer',
@@ -185,11 +187,11 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
           flexShrink: 0,
         }}
-        onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f0e4a8')}
-        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#FAEFBC')}
+        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(15,26,15,0.88)')}
+        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(15,26,15,0.72)')}
       >
         {/* Chevron icon */}
-        <span style={{ color: '#2C1810', opacity: 0.6, lineHeight: 1 }}>
+        <span style={{ color: '#E8DAB2', opacity: 0.6, lineHeight: 1 }}>
           {isCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
         </span>
 
@@ -199,17 +201,17 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           transform: 'rotate(180deg)',
           fontSize: '9px',
           fontWeight: '900',
-          color: '#2C1810',
+          color: '#E8DAB2',
           textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          opacity: 0.55,
+          letterSpacing: '0.14em',
+          opacity: 0.6,
           userSelect: 'none',
         }}>
           Stories
         </span>
 
         {/* Icon */}
-        <span style={{ color: '#2C1810', opacity: 0.45, lineHeight: 1 }}>
+        <span style={{ color: '#E8DAB2', opacity: 0.45, lineHeight: 1 }}>
           <BookOpen size={13} />
         </span>
       </button>
@@ -371,25 +373,27 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
 // STYLES
 const panelStyle: React.CSSProperties = {
   width: '300px',
-  backgroundColor: '#FAEFBC',
-  borderRadius: '0 32px 32px 0',
+  backgroundColor: 'rgba(250,239,188,0.96)',
+  backdropFilter: 'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
+  borderRadius: '0 22px 22px 0',
   display: 'flex',
   flexDirection: 'column',
-  border: '2px solid #2C1810',
+  border: '1px solid rgba(212,175,55,0.3)',
   borderLeft: 'none',
   overflow: 'hidden',
-  boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+  boxShadow: '0 16px 48px rgba(0,0,0,0.38)',
 }
 
 const headerStyle: React.CSSProperties = { 
-  padding: '20px 25px', borderBottom: '1px solid rgba(44,24,16,0.1)', 
+  padding: '16px 22px', borderBottom: '1px solid rgba(212,175,55,0.18)', 
   display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
 }
-const titleStyle: React.CSSProperties = { margin: 0, fontFamily: 'serif', fontSize: '20px', color: '#2C1810', fontWeight: '950' }
+const titleStyle: React.CSSProperties = { margin: 0, fontFamily: 'Playfair Display, serif', fontSize: '18px', color: '#2C1810', fontWeight: '700', letterSpacing: '0.01em' }
 const subtitleStyle: React.CSSProperties = { margin: '2px 0 0', fontSize: '11px', color: '#2C1810', opacity: 0.6, fontWeight: '700' }
 
 const addButtonStyle: React.CSSProperties = {
-  width: '38px', height: '38px', borderRadius: '12px', backgroundColor: '#2C1810', color: '#FAEFBC',
+  width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#2C1810', color: '#FAEFBC',
   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none',
   boxShadow: '0 4px 10px rgba(0,0,0,0.2)', transition: 'all 0.2s ease'
 }
