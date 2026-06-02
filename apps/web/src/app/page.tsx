@@ -551,7 +551,7 @@ export default function AppleTreeDashboard() {
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
-      <div className="main-layout" style={{ display: 'flex', width: '100%', height: 'calc(100vh - 140px)', marginTop: '140px', position: 'relative' }}>
+      <div className="main-layout" style={{ display: 'flex', width: '100%', height: 'calc(100vh - 76px)', marginTop: '76px', position: 'relative' }}>
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
           {(filteredMembers.length > 0 || !loading) && (
             <TreeCanvas 
