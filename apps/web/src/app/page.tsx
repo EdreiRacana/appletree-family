@@ -304,24 +304,24 @@ export default function AppleTreeDashboard() {
 
         <div style={{ 
           zIndex: 10, 
-          backgroundColor: 'rgba(15, 26, 15, 0.9)', 
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          padding: '60px 40px', 
-          borderRadius: '40px', 
+          backgroundColor: 'rgba(15, 26, 15, 0.55)', 
+          backdropFilter: 'blur(30px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(140%)',
+          padding: '40px 34px', 
+          borderRadius: '24px', 
           border: '1px solid rgba(212, 175, 55, 0.3)', 
-          width: '90%', 
-          maxWidth: '420px', 
-          boxShadow: '0 40px 100px rgba(0,0,0,0.6), inset 0 0 20px rgba(212, 175, 55, 0.05)', 
+          width: '88%', 
+          maxWidth: '360px', 
+          boxShadow: '0 24px 70px rgba(0,0,0,0.5), inset 0 0 18px rgba(212, 175, 55, 0.04)', 
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center'
         }}>
           <div style={{ 
-            width: '120px', 
-            height: '120px', 
-            marginBottom: '24px', 
+            width: '76px', 
+            height: '76px', 
+            marginBottom: '16px', 
             filter: 'drop-shadow(0 0 15px rgba(212, 175, 55, 0.4))',
             transition: 'transform 0.3s ease'
           }} className="hover:scale-105">
@@ -333,25 +333,25 @@ export default function AppleTreeDashboard() {
             background: 'linear-gradient(180deg, #F5E6C8 0%, #D4AF37 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            margin: '0 0 8px', 
-            fontSize: '38px',
-            fontWeight: '900',
-            letterSpacing: '0.04em',
+            margin: '0 0 6px', 
+            fontSize: '27px',
+            fontWeight: '600',
+            letterSpacing: '0.10em',
             textTransform: 'uppercase',
             filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))'
           }}>AppleFamily Tree</h1>
           
           <p style={{ 
             color: '#D4AF37', 
-            opacity: 0.8, 
-            marginBottom: '40px', 
+            opacity: 0.75, 
+            marginBottom: '26px', 
             fontWeight: '600', 
-            fontSize: '13px',
-            letterSpacing: '0.15em',
+            fontSize: '11px',
+            letterSpacing: '0.18em',
             textTransform: 'uppercase'
           }}>Acceso Privado Familiar</p>
           
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ position: 'relative' }}>
               <input 
                 type="text" 
@@ -360,12 +360,12 @@ export default function AppleTreeDashboard() {
                 onChange={e => setLoginInputUser(e.target.value)}
                 style={{ 
                   width: '100%', 
-                  padding: '18px 24px', 
-                  borderRadius: '20px', 
-                  border: '1.5px solid rgba(212, 175, 55, 0.2)', 
+                  padding: '13px 18px', 
+                  borderRadius: '12px', 
+                  border: '1px solid rgba(212, 175, 55, 0.22)', 
                   outline: 'none', 
                   backgroundColor: 'rgba(255,255,255,0.05)', 
-                  fontSize: '16px', 
+                  fontSize: '14px', 
                   color: '#F5E6C8',
                   transition: 'all 0.3s ease',
                   boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
@@ -385,12 +385,12 @@ export default function AppleTreeDashboard() {
                 }}
                 style={{ 
                   width: '100%', 
-                  padding: '18px 24px', 
-                  borderRadius: '20px', 
-                  border: '1.5px solid rgba(212, 175, 55, 0.2)', 
+                  padding: '13px 18px', 
+                  borderRadius: '12px', 
+                  border: '1px solid rgba(212, 175, 55, 0.22)', 
                   outline: 'none', 
                   backgroundColor: 'rgba(255,255,255,0.05)', 
-                  fontSize: '16px', 
+                  fontSize: '14px', 
                   color: '#F5E6C8',
                   transition: 'all 0.3s ease',
                   boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
@@ -418,13 +418,14 @@ export default function AppleTreeDashboard() {
             onClick={handleLogin}
             style={{ 
               width: '100%', 
-              padding: '18px', 
+              padding: '14px', 
               background: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)', 
               color: '#0F1A0F', 
-              borderRadius: '20px', 
+              borderRadius: '12px', 
               border: 'none', 
-              fontSize: '17px', 
-              fontWeight: '900', 
+              fontSize: '15px', 
+              fontWeight: '700', 
+              letterSpacing: '0.02em', 
               cursor: 'pointer', 
               boxShadow: '0 12px 24px rgba(212, 175, 55, 0.3)',
               transition: 'all 0.3s ease',
@@ -442,7 +443,7 @@ export default function AppleTreeDashboard() {
             Entrar al Legado
           </button>
           
-          <p style={{ marginTop: '30px', fontSize: '12px', color: '#F5E6C8', opacity: 0.4 }}>
+          <p style={{ marginTop: '22px', fontSize: '11px', color: '#F5E6C8', opacity: 0.4 }}>
             &copy; 2025 AppleTree Family Legacy. Todos los derechos reservados.
           </p>
         </div>
