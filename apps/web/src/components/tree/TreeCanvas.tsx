@@ -40,13 +40,77 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   
   // Starting at 0,0 since we calibrated BASE_Y in the layout engine
   const [offset, setOffset] = useState({ x: 0, y: 0 }) 
+  const [scale, setScale] = useState(1)
   const [isDragging, setIsDragging] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Zoom limits
+  const MIN_SCALE = 0.25
+  const MAX_SCALE = 2
+
+  // Refs mirror state so native (non-React) listeners always read fresh values
+  const offsetRef = useRef(offset)
+  const scaleRef = useRef(scale)
+  useEffect(() => { offsetRef.current = offset }, [offset])
+  useEffect(() => { scaleRef.current = scale }, [scale])
+
   const positionedMembers = useMemo(() => {
     return computeTreeLayout(members, relationships)
   }, [members, relationships])
+
+  // Tree bounding box in canvas coordinates (includes node size + name labels)
+  const treeBounds = useMemo(() => {
+    if (positionedMembers.length === 0) return null
+    const xs = positionedMembers.map(m => m.canvasX ?? 0)
+    const ys = positionedMembers.map(m => m.canvasY ?? 0)
+    return {
+      minX: Math.min(...xs) - NODE_SIZE / 2,
+      maxX: Math.max(...xs) + NODE_SIZE / 2,
+      minY: Math.min(...ys),
+      maxY: Math.max(...ys) + NODE_SIZE + 50 // room for name labels
+    }
+  }, [positionedMembers])
+
+  // ── FIT TO VIEW: scale + center so the WHOLE tree is visible ──
+  const fitToView = useCallback(() => {
+    if (!treeBounds || !containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const PAD = 70
+    const treeW = treeBounds.maxX - treeBounds.minX
+    const treeH = treeBounds.maxY - treeBounds.minY
+    const fitScale = Math.min(
+      (rect.width - PAD * 2) / treeW,
+      (rect.height - PAD * 2) / treeH,
+      1 // never zoom IN beyond 100% automatically
+    )
+    const newScale = Math.max(fitScale, MIN_SCALE)
+    setScale(newScale)
+    setOffset({
+      x: (rect.width - treeW * newScale) / 2 - treeBounds.minX * newScale,
+      y: (rect.height - treeH * newScale) / 2 - treeBounds.minY * newScale
+    })
+  }, [treeBounds])
+
+  // ── ZOOM AROUND A SCREEN POINT (cursor or viewport center) ──
+  const zoomAt = useCallback((screenX: number, screenY: number, factor: number) => {
+    const oldScale = scaleRef.current
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, oldScale * factor))
+    if (newScale === oldScale) return
+    const ratio = newScale / oldScale
+    const o = offsetRef.current
+    setScale(newScale)
+    setOffset({
+      x: screenX - (screenX - o.x) * ratio,
+      y: screenY - (screenY - o.y) * ratio
+    })
+  }, [])
+
+  const zoomFromCenter = (factor: number) => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    zoomAt(rect.width / 2, rect.height / 2, factor)
+  }
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.apple-node-clickable')) return
@@ -62,25 +126,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return () => window.removeEventListener('open-add-modal', handleOpenModal)
   }, [])
 
-  // AUTO-CENTERING LOGIC
+  // AUTO FIT-TO-VIEW on first load: the whole family is visible from second one
+  const didInitialFit = useRef(false)
   useEffect(() => {
-    if (positionedMembers.length > 0 && containerRef.current) {
-      const minX = Math.min(...positionedMembers.map(m => m.canvasX ?? 0))
-      const maxX = Math.max(...positionedMembers.map(m => m.canvasX ?? 0))
-      const treeCenterX = (minX + maxX) / 2
-
-      const root = positionedMembers.find(m => m.generation === 0) || positionedMembers[0]
-      const rect = containerRef.current.getBoundingClientRect()
-      
-      const targetX = (rect.width / 2) - treeCenterX
-      // Center vertically, or push it down a bit so the tree grows upwards
-      const targetY = (rect.height / 2) - root.canvasY + (positionedMembers.length === 1 ? 0 : 200)
-
-      if ((offset.x === 0 && offset.y === 0) || positionedMembers.length === 1) {
-        setOffset({ x: targetX, y: targetY })
-      }
+    if (positionedMembers.length > 0 && containerRef.current && !didInitialFit.current) {
+      didInitialFit.current = true
+      fitToView()
     }
-  }, [positionedMembers.length, offset.x, offset.y])
+  }, [positionedMembers.length, fitToView])
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return
@@ -127,12 +180,22 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
 
   // Premium Wheel Handler: Must be native non-passive to call preventDefault()
   // This physically blocks the browser from interpreting trackpad swipes as "go back" gestures.
+  // Pinch gesture / Ctrl+wheel → ZOOM toward the cursor. Plain wheel → PAN.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
     const handleNativeWheel = (e: WheelEvent) => {
-      e.preventDefault() // Stop browser history swipe
+      e.preventDefault() // Stop browser history swipe / page zoom
+
+      if (e.ctrlKey || e.metaKey) {
+        // Trackpad pinch fires wheel events with ctrlKey=true
+        const rect = el.getBoundingClientRect()
+        const factor = Math.exp(-e.deltaY * 0.0022)
+        zoomAt(e.clientX - rect.left, e.clientY - rect.top, factor)
+        return
+      }
+
       setOffset(prev => ({ 
         x: prev.x - e.deltaX * 0.8,
         y: prev.y - e.deltaY * 0.8 
@@ -142,7 +205,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     // passive: false allows preventDefault to work
     el.addEventListener('wheel', handleNativeWheel, { passive: false })
     return () => el.removeEventListener('wheel', handleNativeWheel)
-  }, [])
+  }, [zoomAt])
 
   const handleDeleteMember = async (member: Member) => {
     if (!window.confirm(`¿Estás seguro de que quieres eliminar a ${member.firstName} ${member.lastName}? Esta acción no se puede deshacer.`)) {
@@ -228,11 +291,12 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
       {/* Shadow Overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,46,26,0.2)', pointerEvents: 'none', zIndex: 5 }} />
 
-      {/* PAN WRAPPER (For performance during dragging) */}
+      {/* PAN + ZOOM WRAPPER (For performance during dragging) */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        transform: `translate(${offset.x}px, ${offset.y}px)`,
+        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+        transformOrigin: '0 0',
         pointerEvents: 'none', // Let dragging work on the container behind it
         zIndex: 50 // Creates stacking context ABOVE the background
       }}>
@@ -366,6 +430,66 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           </div>
         ))}
         </div>
+      </div>
+
+      {/* ZOOM CONTROLS · floating, bottom center */}
+      <div style={{
+        position: 'absolute',
+        bottom: '24px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '6px',
+        borderRadius: '14px',
+        backgroundColor: 'rgba(20, 35, 20, 0.85)',
+        border: '1px solid rgba(212, 175, 55, 0.35)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 500
+      }}>
+        {([
+          { label: '−', title: 'Alejar', action: () => zoomFromCenter(1 / 1.25) },
+          { label: '⊡', title: 'Ver todo el árbol', action: fitToView },
+          { label: '+', title: 'Acercar', action: () => zoomFromCenter(1.25) }
+        ] as const).map(btn => (
+          <button
+            key={btn.title}
+            title={btn.title}
+            onClick={btn.action}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: '#D4AF37',
+              fontSize: btn.label === '⊡' ? '18px' : '20px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background-color 0.15s'
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(212,175,55,0.15)' }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}
+          >
+            {btn.label}
+          </button>
+        ))}
+        <span style={{
+          color: 'rgba(212,175,55,0.7)',
+          fontSize: '11px',
+          minWidth: '38px',
+          textAlign: 'center',
+          letterSpacing: '0.5px',
+          userSelect: 'none'
+        }}>
+          {Math.round(scale * 100)}%
+        </span>
       </div>
 
       {/* ADD MEMBER MODAL LAYER */}
