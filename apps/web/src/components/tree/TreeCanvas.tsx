@@ -126,14 +126,26 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return () => window.removeEventListener('open-add-modal', handleOpenModal)
   }, [])
 
-  // AUTO FIT-TO-VIEW on first load: the whole family is visible from second one
+  // INITIAL VIEW: classic 100% centered framing (fit-to-view stays
+  // available on the ⊡ button for when the user wants the full overview)
   const didInitialFit = useRef(false)
   useEffect(() => {
     if (positionedMembers.length > 0 && containerRef.current && !didInitialFit.current) {
       didInitialFit.current = true
-      fitToView()
+      const minX = Math.min(...positionedMembers.map(m => m.canvasX ?? 0))
+      const maxX = Math.max(...positionedMembers.map(m => m.canvasX ?? 0))
+      const treeCenterX = (minX + maxX) / 2
+
+      const root = positionedMembers.find(m => m.generation === 0) || positionedMembers[0]
+      const rect = containerRef.current.getBoundingClientRect()
+
+      setScale(1)
+      setOffset({
+        x: (rect.width / 2) - treeCenterX,
+        y: (rect.height / 2) - root.canvasY + (positionedMembers.length === 1 ? 0 : 200)
+      })
     }
-  }, [positionedMembers.length, fitToView])
+  }, [positionedMembers])
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return
