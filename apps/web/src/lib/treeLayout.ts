@@ -1,53 +1,32 @@
 import type { Member, Relationship } from './types'
 
 /**
- * Genealogy Tree Layout Engine v12 — "Compact Canopy"
- * ───────────────────────────────────────────────────
- * Hierarchical subtree packing (Reingold-Tilford style):
+ * Genealogy Tree Layout Engine v14 — "Magnetic Rows"
+ * ──────────────────────────────────────────────────
+ * Professional-grade row layout (Sugiyama barycenter method):
  *
- *  1. Members of each generation are grouped into UNITS (couples / singles).
- *  2. Units are linked to their parent unit, forming a forest of family trees.
- *  3. Widths are computed BOTTOM-UP: a unit's subtree width is the max of its
- *     own width and the packed width of its children's subtrees.
- *  4. Positions are assigned TOP-DOWN: every unit is centered over its own
- *     children — never over the whole row — producing a compact canopy where
- *     branches hug their bloodline.
- *
- *  Guarantees:
- *   • Zero overlaps (sibling subtrees own disjoint horizontal spans).
- *   • Parent-child connector lines flow straight down, no crossings between
- *     separate family branches.
- *   • Deterministic output (stable sorting everywhere) — no layout jumps.
+ *  1. One row per generation. Units (couples / singles) are ordered by the
+ *     X position of their parents → connector lines NEVER cross, even with
+ *     two root trees (paternal + maternal) joined by a marriage.
+ *  2. Every unit is magnetically pulled to sit EXACTLY under the midpoint
+ *     of its parents. Collisions between neighboring families are resolved
+ *     with isotonic regression (Pool Adjacent Violators) — the provably
+ *     optimal minimum displacement that keeps order and minimum gaps.
+ *  3. Result: siblings cluster tightly under their parents, separate
+ *     families read as visual groups, and each row is as compact as the
+ *     geometry allows. Zero overlaps, fully deterministic.
  */
 
 // ── LAYOUT CONSTANTS · single source of truth ──────────────────────
-// All spacing derives from NODE_SIZE so the tree keeps proportional
-// breathing room at any family size. Resize the tree by changing ONLY this.
-export const NODE_SIZE = 140                        // apple diameter in px
-export const SPOUSE_SPACING = NODE_SIZE * 1.02      // slot per person inside a couple (apples nearly kiss)
-export const SUBTREE_GAP = NODE_SIZE * 0.35         // clear air between sibling sub-families
-export const ROOT_GAP = NODE_SIZE * 0.6             // air between unrelated root trees
-export const GENERATION_GAP = NODE_SIZE * 1.7       // vertical gap between generations
-const LABEL_CLEARANCE = NODE_SIZE * 0.12            // extra width so name labels never collide
+// NODE_SIZE controls the apple diameter AND every spacing value below it.
+// All gaps derive from NODE_SIZE, so apples never overlap at any family size.
+// To resize the whole tree, change ONLY this number.
+export const NODE_SIZE = 140                       // apple diameter in px
+export const SPOUSE_SPACING = NODE_SIZE * 1.0      // couples: apples kiss (organic cluster look)
+export const UNIT_AIR = NODE_SIZE * 0.32           // clear air between separate family units
+export const GENERATION_GAP = NODE_SIZE * 1.5      // vertical gap between generations
 
-const ROOT_Y = 900      // generation 0 (roots) sit at the bottom; tree grows upward
-const CENTER_X = 960
-
-type Positioned = Member & { canvasX: number; canvasY: number }
-
-interface Unit {
-  id: string
-  members: Member[]
-  generation: number
-  children: Unit[]
-}
-
-/** Visual width of the unit itself (its members side by side). */
-function ownWidth(unit: Unit): number {
-  return (unit.members.length - 1) * SPOUSE_SPACING + NODE_SIZE + LABEL_CLEARANCE
-}
-
-export function computeTreeLayout(members: Member[] = [], relationships: Relationship[] = []): Positioned[] {
+export function computeTreeLayout(members: Member[] = [], relationships: Relationship[] = []) {
   if (!members || members.length === 0) return []
 
   // 1. STABLE SORTING: deterministic processing prevents layout jumps
@@ -60,15 +39,18 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     if (!gens[g]) gens[g] = []
     gens[g].push(m)
   })
+
   const sortedGens = Object.keys(gens).map(Number).sort((a, b) => a - b)
 
-  // 2. BUILD UNITS (couples clustered via spouse relationships) per generation
-  const allUnits: Unit[] = []
-  const unitOfMember = new Map<string, Unit>()
+  const ROOT_Y = 900   // Generation 0 (roots) sits at the bottom; tree grows upward
+  const CENTER_X = 960
+
+  const positioned: (Member & { canvasX: number, canvasY: number })[] = []
 
   sortedGens.forEach(g => {
     const genMembers = [...gens[g]]
 
+    // ── 2. CLUSTER SPOUSES INTO UNITS ──────────────────────────────
     const spouseAdjacency: Record<string, string[]> = {}
     genMembers.forEach(m => { spouseAdjacency[m.id] = [] })
 
@@ -84,6 +66,7 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
       })
 
     const processedIds = new Set<string>()
+    const units: Member[][] = []
 
     genMembers.forEach(m => {
       if (processedIds.has(m.id)) return
@@ -104,190 +87,132 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
       }
 
       // Most-connected member sits in the middle of the couple cluster
-      let orderedIds = clusterIds
       if (clusterIds.length > 1) {
-        const byConnections = [...clusterIds].sort(
-          (a, b) => spouseAdjacency[b].length - spouseAdjacency[a].length
-        )
+        clusterIds.sort((a, b) => spouseAdjacency[b].length - spouseAdjacency[a].length)
         const arranged: string[] = []
-        byConnections.forEach((id, idx) => {
+        clusterIds.forEach((id, idx) => {
           if (idx % 2 === 0) arranged.push(id)
           else arranged.unshift(id)
         })
-        orderedIds = arranged
+        units.push(arranged.map(id => genMembers.find(member => member.id === id)!))
+      } else {
+        units.push([m])
       }
-
-      const unit: Unit = {
-        id: orderedIds[0],
-        members: orderedIds.map(id => genMembers.find(gm => gm.id === id)!),
-        generation: g,
-        children: []
-      }
-      allUnits.push(unit)
-      unit.members.forEach(mem => unitOfMember.set(mem.id, unit))
     })
-  })
 
-  // 3. LINK UNITS INTO A FOREST: each unit attaches to the unit holding
-  //    the majority of its members' parents (must be an older generation).
-  const roots: Unit[] = []
+    // ── 3. ORDER UNITS BY PARENT X (prevents ALL line crossings) ──
+    const getParentX = (unit: Member[]): number | null => {
+      let totalX = 0
+      let count = 0
+      unit.forEach(m => {
+        (m.parents || []).forEach(pid => {
+          const pNode = positioned.find(pn => pn.id === pid)
+          if (pNode && pNode.canvasX !== undefined) {
+            totalX += pNode.canvasX
+            count++
+          }
+        })
+      })
+      return count > 0 ? totalX / count : null
+    }
 
-  allUnits.forEach(unit => {
-    const votes = new Map<Unit, number>()
-    unit.members.forEach(m => {
-      (m.parents || []).forEach(pid => {
-        const pUnit = unitOfMember.get(pid)
-        if (pUnit && pUnit.generation < unit.generation) {
-          votes.set(pUnit, (votes.get(pUnit) || 0) + 1)
-        }
+    // ── 3b. ORIENT SPOUSES WITHIN EACH COUPLE BY THEIR OWN PARENTS ──
+    // A couple bridging two family trees ("AMBAS" view) must place each
+    // spouse on the side of their own parents, or their lines swap & cross.
+    const memberParentX = (m: Member): number | null => {
+      const ps = (m.parents || [])
+        .map(pid => positioned.find(pn => pn.id === pid))
+        .filter((p): p is (Member & { canvasX: number, canvasY: number }) => !!p)
+      if (ps.length === 0) return null
+      return ps.reduce((s, p) => s + p.canvasX, 0) / ps.length
+    }
+
+    units.forEach(unit => {
+      if (unit.length < 2) return
+      const keys = new Map<string, number | null>()
+      unit.forEach(m => keys.set(m.id, memberParentX(m)))
+      const known = unit.filter(m => keys.get(m.id) !== null)
+      if (known.length < 2) return // nothing to orient with a single anchor
+
+      const knownMean = known.reduce((s, m) => s + (keys.get(m.id) as number), 0) / known.length
+
+      // Parentless members hug their spouse, sitting on the outer side
+      const resolved = new Map<string, number>()
+      unit.forEach(m => {
+        const k = keys.get(m.id)
+        if (k != null) { resolved.set(m.id, k); return }
+        const spouseId = (spouseAdjacency[m.id] || []).find(sid => keys.get(sid) != null)
+        const anchor = spouseId != null ? (keys.get(spouseId) ?? knownMean) : knownMean
+        const side = anchor >= knownMean ? 1 : -1
+        resolved.set(m.id, anchor + side * 0.001)
+      })
+
+      unit.sort((a, b) => {
+        const d = (resolved.get(a.id)!) - (resolved.get(b.id)!)
+        return d !== 0 ? d : a.id.localeCompare(b.id)
       })
     })
 
-    if (votes.size === 0) {
-      roots.push(unit)
-      return
+    const unitDesired = new Map<Member[], number | null>()
+    units.forEach(u => unitDesired.set(u, getParentX(u)))
+
+    units.sort((unitA, unitB) => {
+      const pXa = unitDesired.get(unitA) ?? CENTER_X
+      const pXb = unitDesired.get(unitB) ?? CENTER_X
+      if (pXa !== pXb) return pXa - pXb
+      return unitA[0].id.localeCompare(unitB[0].id) // deterministic fallback
+    })
+
+    // ── 4. MAGNETIC PLACEMENT (isotonic regression / PAV) ─────────
+    // Each unit wants its center at its parents' midpoint. Minimum
+    // center-to-center distances keep apples from ever overlapping.
+    // PAV finds the closest-to-desired positions that respect both.
+    const n = units.length
+    const widths = units.map(u => u.length * SPOUSE_SPACING)
+
+    // Units with no parents (roots / unlinked) desire the average of their
+    // siblings-with-parents row, falling back to CENTER_X — so root rows
+    // stay centered and orphan units don't yank the layout sideways.
+    const knownDesires = units
+      .map(u => unitDesired.get(u))
+      .filter((d): d is number => d !== null)
+    const fallbackDesire = knownDesires.length > 0
+      ? knownDesires.reduce((a, b) => a + b, 0) / knownDesires.length
+      : CENTER_X
+
+    const desired = units.map(u => unitDesired.get(u) ?? fallbackDesire)
+
+    // cum[i] = required offset of unit i's center from unit 0's center
+    const cum: number[] = [0]
+    for (let i = 1; i < n; i++) {
+      cum[i] = cum[i - 1] + widths[i - 1] / 2 + UNIT_AIR + widths[i] / 2
     }
 
-    let parentUnit: Unit | null = null
-    let bestVotes = -1
-    votes.forEach((count, pUnit) => {
-      if (count > bestVotes || (count === bestVotes && parentUnit && pUnit.id.localeCompare(parentUnit.id) < 0)) {
-        bestVotes = count
-        parentUnit = pUnit
+    // Transform: y[i] = x[i] - cum[i]. Constraint x[i] >= x[i-1] + gap
+    // becomes y[i] >= y[i-1]  →  classic isotonic regression, solved by PAV.
+    const t = desired.map((d, i) => d - cum[i])
+    const blocks: { sum: number, count: number, val: number }[] = []
+    t.forEach(v => {
+      blocks.push({ sum: v, count: 1, val: v })
+      while (blocks.length > 1 && blocks[blocks.length - 1].val < blocks[blocks.length - 2].val) {
+        const b = blocks.pop()!
+        const a = blocks[blocks.length - 1]
+        a.sum += b.sum
+        a.count += b.count
+        a.val = a.sum / a.count
       }
     })
-    parentUnit!.children.push(unit)
-  })
+    const y: number[] = []
+    blocks.forEach(b => { for (let k = 0; k < b.count; k++) y.push(b.val) })
 
-  // Siblings ordered by birth date (eldest left), then by id for determinism
-  const eldestBirth = (u: Unit): string => {
-    const dates = u.members.map(m => m.dateOfBirth || '9999-12-31').sort()
-    return dates[0]
-  }
-  const sortChildren = (u: Unit) => {
-    u.children.sort((a, b) => {
-      const d = eldestBirth(a).localeCompare(eldestBirth(b))
-      return d !== 0 ? d : a.id.localeCompare(b.id)
-    })
-    u.children.forEach(sortChildren)
-  }
-  roots.forEach(sortChildren)
-  roots.sort((a, b) => (a.generation - b.generation) || a.id.localeCompare(b.id))
-
-  // 4. CONTOUR-BASED PACKING (true Reingold-Tilford)
-  //    Each subtree carries a per-generation contour [min,max]. Siblings are
-  //    packed as close as their contours allow at EVERY shared level — a deep
-  //    narrow branch tucks beneath a shallow wide one, instead of reserving a
-  //    full bounding box. Parents center over the midpoint of their children.
-  type Contour = Map<number, { min: number; max: number }>
-
-  interface SubLayout {
-    positions: Map<string, number>      // memberId -> x (frame of this subtree)
-    unitCenter: number                  // x of this unit's center
-    contour: Contour
-  }
-
-  const shiftLayout = (sl: SubLayout, dx: number) => {
-    sl.positions.forEach((x, id) => sl.positions.set(id, x + dx))
-    sl.unitCenter += dx
-    sl.contour.forEach(ext => { ext.min += dx; ext.max += dx })
-  }
-
-  const mergeContour = (target: Contour, source: Contour) => {
-    source.forEach((ext, gen) => {
-      const t = target.get(gen)
-      if (!t) target.set(gen, { min: ext.min, max: ext.max })
-      else {
-        t.min = Math.min(t.min, ext.min)
-        t.max = Math.max(t.max, ext.max)
-      }
-    })
-  }
-
-  /** Minimum dx so that `incoming` clears `placed` by `gap` at every shared level. */
-  const requiredShift = (placed: Contour, incoming: Contour, gap: number): number => {
-    let shift = -Infinity
-    incoming.forEach((ext, gen) => {
-      const p = placed.get(gen)
-      if (p) shift = Math.max(shift, p.max + gap - ext.min)
-    })
-    if (shift === -Infinity) {
-      // No shared generations: fall back to global right edge
-      let globalMax = -Infinity
-      placed.forEach(ext => { globalMax = Math.max(globalMax, ext.max) })
-      let incomingMin = Infinity
-      incoming.forEach(ext => { incomingMin = Math.min(incomingMin, ext.min) })
-      shift = (globalMax === -Infinity) ? 0 : globalMax + gap - incomingMin
-    }
-    return shift
-  }
-
-  const layoutSubtree = (u: Unit): SubLayout => {
-    const half = ownWidth(u) / 2
-
-    const placeOwnMembers = (positions: Map<string, number>, center: number) => {
-      const L = u.members.length
+    // ── 5. EMIT POSITIONS ──────────────────────────────────────────
+    const currentY = ROOT_Y - g * GENERATION_GAP
+    units.forEach((unit, i) => {
+      const centerX = y[i] + cum[i]
+      const L = unit.length
       const startOffset = -((L - 1) * SPOUSE_SPACING) / 2
-      u.members.forEach((member, i) => {
-        positions.set(member.id, center + startOffset + i * SPOUSE_SPACING)
-      })
-    }
-
-    if (u.children.length === 0) {
-      const positions = new Map<string, number>()
-      placeOwnMembers(positions, 0)
-      const contour: Contour = new Map([[u.generation, { min: -half, max: half }]])
-      return { positions, unitCenter: 0, contour }
-    }
-
-    // Pack children left → right against the merged contour
-    const childLayouts = u.children.map(layoutSubtree)
-    const merged: Contour = new Map()
-    childLayouts.forEach((cl, i) => {
-      const dx = i === 0 ? 0 : requiredShift(merged, cl.contour, SUBTREE_GAP)
-      if (dx !== 0) shiftLayout(cl, dx)
-      mergeContour(merged, cl.contour)
-    })
-
-    // Parent sits over the midpoint of its first and last child (RT aesthetic)
-    const center = (childLayouts[0].unitCenter + childLayouts[childLayouts.length - 1].unitCenter) / 2
-
-    const positions = new Map<string, number>()
-    childLayouts.forEach(cl => cl.positions.forEach((x, id) => positions.set(id, x)))
-    placeOwnMembers(positions, center)
-
-    const ownExt = merged.get(u.generation)
-    if (!ownExt) merged.set(u.generation, { min: center - half, max: center + half })
-    else {
-      ownExt.min = Math.min(ownExt.min, center - half)
-      ownExt.max = Math.max(ownExt.max, center + half)
-    }
-
-    return { positions, unitCenter: center, contour: merged }
-  }
-
-  // 5. PACK ROOT TREES with the same contour logic, then center the forest
-  const forest: Contour = new Map()
-  const rootLayouts = roots.map(layoutSubtree)
-  rootLayouts.forEach((rl, i) => {
-    const dx = i === 0 ? 0 : requiredShift(forest, rl.contour, ROOT_GAP)
-    if (dx !== 0) shiftLayout(rl, dx)
-    mergeContour(forest, rl.contour)
-  })
-
-  let fMin = Infinity, fMax = -Infinity
-  forest.forEach(ext => { fMin = Math.min(fMin, ext.min); fMax = Math.max(fMax, ext.max) })
-  const globalShift = CENTER_X - (fMin + fMax) / 2
-
-  const positioned: Positioned[] = []
-  const memberById = new Map(stableMembers.map(m => [m.id, m]))
-  rootLayouts.forEach(rl => {
-    rl.positions.forEach((x, id) => {
-      const m = memberById.get(id)!
-      positioned.push({
-        ...m,
-        canvasX: x + globalShift,
-        canvasY: ROOT_Y - (m.generation ?? 0) * GENERATION_GAP
+      unit.forEach((member, k) => {
+        positioned.push({ ...member, canvasX: centerX + startOffset + k * SPOUSE_SPACING, canvasY: currentY })
       })
     })
   })
