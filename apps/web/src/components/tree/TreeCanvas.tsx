@@ -45,6 +45,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // ── FOCUS MODE ────────────────────────────────────────────────
+  // When focusedMemberId is set: camera pans to that member, the "kin"
+  // (parents, grandparents, siblings, spouse, children, grandchildren)
+  // stay fully visible, the rest of the tree stays visible but dimmed.
+  const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null)
+  const [animatingTransform, setAnimatingTransform] = useState(false)
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null)
+
   // Zoom limits
   const MIN_SCALE = 0.25
   const MAX_SCALE = 2
@@ -52,12 +60,54 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   // Refs mirror state so native (non-React) listeners always read fresh values
   const offsetRef = useRef(offset)
   const scaleRef = useRef(scale)
+  const focusedMemberIdRef = useRef<string | null>(null)
   useEffect(() => { offsetRef.current = offset }, [offset])
   useEffect(() => { scaleRef.current = scale }, [scale])
+  useEffect(() => { focusedMemberIdRef.current = focusedMemberId }, [focusedMemberId])
 
   const positionedMembers = useMemo(() => {
     return computeTreeLayout(members, relationships)
   }, [members, relationships])
+
+  // Set of member IDs that count as "direct kin" of the focused member.
+  // null → no focus active, all members render at full opacity.
+  const kinIds = useMemo<Set<string> | null>(() => {
+    if (!focusedMemberId) return null
+    const set = new Set<string>()
+    set.add(focusedMemberId)
+    const focused = positionedMembers.find(m => m.id === focusedMemberId)
+    if (!focused) return set
+    const parentIds = focused.parents || []
+    parentIds.forEach(id => set.add(id))
+    // Grandparents
+    parentIds.forEach(pid => {
+      const parent = positionedMembers.find(m => m.id === pid)
+      ;(parent?.parents || []).forEach(gpid => set.add(gpid))
+    })
+    // Siblings (share at least one parent)
+    positionedMembers.forEach(m => {
+      if (m.id === focused.id) return
+      if ((m.parents || []).some(pid => parentIds.includes(pid))) {
+        set.add(m.id)
+      }
+    })
+    // Spouse
+    relationships.forEach(rel => {
+      if (rel.relationship !== 'spouse') return
+      if (rel.member1Id === focused.id) set.add(rel.member2Id)
+      if (rel.member2Id === focused.id) set.add(rel.member1Id)
+    })
+    // Children
+    const children = positionedMembers.filter(m => (m.parents || []).includes(focused.id))
+    children.forEach(c => set.add(c.id))
+    // Grandchildren
+    children.forEach(child => {
+      positionedMembers
+        .filter(m => (m.parents || []).includes(child.id))
+        .forEach(gc => set.add(gc.id))
+    })
+    return set
+  }, [focusedMemberId, positionedMembers, relationships])
 
   // Tree bounding box in canvas coordinates (includes node size + name labels)
   const treeBounds = useMemo(() => {
@@ -112,10 +162,39 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     zoomAt(rect.width / 2, rect.height / 2, factor)
   }
 
+  // ── FOCUS EFFECT: animate camera so the focused member lands centered ──
+  useEffect(() => {
+    if (!focusedMemberId || !containerRef.current) return
+    const focused = positionedMembers.find(m => m.id === focusedMemberId)
+    if (!focused) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const targetScale = Math.max(scaleRef.current, 0.9)
+    const nodeCenterX = focused.canvasX ?? 0
+    const nodeCenterY = (focused.canvasY ?? 0) + NODE_SIZE / 2
+    setAnimatingTransform(true)
+    setScale(targetScale)
+    setOffset({
+      x: rect.width / 2 - nodeCenterX * targetScale,
+      y: rect.height / 2 - nodeCenterY * targetScale
+    })
+    const t = setTimeout(() => setAnimatingTransform(false), 600)
+    return () => clearTimeout(t)
+  }, [focusedMemberId, positionedMembers])
+
+  // ── ESC exits focus mode ──
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && focusedMemberId) setFocusedMemberId(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [focusedMemberId])
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.apple-node-clickable')) return
     setIsDragging(true)
     setLastMousePos({ x: e.clientX, y: e.clientY })
+    mouseDownPosRef.current = { x: e.clientX, y: e.clientY }
   }
 
   useEffect(() => {
@@ -155,7 +234,17 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     setLastMousePos({ x: e.clientX, y: e.clientY })
   }, [isDragging, lastMousePos])
 
-  const handleMouseUp = () => setIsDragging(false)
+  const handleMouseUp = (e: MouseEvent) => {
+    setIsDragging(false)
+    // If the pointer barely moved between mouseDown and mouseUp, treat it
+    // as a background click and exit focus mode when active.
+    if (mouseDownPosRef.current && focusedMemberIdRef.current) {
+      const dx = e.clientX - mouseDownPosRef.current.x
+      const dy = e.clientY - mouseDownPosRef.current.y
+      if (Math.hypot(dx, dy) < 4) setFocusedMemberId(null)
+    }
+    mouseDownPosRef.current = null
+  }
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if ((e.target as HTMLElement).closest('.apple-node-clickable')) return
@@ -309,6 +398,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         inset: 0,
         transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
         transformOrigin: '0 0',
+        transition: animatingTransform ? 'transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1)' : 'none',
         pointerEvents: 'none', // Let dragging work on the container behind it
         zIndex: 50 // Creates stacking context ABOVE the background
       }}>
@@ -336,6 +426,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             const x2 = (child.canvasX ?? 0)
             const y2 = (child.canvasY ?? 0) + NODE_SIZE // Hasta la base del hijo
 
+            const lineIsKin = kinIds
+              ? kinIds.has(child.id) && parents.some(p => kinIds.has(p.id))
+              : true
+            const lineOpacity = kinIds ? (lineIsKin ? 0.9 : 0.12) : 0.5
             return (
               <path
                 key={`path-trunk-${child.id}`}
@@ -344,7 +438,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 stroke="#D4AF37"
                 strokeWidth={1.5}
                 strokeLinecap="round"
-                opacity={0.5}
+                opacity={lineOpacity}
+                style={{ transition: 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)' }}
               />
             )
           })}
@@ -363,6 +458,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 const x2 = m2.canvasX
                 const y2 = m2.canvasY + NODE_SIZE / 2 // Center of node
                 
+                const spouseLineOpacity = kinIds
+                  ? (kinIds.has(m1.id) && kinIds.has(m2.id) ? 0.85 : 0.12)
+                  : 0.6
                 return (
                   <line
                     key={`spouse-line-${rel.id}`}
@@ -371,7 +469,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                     strokeWidth={1.5}
                     strokeDasharray="4, 4"
                     strokeLinecap="round"
-                    opacity={0.6}
+                    opacity={spouseLineOpacity}
+                    style={{ transition: 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)' }}
                   />
                 )
               })
@@ -380,7 +479,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
 
         {/* Nodes Layer */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
-          {positionedMembers.map((member) => (
+          {positionedMembers.map((member) => {
+            const isKin = !kinIds || kinIds.has(member.id)
+            const isFocused = focusedMemberId === member.id
+            return (
             <div
               key={member.id}
               className="apple-node-clickable"
@@ -393,14 +495,23 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   setHoveredMemberId(null)
                 }, 400)
               }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setFocusedMemberId(prev => prev === member.id ? null : member.id)
+              }}
               style={{
                 position: 'absolute',
-                left: member.canvasX - NODE_SIZE / 2, 
+                left: member.canvasX - NODE_SIZE / 2,
                 top: member.canvasY,
-                zIndex: hoveredMemberId === member.id ? 2000 : 50,
+                zIndex: isFocused ? 3000 : hoveredMemberId === member.id ? 2000 : 50,
                 pointerEvents: 'auto',
                 padding: '20px',
-                margin: '-20px'
+                margin: '-20px',
+                opacity: isKin ? 1 : 0.28,
+                transform: isKin ? 'scale(1)' : 'scale(0.92)',
+                transformOrigin: 'center center',
+                transition: 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)',
+                filter: isFocused ? 'drop-shadow(0 0 22px rgba(212,175,55,0.75))' : 'none'
               }}
             >
             <AppleNode
@@ -440,7 +551,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               />
             )}
           </div>
-        ))}
+          )
+        })}
         </div>
       </div>
 
@@ -503,6 +615,40 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           {Math.round(scale * 100)}%
         </span>
       </div>
+
+      {/* EXIT FOCUS BUTTON · appears only while focus mode is active */}
+      {focusedMemberId && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setFocusedMemberId(null) }}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Salir del enfoque (Esc)"
+          style={{
+            position: 'absolute',
+            top: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '8px 18px',
+            borderRadius: '999px',
+            border: '1px solid rgba(212, 175, 55, 0.35)',
+            backgroundColor: 'rgba(20, 35, 20, 0.85)',
+            color: '#D4AF37',
+            fontSize: '12px',
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            zIndex: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span style={{ fontSize: '14px', lineHeight: 1 }}>✕</span>
+          Salir del enfoque
+          <span style={{ opacity: 0.55, fontSize: '10px', border: '1px solid rgba(212,175,55,0.4)', padding: '1px 5px', borderRadius: '4px' }}>Esc</span>
+        </button>
+      )}
 
       {/* ADD MEMBER MODAL LAYER */}
       {addingToMember && (
