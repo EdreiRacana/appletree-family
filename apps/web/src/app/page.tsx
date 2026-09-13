@@ -694,33 +694,47 @@ export default function AppleTreeDashboard() {
         }
       }
 
+      // With RLS enabled, creating a tree requires a real Supabase Auth session.
+      // The tree.owner_id column is NOT NULL and must reference a real user.
+      if (!session) {
+        alert('Para crear tu propio árbol, primero necesitas registrarte con correo y contraseña (arriba en "Crear cuenta").')
+        return
+      }
+
       const newTreeId = crypto.randomUUID()
-      
-      // 1. Create the tree first (required for foreign key constraint)
+      const displayName =
+        (session.user.user_metadata?.full_name as string | undefined) ||
+        session.user.email?.split('@')[0] ||
+        'Mi Familia'
+
+      // 1. Create the tree with owner_id set to the authenticated user
       const { error: treeError } = await supabase.from('trees').insert({
         id: newTreeId,
-        name: `Árbol de ${loginInputUser || 'Francisco'}`
+        owner_id: session.user.id,
+        name: `Árbol de ${displayName}`
       })
       if (treeError) throw treeError
 
-      // 2. Create first member for this tree (removed invalid 'is_baby' column)
-      const { data: newMember, error } = await supabase.from('members').insert({
+      // 2. Create first member for this tree, linked to the auth user so the
+      //    "family_read" policy lets them see the whole tree.
+      const { error } = await supabase.from('members').insert({
         tree_id: newTreeId,
-        first_name: loginInputUser || 'Francisco',
+        user_id: session.user.id,
+        first_name: displayName,
         last_name: '',
         generation: 0,
-        gender: 'male'
-      }).select().single()
-
+        apple_type: 'red'
+      })
       if (error) throw error
 
       // Also log activity
       await supabase.from('activities').insert({
         tree_id: newTreeId,
-        type: 'member_added',
+        actor_user_id: session.user.id,
+        activity_type: 'new_member',
         title: 'Árbol Creado',
-        description: `${loginInputUser || 'Francisco'} ha comenzado su árbol genealógico.`,
-        privacy: 'family'
+        description: `${displayName} ha comenzado su árbol genealógico.`,
+        privacy: 'core'
       })
 
       if (typeof window !== 'undefined') {
@@ -732,7 +746,7 @@ export default function AppleTreeDashboard() {
       setTutorialStep(0)
     } catch (err) {
       console.error('Error starting new tree:', err)
-      alert('Error al crear tu árbol: Verifica tu conexión a internet.')
+      alert('Error al crear tu árbol: ' + (err instanceof Error ? err.message : 'Desconocido'))
     }
   }
 
