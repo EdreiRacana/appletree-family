@@ -16,6 +16,7 @@ import MobileBottomSheet from '@/components/MobileBottomSheet'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import MobileLayout from '@/components/MobileLayout'
 import { supabase } from '@/lib/supabase'
+import type { Session } from '@supabase/supabase-js'
 import type { Member, Relationship } from '@/lib/types'
 import { useNotifications } from '@/lib/useNotifications'
 
@@ -40,13 +41,23 @@ export default function AppleTreeDashboard() {
   const [isTermsOpen, setIsTermsOpen] = useState(false)
 
 
-  // MOCK LOGIN STATE
+  // MOCK LOGIN STATE (legacy hardcoded family users — kept as fallback)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loginInputUser, setLoginInputUser] = useState('')
   const [loginInputPass, setLoginInputPass] = useState('')
   const [loginError, setLoginError] = useState('')
   const [tutorialStep, setTutorialStep] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
+
+  // ── REAL AUTH (Supabase Auth) ──────────────────────────────────
+  const [session, setSession] = useState<Session | null>(null)
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authName, setAuthName] = useState('')
+  const [authNotice, setAuthNotice] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [showLegacyLogin, setShowLegacyLogin] = useState(false)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -59,17 +70,74 @@ export default function AppleTreeDashboard() {
   const DEMO_TREE_ID = '00000000-0000-0000-0000-000000000001'
   const [currentTreeId, setCurrentTreeId] = useState<string>(DEMO_TREE_ID)
 
-  // ── Restaurar sesión: mantener al usuario dentro como en una web normal ──
+  // ── Restaurar sesión: prioridad a Supabase Auth, luego al legacy ──
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const savedUser = window.localStorage.getItem('apple_session_user')
-    if (savedUser) {
-      setLoginInputUser(savedUser)
-      const savedTreeId = window.localStorage.getItem('apple_user_tree_id')
-      if (savedTreeId) setCurrentTreeId(savedTreeId)
-      setTutorialStep(0)
-      setIsLoggedIn(true)
+
+    // 1. Try to restore Supabase Auth session first
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        applySupabaseSession(data.session)
+        return
+      }
+      // 2. Fall back to legacy hardcoded session (Francisco / Eber)
+      const savedUser = window.localStorage.getItem('apple_session_user')
+      if (savedUser) {
+        setLoginInputUser(savedUser)
+        const savedTreeId = window.localStorage.getItem('apple_user_tree_id')
+        if (savedTreeId) setCurrentTreeId(savedTreeId)
+        setTutorialStep(0)
+        setIsLoggedIn(true)
+      }
+    })
+
+    // Keep listening for auth state changes (login / logout / token refresh)
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession)
+      if (newSession) applySupabaseSession(newSession)
+    })
+    return () => sub.subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Apply a fresh Supabase Auth session to the app: pick a display name and
+  // try to auto-load the user's tree. Falls back to the DEMO tree if none.
+  const applySupabaseSession = React.useCallback(async (s: Session) => {
+    setSession(s)
+    const displayName =
+      (s.user.user_metadata?.full_name as string | undefined) ||
+      s.user.email?.split('@')[0] ||
+      'Familia'
+    setLoginInputUser(displayName)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('apple_session_user', displayName)
+      window.localStorage.setItem('currentUser', displayName)
     }
+    // Auto-load a tree owned by this user, if any
+    try {
+      const { data: trees } = await supabase
+        .from('trees')
+        .select('id')
+        .eq('owner_id', s.user.id)
+        .limit(1)
+      if (trees && trees.length > 0) {
+        setCurrentTreeId(trees[0].id)
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('apple_user_tree_id', trees[0].id)
+        }
+      } else {
+        // No linked tree yet: keep whatever the localStorage flow already has,
+        // so a user that just signed up doesn't lose the demo/legacy tree.
+        const saved = typeof window !== 'undefined'
+          ? window.localStorage.getItem('apple_user_tree_id')
+          : null
+        if (saved) setCurrentTreeId(saved)
+      }
+    } catch (err) {
+      console.warn('Could not auto-load user tree:', err)
+    }
+    setIsLoggedIn(true)
+    setTutorialStep(0)
   }, [])
 
   const fetchFamilyData = React.useCallback(async () => {
@@ -263,16 +331,81 @@ export default function AppleTreeDashboard() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Sign out from Supabase Auth if there was a real session
+    try { await supabase.auth.signOut() } catch { /* ignore */ }
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('apple_session_user')
       window.localStorage.removeItem('currentUser')
     }
+    setSession(null)
     setIsLoggedIn(false)
     setLoginInputUser('')
     setLoginInputPass('')
     setLoginError('')
+    setAuthEmail('')
+    setAuthPassword('')
+    setAuthName('')
+    setAuthNotice('')
     setTutorialStep(0)
+  }
+
+  // ── SUPABASE AUTH: sign in with email + password ──
+  const handleSupabaseSignIn = async () => {
+    setLoginError('')
+    setAuthNotice('')
+    if (!authEmail || !authPassword) {
+      setLoginError('Escribe tu correo y contraseña.')
+      return
+    }
+    setAuthLoading(true)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: authEmail.trim(),
+      password: authPassword
+    })
+    setAuthLoading(false)
+    if (error) {
+      setLoginError(error.message === 'Invalid login credentials'
+        ? 'Correo o contraseña incorrectos.'
+        : error.message)
+      return
+    }
+    if (data.session) await applySupabaseSession(data.session)
+  }
+
+  // ── SUPABASE AUTH: sign up new account ──
+  const handleSupabaseSignUp = async () => {
+    setLoginError('')
+    setAuthNotice('')
+    if (!authEmail || !authPassword) {
+      setLoginError('Escribe tu correo y contraseña.')
+      return
+    }
+    if (authPassword.length < 6) {
+      setLoginError('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+    setAuthLoading(true)
+    const { data, error } = await supabase.auth.signUp({
+      email: authEmail.trim(),
+      password: authPassword,
+      options: {
+        data: { full_name: authName.trim() || authEmail.split('@')[0] }
+      }
+    })
+    setAuthLoading(false)
+    if (error) {
+      setLoginError(error.message)
+      return
+    }
+    if (data.session) {
+      // Email confirmation is disabled → autologin
+      await applySupabaseSession(data.session)
+    } else {
+      // Email confirmation is required → tell the user to check their inbox
+      setAuthNotice(`¡Cuenta creada! Revisa ${authEmail.trim()} para confirmar tu correo y luego inicia sesión.`)
+      setAuthMode('signin')
+    }
   }
 
   if (!isLoggedIn) {
@@ -341,109 +474,195 @@ export default function AppleTreeDashboard() {
             filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))'
           }}>AppleFamily Tree</h1>
           
-          <p style={{ 
-            color: '#D4AF37', 
-            opacity: 0.75, 
-            marginBottom: '26px', 
-            fontWeight: '600', 
+          <p style={{
+            color: '#D4AF37',
+            opacity: 0.75,
+            marginBottom: '22px',
+            fontWeight: '600',
             fontSize: '11px',
             letterSpacing: '0.18em',
             textTransform: 'uppercase'
           }}>Acceso Privado Familiar</p>
-          
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="text" 
-                placeholder="Usuario" 
-                value={loginInputUser}
-                onChange={e => setLoginInputUser(e.target.value)}
-                style={{ 
-                  width: '100%', 
-                  padding: '13px 18px', 
-                  borderRadius: '12px', 
-                  border: '1px solid rgba(212, 175, 55, 0.22)', 
-                  outline: 'none', 
-                  backgroundColor: 'rgba(255,255,255,0.05)', 
-                  fontSize: '14px', 
-                  color: '#F5E6C8',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                }} 
-                className="focus:border-[#D4AF37] focus:ring-4 focus:ring-[#D4AF371A]"
-              />
-            </div>
 
-            <div style={{ position: 'relative' }}>
-              <input 
-                type="password" 
-                placeholder="Contraseña" 
-                value={loginInputPass}
-                onChange={e => setLoginInputPass(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') handleLogin()
+          {/* ── AUTH MODE TABS ───────────────────────────────────── */}
+          <div style={{
+            display: 'flex',
+            width: '100%',
+            marginBottom: '18px',
+            borderRadius: '10px',
+            padding: '4px',
+            backgroundColor: 'rgba(212, 175, 55, 0.08)',
+            border: '1px solid rgba(212, 175, 55, 0.15)'
+          }}>
+            {(['signin', 'signup'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => { setAuthMode(mode); setLoginError(''); setAuthNotice('') }}
+                style={{
+                  flex: 1,
+                  padding: '8px 4px',
+                  borderRadius: '7px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  letterSpacing: '0.03em',
+                  backgroundColor: authMode === mode ? 'rgba(212, 175, 55, 0.85)' : 'transparent',
+                  color: authMode === mode ? '#0F1A0F' : '#D4AF37',
+                  transition: 'all 0.2s'
                 }}
-                style={{ 
-                  width: '100%', 
-                  padding: '13px 18px', 
-                  borderRadius: '12px', 
-                  border: '1px solid rgba(212, 175, 55, 0.22)', 
-                  outline: 'none', 
-                  backgroundColor: 'rgba(255,255,255,0.05)', 
-                  fontSize: '14px', 
-                  color: '#F5E6C8',
-                  transition: 'all 0.3s ease',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                }} 
-                className="focus:border-[#D4AF37] focus:ring-4 focus:ring-[#D4AF371A]"
-              />
-            </div>
+              >
+                {mode === 'signin' ? 'Iniciar sesión' : 'Crear cuenta'}
+              </button>
+            ))}
           </div>
-          
-          <div style={{ minHeight: '28px', marginTop: '12px', marginBottom: '12px' }}>
+
+          {/* ── AUTH FORM (Supabase Auth) ───────────────────────── */}
+          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {authMode === 'signup' && (
+              <input
+                type="text"
+                placeholder="Tu nombre completo"
+                value={authName}
+                onChange={e => setAuthName(e.target.value)}
+                autoComplete="name"
+                style={{
+                  width: '100%', padding: '13px 18px', borderRadius: '12px',
+                  border: '1px solid rgba(212, 175, 55, 0.22)', outline: 'none',
+                  backgroundColor: 'rgba(255,255,255,0.05)', fontSize: '14px', color: '#F5E6C8',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                }}
+              />
+            )}
+            <input
+              type="email"
+              placeholder="Correo electrónico"
+              value={authEmail}
+              onChange={e => setAuthEmail(e.target.value)}
+              autoComplete={authMode === 'signup' ? 'email' : 'username'}
+              style={{
+                width: '100%', padding: '13px 18px', borderRadius: '12px',
+                border: '1px solid rgba(212, 175, 55, 0.22)', outline: 'none',
+                backgroundColor: 'rgba(255,255,255,0.05)', fontSize: '14px', color: '#F5E6C8',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+              }}
+            />
+            <input
+              type="password"
+              placeholder="Contraseña"
+              value={authPassword}
+              onChange={e => setAuthPassword(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  authMode === 'signin' ? handleSupabaseSignIn() : handleSupabaseSignUp()
+                }
+              }}
+              autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
+              style={{
+                width: '100%', padding: '13px 18px', borderRadius: '12px',
+                border: '1px solid rgba(212, 175, 55, 0.22)', outline: 'none',
+                backgroundColor: 'rgba(255,255,255,0.05)', fontSize: '14px', color: '#F5E6C8',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+              }}
+            />
+          </div>
+
+          <div style={{ minHeight: '28px', marginTop: '10px', marginBottom: '4px' }}>
             {loginError && (
-              <p style={{ 
-                color: '#FF6B6B', 
-                fontSize: '14px', 
-                margin: 0, 
-                fontWeight: '600',
+              <p style={{
+                color: '#FF6B6B', fontSize: '13px', margin: 0, fontWeight: 600,
                 animation: 'shake 0.4s ease-in-out'
-              }}>
-                {loginError}
-              </p>
+              }}>{loginError}</p>
+            )}
+            {authNotice && !loginError && (
+              <p style={{
+                color: '#7FE0A2', fontSize: '12px', margin: 0, fontWeight: 500, lineHeight: 1.4
+              }}>{authNotice}</p>
             )}
           </div>
 
-          <button 
-            onClick={handleLogin}
-            style={{ 
-              width: '100%', 
-              padding: '14px', 
-              background: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)', 
-              color: '#0F1A0F', 
-              borderRadius: '12px', 
-              border: 'none', 
-              fontSize: '15px', 
-              fontWeight: '700', 
-              letterSpacing: '0.02em', 
-              cursor: 'pointer', 
+          <button
+            onClick={authMode === 'signin' ? handleSupabaseSignIn : handleSupabaseSignUp}
+            disabled={authLoading}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'linear-gradient(135deg, #D4AF37 0%, #B8860B 100%)',
+              color: '#0F1A0F',
+              borderRadius: '12px',
+              border: 'none',
+              fontSize: '15px',
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              cursor: authLoading ? 'wait' : 'pointer',
               boxShadow: '0 12px 24px rgba(212, 175, 55, 0.3)',
               transition: 'all 0.3s ease',
-              marginTop: '10px'
-            }}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 15px 30px rgba(212, 175, 55, 0.5)'
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = '0 12px 24px rgba(212, 175, 55, 0.3)'
+              marginTop: '8px',
+              opacity: authLoading ? 0.65 : 1
             }}
           >
-            Entrar al Legado
+            {authLoading ? '...' : (authMode === 'signin' ? 'Entrar al Legado' : 'Crear mi cuenta')}
           </button>
-          
-          <p style={{ marginTop: '22px', fontSize: '11px', color: '#F5E6C8', opacity: 0.4 }}>
+
+          {/* ── LEGACY QUICK ACCESS (hardcoded family users) ──── */}
+          <div style={{ width: '100%', marginTop: '18px' }}>
+            <button
+              onClick={() => setShowLegacyLogin(v => !v)}
+              style={{
+                width: '100%',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(245, 230, 200, 0.55)',
+                fontSize: '11px',
+                letterSpacing: '0.08em',
+                cursor: 'pointer',
+                padding: '4px'
+              }}
+            >
+              {showLegacyLogin ? '▲ Ocultar acceso rápido familiar' : '▼ Acceso rápido familiar (temporal)'}
+            </button>
+            {showLegacyLogin && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="Usuario (francisco / eber)"
+                  value={loginInputUser}
+                  onChange={e => setLoginInputUser(e.target.value)}
+                  style={{
+                    padding: '10px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(212, 175, 55, 0.15)',
+                    background: 'rgba(255,255,255,0.03)', color: '#F5E6C8',
+                    fontSize: '13px', outline: 'none'
+                  }}
+                />
+                <input
+                  type="password"
+                  placeholder="Contraseña"
+                  value={loginInputPass}
+                  onChange={e => setLoginInputPass(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleLogin() }}
+                  style={{
+                    padding: '10px 14px', borderRadius: '10px',
+                    border: '1px solid rgba(212, 175, 55, 0.15)',
+                    background: 'rgba(255,255,255,0.03)', color: '#F5E6C8',
+                    fontSize: '13px', outline: 'none'
+                  }}
+                />
+                <button
+                  onClick={handleLogin}
+                  style={{
+                    padding: '10px', borderRadius: '10px', border: '1px solid rgba(212, 175, 55, 0.35)',
+                    background: 'transparent', color: '#D4AF37', fontSize: '12px', fontWeight: 600,
+                    cursor: 'pointer', letterSpacing: '0.03em'
+                  }}
+                >
+                  Entrar con acceso familiar
+                </button>
+              </div>
+            )}
+          </div>
+
+          <p style={{ marginTop: '18px', fontSize: '10px', color: '#F5E6C8', opacity: 0.35 }}>
             &copy; 2025 AppleTree Family Legacy. Todos los derechos reservados.
           </p>
         </div>
