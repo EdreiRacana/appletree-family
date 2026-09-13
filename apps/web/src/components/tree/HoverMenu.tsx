@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageCircle, Heart, Trophy, User, Shield, Share2, Edit2, UserPlus, Trash2 } from 'lucide-react'
+import { MessageCircle, Heart, Trophy, User, Shield, Share2, Edit2, UserPlus, Trash2, Minimize2, Maximize2 } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface HoverMenuProps {
@@ -12,6 +12,10 @@ interface HoverMenuProps {
   onViewProfile: (member: Member) => void
   onAddStory: (member: Member) => void
   onMouseEnter?: () => void
+  // Collapse/expand controls (only shown when the member has descendants)
+  hasDescendants?: boolean
+  isCollapsed?: boolean
+  onToggleCollapse?: (member: Member) => void
 }
 
 const menuItems = [
@@ -24,7 +28,7 @@ const menuItems = [
   { id: 'profile',     icon: User,          label: () => 'Ver Perfil', isContact: false },
 ]
 
-export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onMouseEnter }: HoverMenuProps) {
+export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onMouseEnter, hasDescendants, isCollapsed, onToggleCollapse }: HoverMenuProps) {
   
   // LOGIC: Check if member is a minor (< 18 years old or is marked as baby)
   const isMinor = () => {
@@ -78,6 +82,17 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
       onMouseEnter={onMouseEnter}
       id={`hover-menu-${member.id}`}
     >
+      {hasDescendants && onToggleCollapse && (
+        <button
+          className="hover-menu-item"
+          onClick={() => { onToggleCollapse(member); onClose() }}
+        >
+          {isCollapsed
+            ? <Maximize2 className="hover-menu-icon" />
+            : <Minimize2 className="hover-menu-icon" />}
+          {isCollapsed ? 'Expandir rama' : 'Colapsar rama'}
+        </button>
+      )}
       {filteredItems.map((item, idx) => {
         const Icon = item.icon
         const showDivider = idx > 0 && (item.id === 'privacy' || item.id === 'share')

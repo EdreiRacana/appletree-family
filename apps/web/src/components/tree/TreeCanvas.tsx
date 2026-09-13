@@ -53,6 +53,19 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   const [animatingTransform, setAnimatingTransform] = useState(false)
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null)
 
+  // ── COLLAPSIBLE BRANCHES ─────────────────────────────────────
+  // Members in collapsedIds hide their descendants from the canvas.
+  // A golden "+N" badge appears on the collapsed apple; clicking it re-expands.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
+  const toggleCollapsed = useCallback((memberId: string) => {
+    setCollapsedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(memberId)) next.delete(memberId)
+      else next.add(memberId)
+      return next
+    })
+  }, [])
+
   // Zoom limits
   const MIN_SCALE = 0.25
   const MAX_SCALE = 2
@@ -108,6 +121,64 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     })
     return set
   }, [focusedMemberId, positionedMembers, relationships])
+
+  // Adjacency: for each parent id → array of direct child members.
+  // Computed once per tree change, reused by the derived collapse maps below.
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, typeof positionedMembers>()
+    positionedMembers.forEach(m => {
+      ;(m.parents || []).forEach(pid => {
+        const arr = map.get(pid) || []
+        arr.push(m)
+        map.set(pid, arr)
+      })
+    })
+    return map
+  }, [positionedMembers])
+
+  // hasDescendantsMap: id → true if member has at least one child.
+  const hasDescendantsMap = useMemo(() => {
+    const map = new Map<string, boolean>()
+    positionedMembers.forEach(m => {
+      map.set(m.id, (childrenByParent.get(m.id)?.length ?? 0) > 0)
+    })
+    return map
+  }, [positionedMembers, childrenByParent])
+
+  // hiddenIds: members currently hidden because an ancestor is collapsed.
+  const hiddenIds = useMemo(() => {
+    const hidden = new Set<string>()
+    if (collapsedIds.size === 0) return hidden
+    const visit = (id: string) => {
+      const kids = childrenByParent.get(id) || []
+      kids.forEach(k => {
+        if (!hidden.has(k.id)) {
+          hidden.add(k.id)
+          visit(k.id)
+        }
+      })
+    }
+    collapsedIds.forEach(id => visit(id))
+    return hidden
+  }, [collapsedIds, childrenByParent])
+
+  // descendantCount: id → total descendants (only computed for collapsed nodes).
+  const descendantCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    collapsedIds.forEach(id => {
+      let count = 0
+      const visit = (nid: string) => {
+        const kids = childrenByParent.get(nid) || []
+        kids.forEach(k => {
+          count++
+          visit(k.id)
+        })
+      }
+      visit(id)
+      counts.set(id, count)
+    })
+    return counts
+  }, [collapsedIds, childrenByParent])
 
   // Tree bounding box in canvas coordinates (includes node size + name labels)
   const treeBounds = useMemo(() => {
@@ -407,6 +478,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           {positionedMembers.map((child) => {
             const parentIds = child.parents || []
             if (parentIds.length === 0) return null
+            if (hiddenIds.has(child.id)) return null
 
             let parents = positionedMembers.filter(p => parentIds.includes(p.id))
             if (parents.length === 0) return null
@@ -452,6 +524,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 const otherId = rel.member1Id === m1.id ? rel.member2Id : rel.member1Id
                 const m2 = positionedMembers.find(m => m.id === otherId)
                 if (!m2 || m1.id > m2.id) return null // Draw once per pair
+                if (hiddenIds.has(m1.id) || hiddenIds.has(m2.id)) return null
                 
                 const x1 = m1.canvasX
                 const y1 = m1.canvasY + NODE_SIZE / 2 // Center of node
@@ -480,8 +553,12 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         {/* Nodes Layer */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
           {positionedMembers.map((member) => {
+            if (hiddenIds.has(member.id)) return null
             const isKin = !kinIds || kinIds.has(member.id)
             const isFocused = focusedMemberId === member.id
+            const isCollapsed = collapsedIds.has(member.id)
+            const collapsedCount = descendantCounts.get(member.id) ?? 0
+            const memberHasDescendants = hasDescendantsMap.get(member.id) ?? false
             return (
             <div
               key={member.id}
@@ -524,9 +601,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
 
             {/* INTERACTIVE HOVER MENU */}
             {hoveredMemberId === member.id && (
-              <HoverMenu 
-                member={member} 
-                onClose={() => setHoveredMemberId(null)} 
+              <HoverMenu
+                member={member}
+                onClose={() => setHoveredMemberId(null)}
                 onMouseEnter={() => {
                   if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
                   setHoveredMemberId(member.id)
@@ -548,7 +625,47 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   onAddStory(m)
                   setHoveredMemberId(null)
                 }}
+                hasDescendants={memberHasDescendants}
+                isCollapsed={isCollapsed}
+                onToggleCollapse={(m) => {
+                  toggleCollapsed(m.id)
+                  setHoveredMemberId(null)
+                }}
               />
+            )}
+
+            {/* COLLAPSED BRANCH BADGE · click to expand */}
+            {isCollapsed && collapsedCount > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleCollapsed(member.id)
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                title={`Expandir rama (${collapsedCount} descendientes)`}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: `${NODE_SIZE + 8}px`,
+                  transform: 'translateX(-50%)',
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(212, 175, 55, 0.7)',
+                  backgroundColor: 'rgba(20, 35, 20, 0.9)',
+                  color: '#D4AF37',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.3px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'auto',
+                  zIndex: 60,
+                  fontFamily: "'Inter', sans-serif"
+                }}
+              >
+                +{collapsedCount}
+              </button>
             )}
           </div>
           )
