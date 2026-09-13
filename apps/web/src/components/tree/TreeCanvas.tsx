@@ -53,6 +53,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   const [animatingTransform, setAnimatingTransform] = useState(false)
   const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null)
 
+  // Container dimensions (tracked live via ResizeObserver) so the mini-map
+  // can compute the viewport rectangle without depending on a stale ref read.
+  const [containerRect, setContainerRect] = useState<{ width: number; height: number } | null>(null)
+
   // ── COLLAPSIBLE BRANCHES ─────────────────────────────────────
   // Members in collapsedIds hide their descendants from the canvas.
   // A golden "+N" badge appears on the collapsed apple; clicking it re-expands.
@@ -260,6 +264,55 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [focusedMemberId])
+
+  // ── Keep containerRect in sync with the real viewport ──
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = () => {
+      const r = el.getBoundingClientRect()
+      setContainerRect({ width: r.width, height: r.height })
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // ── MINI-MAP layout: how tree coords map into the 200x140 mini-map area ──
+  const MINIMAP_W = 200
+  const MINIMAP_H = 140
+  const MINIMAP_PAD = 10
+  const miniMapInfo = useMemo(() => {
+    if (!treeBounds) return null
+    const innerW = MINIMAP_W - 2 * MINIMAP_PAD
+    const innerH = MINIMAP_H - 2 * MINIMAP_PAD
+    const treeW = Math.max(treeBounds.maxX - treeBounds.minX, 1)
+    const treeH = Math.max(treeBounds.maxY - treeBounds.minY, 1)
+    const s = Math.min(innerW / treeW, innerH / treeH)
+    const contentW = treeW * s
+    const contentH = treeH * s
+    return {
+      s,
+      offsetX: MINIMAP_PAD + (innerW - contentW) / 2,
+      offsetY: MINIMAP_PAD + (innerH - contentH) / 2
+    }
+  }, [treeBounds])
+
+  const handleMinimapClick = useCallback((e: React.MouseEvent<SVGElement>) => {
+    if (!treeBounds || !miniMapInfo || !containerRect) return
+    const svgRect = e.currentTarget.getBoundingClientRect()
+    const mx = e.clientX - svgRect.left
+    const my = e.clientY - svgRect.top
+    const treeX = (mx - miniMapInfo.offsetX) / miniMapInfo.s + treeBounds.minX
+    const treeY = (my - miniMapInfo.offsetY) / miniMapInfo.s + treeBounds.minY
+    setAnimatingTransform(true)
+    setOffset({
+      x: containerRect.width / 2 - treeX * scaleRef.current,
+      y: containerRect.height / 2 - treeY * scaleRef.current
+    })
+    setTimeout(() => setAnimatingTransform(false), 600)
+  }, [treeBounds, miniMapInfo, containerRect])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.apple-node-clickable')) return
@@ -597,6 +650,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               isHovered={hoveredMemberId === member.id}
               onHover={() => {}}
               onLeave={() => {}}
+              viewportScale={scale}
             />
 
             {/* INTERACTIVE HOVER MENU */}
@@ -732,6 +786,73 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           {Math.round(scale * 100)}%
         </span>
       </div>
+
+      {/* MINI-MAP · overview of the whole tree with a viewport indicator */}
+      {treeBounds && miniMapInfo && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '24px',
+            right: '24px',
+            width: `${MINIMAP_W}px`,
+            height: `${MINIMAP_H}px`,
+            backgroundColor: 'rgba(20, 35, 20, 0.85)',
+            border: '1px solid rgba(212, 175, 55, 0.35)',
+            borderRadius: '10px',
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            overflow: 'hidden',
+            zIndex: 500
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <svg
+            width={MINIMAP_W}
+            height={MINIMAP_H}
+            onClick={handleMinimapClick}
+            style={{ cursor: 'crosshair', display: 'block' }}
+          >
+            {positionedMembers.map(m => {
+              if (hiddenIds.has(m.id)) return null
+              const isKin = !kinIds || kinIds.has(m.id)
+              const isFocused = focusedMemberId === m.id
+              const dx = ((m.canvasX ?? 0) - treeBounds.minX) * miniMapInfo.s + miniMapInfo.offsetX
+              const dy = ((m.canvasY ?? 0) - treeBounds.minY) * miniMapInfo.s + miniMapInfo.offsetY
+              return (
+                <circle
+                  key={m.id}
+                  cx={dx}
+                  cy={dy}
+                  r={isFocused ? 3.2 : isKin ? 2 : 1.4}
+                  fill={
+                    isFocused ? '#FFD873'
+                      : isKin ? '#D4AF37'
+                      : 'rgba(212, 175, 55, 0.35)'
+                  }
+                />
+              )
+            })}
+            {containerRect && (() => {
+              const treeLeft = (0 - offset.x) / scale
+              const treeTop = (0 - offset.y) / scale
+              const treeRight = (containerRect.width - offset.x) / scale
+              const treeBottom = (containerRect.height - offset.y) / scale
+              return (
+                <rect
+                  x={(treeLeft - treeBounds.minX) * miniMapInfo.s + miniMapInfo.offsetX}
+                  y={(treeTop - treeBounds.minY) * miniMapInfo.s + miniMapInfo.offsetY}
+                  width={(treeRight - treeLeft) * miniMapInfo.s}
+                  height={(treeBottom - treeTop) * miniMapInfo.s}
+                  fill="rgba(212, 175, 55, 0.10)"
+                  stroke="#D4AF37"
+                  strokeWidth={1.2}
+                  pointerEvents="none"
+                />
+              )
+            })()}
+          </svg>
+        </div>
+      )}
 
       {/* EXIT FOCUS BUTTON · appears only while focus mode is active */}
       {focusedMemberId && (

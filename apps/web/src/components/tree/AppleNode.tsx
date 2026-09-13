@@ -10,9 +10,12 @@ interface AppleNodeProps {
   size?: number
   showNameBelow?: boolean
   onClick?: () => void
+  // Current viewport zoom scale (from the pan/zoom wrapper). Used to progressively
+  // hide internal detail as the tree is zoomed out. Default 1 = no change.
+  viewportScale?: number
 }
 
-export default function AppleNode({ member, isHovered, onHover, onLeave, hideText = false, size = 200, showNameBelow = false, onClick }: AppleNodeProps) {
+export default function AppleNode({ member, isHovered, onHover, onLeave, hideText = false, size = 200, showNameBelow = false, onClick, viewportScale = 1 }: AppleNodeProps) {
   const [imgHasError, setImgHasError] = useState(false)
 
   React.useEffect(() => {
@@ -58,6 +61,14 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
 
   const scale = size / 200
   const fontSize = member.firstName.length > 9 ? '8px' : '10px'
+
+  // ── SEMANTIC ZOOM: progressively reveal detail as user zooms in ──
+  // Below the text threshold the name + dates become unreadable, so hide them.
+  // Below the medallion threshold even the 48px avatar circle turns into a
+  // colored dot, so drop it too. Kept as opacity (not display:none) so the
+  // detail fades in/out smoothly instead of popping.
+  const textOpacity = viewportScale >= 0.5 ? 1 : 0
+  const medallionOpacity = viewportScale >= 0.35 ? 1 : 0
 
   return (
     <div
@@ -132,7 +143,9 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '6px'
+          marginBottom: '6px',
+          opacity: medallionOpacity,
+          transition: 'opacity 0.25s ease-out'
         }}>
           <img
             src={getMedallionContent()}
@@ -152,7 +165,9 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
             width: '100%',
             textAlign: 'center',
             padding: '0 25px',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            opacity: textOpacity,
+            transition: 'opacity 0.25s ease-out'
           }}>
             <p style={{
               fontFamily: "'Inter', sans-serif",
