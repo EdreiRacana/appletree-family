@@ -113,9 +113,9 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
           width: '100%',
           height: '100%',
           objectFit: 'contain',
-          opacity: isDeceased ? 0.62 : 1,
+          opacity: isDeceased ? 0.42 : 1,
           filter: isDeceased
-            ? 'drop-shadow(0 0 22px rgba(212,175,55,0.55)) drop-shadow(0 10px 25px rgba(0,0,0,0.5))'
+            ? 'drop-shadow(0 0 18px rgba(212,175,55,0.65)) drop-shadow(0 6px 14px rgba(0,0,0,0.4))'
             : 'drop-shadow(0 10px 25px rgba(0,0,0,0.5))'
         }}
       />

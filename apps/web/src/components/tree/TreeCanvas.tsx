@@ -30,12 +30,9 @@ interface TreeCanvasProps {
   onEditMember: (member: Member) => void
   onAddStory: (member: Member) => void
   bgOpacity: number
-  // When the side profile drawer is mounted (~450px on the right) the minimap
-  // slides left so the drawer never covers it.
-  profilePanelOpen?: boolean
 }
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity }: TreeCanvasProps) {
   const isMobile = useIsMobile()
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
@@ -360,26 +357,25 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return () => window.removeEventListener('open-add-modal', handleOpenModal)
   }, [])
 
-  // INITIAL VIEW: classic 100% centered framing (fit-to-view stays
-  // available on the ⊡ button for when the user wants the full overview)
+  // INITIAL VIEW: auto fit-to-view so the WHOLE tree fits the viewport on
+  // load — a family that grows two more generations still frames itself
+  // correctly without the user having to zoom or pan. Falls back to a
+  // centered 100% only for a single-node tree where fit isn't meaningful.
   const didInitialFit = useRef(false)
   useEffect(() => {
-    if (positionedMembers.length > 0 && containerRef.current && !didInitialFit.current) {
-      didInitialFit.current = true
-      const minX = Math.min(...positionedMembers.map(m => m.canvasX ?? 0))
-      const maxX = Math.max(...positionedMembers.map(m => m.canvasX ?? 0))
-      const treeCenterX = (minX + maxX) / 2
+    if (positionedMembers.length === 0 || !containerRef.current || didInitialFit.current) return
+    didInitialFit.current = true
 
-      const root = positionedMembers.find(m => m.generation === 0) || positionedMembers[0]
+    if (positionedMembers.length === 1) {
+      const only = positionedMembers[0]
       const rect = containerRef.current.getBoundingClientRect()
-
       setScale(1)
-      setOffset({
-        x: (rect.width / 2) - treeCenterX,
-        y: (rect.height / 2) - root.canvasY + (positionedMembers.length === 1 ? 0 : 200)
-      })
+      setOffset({ x: rect.width / 2 - only.canvasX, y: rect.height / 2 - only.canvasY })
+      return
     }
-  }, [positionedMembers])
+    // Defer one frame so treeBounds/fitToView have the latest positions
+    requestAnimationFrame(() => fitToView())
+  }, [positionedMembers, fitToView])
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return
@@ -818,14 +814,15 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         </span>
       </div>
 
-      {/* MINI-MAP · overview of the whole tree with a viewport indicator.
-         Slides left when the profile drawer is open so it stays visible. */}
+      {/* MINI-MAP · anchored bottom-LEFT past the 80px sidebar. Was bottom-right
+         but the profile drawer covered it there; the left side stays clean at
+         every viewport width, no repositioning needed. */}
       {treeBounds && miniMapInfo && (
         <div
           style={{
             position: 'absolute',
             bottom: '24px',
-            right: profilePanelOpen ? '474px' : '24px',
+            left: '100px',
             width: `${MINIMAP_W}px`,
             height: `${MINIMAP_H}px`,
             backgroundColor: 'rgba(20, 35, 20, 0.85)',
@@ -834,8 +831,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             backdropFilter: 'blur(8px)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
             overflow: 'hidden',
-            zIndex: 500,
-            transition: 'right 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+            zIndex: 500
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
