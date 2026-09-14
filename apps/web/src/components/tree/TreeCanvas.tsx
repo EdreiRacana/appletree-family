@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
-import { computeHoneycombLayout, NODE_SIZE } from '@/lib/treeLayout'
+import { computeTreeLayout, NODE_SIZE } from '@/lib/treeLayout'
 import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
 import HoverPeek from './HoverPeek'
@@ -104,48 +104,21 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   useEffect(() => { focusedMemberIdRef.current = focusedMemberId }, [focusedMemberId])
 
   const positionedMembers = useMemo(() => {
-    return computeHoneycombLayout(members, relationships)
+    return computeTreeLayout(members, relationships)
   }, [members, relationships])
 
-  // ── RADIAL SPHERE LENS ────────────────────────────────────────
-  // Cada manzana se remapea con una distorsión barrel radial centrada en
-  // el viewport: r' = r * (1 - K*(r/R)²). Es lo que da la ilusión de
-  // esfera 3D — las filas rectas se curvan como si estuvieran sobre una
-  // bola. Como calculo AQUÍ las posiciones lenseadas, las líneas SVG
-  // (que se dibujan entre estas posiciones) siguen la curva automática-
-  // mente, sin quedar despegadas de las manzanas.
+  // Sphere lens disabled — deformaba filas y confundía el layout jerárquico.
+  // Passthrough: mantiene coords originales, escala neutra. El fisheye del
+  // cursor (más abajo, per-apple) sigue funcionando para el efecto lente
+  // local sobre la manzana que apuntas.
   const spherizedMembers = useMemo(() => {
-    if (!containerRect) {
-      return positionedMembers.map(m => ({
-        ...m,
-        lensedX: m.canvasX,
-        lensedY: m.canvasY,
-        lensScale: 1,
-      }))
-    }
-    const cx = containerRect.width / 2
-    const cy = containerRect.height / 2
-    const R = Math.min(containerRect.width, containerRect.height) * 0.6
-    const PULL = 0.35     // fuerza del barrel (0 = plano, 0.5 = fisheye extremo)
-    const S_CENTER = 1.28 // manzana central: +28%
-    const S_EDGE = 0.62   // manzana en el borde: -38%
-    return positionedMembers.map(m => {
-      const sx = (m.canvasX ?? 0) * scale + offset.x
-      const sy = ((m.canvasY ?? 0) + NODE_SIZE / 2) * scale + offset.y
-      const dx = sx - cx
-      const dy = sy - cy
-      const d = Math.hypot(dx, dy)
-      const t = Math.min(d / R, 1)          // 0 centro, 1 borde
-      const compress = 1 - PULL * t * t     // barrel radial
-      const newSx = cx + dx * compress
-      const newSy = cy + dy * compress
-      const lensedX = (newSx - offset.x) / scale
-      const lensedY = (newSy - offset.y) / scale - NODE_SIZE / 2
-      const closeness = 1 - t * t * (3 - 2 * t) // smoothstep
-      const lensScale = S_EDGE + (S_CENTER - S_EDGE) * closeness
-      return { ...m, lensedX, lensedY, lensScale }
-    })
-  }, [positionedMembers, containerRect, scale, offset.x, offset.y])
+    return positionedMembers.map(m => ({
+      ...m,
+      lensedX: m.canvasX,
+      lensedY: m.canvasY,
+      lensScale: 1,
+    }))
+  }, [positionedMembers])
 
   const lensedById = useMemo(() => {
     const map = new Map<string, { lensedX: number; lensedY: number; lensScale: number }>()
@@ -701,35 +674,29 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             let parents = positionedMembers.filter(p => parentIds.includes(p.id))
             if (parents.length === 0) return null
 
-            // Honeycomb: posiciones NO son jerárquicas verticalmente.
-            // Se dibuja un bezier suave del centro del padre-promedio al
-            // centro del hijo. Las coords lenseadas hacen que la línea
-            // siga la deformación de la esfera.
+            // Usar posiciones lenseadas para que las líneas sigan la
+            // deformación radial del sphere lens.
             const childLensed = lensedById.get(child.id)
-            const childX = (childLensed ? childLensed.lensedX : (child.canvasX ?? 0)) + NODE_SIZE / 2
-            const childY = (childLensed ? childLensed.lensedY : (child.canvasY ?? 0)) + NODE_SIZE / 2
-            const midX = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedX ?? p.canvasX ?? 0), 0) / parents.length + NODE_SIZE / 2
-            const midY = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedY ?? p.canvasY ?? 0), 0) / parents.length + NODE_SIZE / 2
+            const childX = childLensed ? childLensed.lensedX : (child.canvasX ?? 0)
+            const childY = childLensed ? childLensed.lensedY : (child.canvasY ?? 0)
+            const midX = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedX ?? p.canvasX ?? 0), 0) / parents.length
+            const midY = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedY ?? p.canvasY ?? 0), 0) / parents.length
+
+            if (childY >= midY) return null
 
             const x1 = midX
-            const y1 = midY
+            const y1 = midY + NODE_SIZE / 2
             const x2 = childX
-            const y2 = childY
+            const y2 = childY + NODE_SIZE
 
             const lineIsKin = kinIds
               ? kinIds.has(child.id) && parents.some(p => kinIds.has(p.id))
               : true
             const lineOpacity = kinIds ? (lineIsKin ? 0.9 : 0.12) : 0.5
-            // Bezier suave con curvatura perpendicular al vector padre→hijo
-            // (dibuja un arco corto en vez de una S vertical fea)
-            const dx = x2 - x1
-            const dy = y2 - y1
-            const midCX = (x1 + x2) / 2 + dy * 0.15
-            const midCY = (y1 + y2) / 2 - dx * 0.15
             return (
               <path
                 key={`path-trunk-${child.id}`}
-                d={`M ${x1} ${y1} Q ${midCX} ${midCY} ${x2} ${y2}`}
+                d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
                 fill="none"
                 stroke="var(--tree-line)"
                 strokeWidth={1.5}
@@ -820,7 +787,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               }}
               onClick={(e) => {
                 e.stopPropagation()
-                setFocusedMemberId(prev => prev === member.id ? null : member.id)
+                // Click abre el perfil (drawer). El focus mode se activa
+                // desde el menú expandido si el usuario lo quiere.
+                onViewProfile(member)
+                setHoveredMemberId(null)
               }}
               style={{
                 position: 'absolute',
