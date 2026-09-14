@@ -37,7 +37,7 @@ function ThemeToggle() {
         cursor: 'pointer'
       }}
     >
-      {theme === 'dark' ? <Sun size={18} color="#F5E6C8" /> : <Moon size={18} color="#F5E6C8" />}
+      {theme === 'dark' ? <Sun size={18} color="var(--topbar-fg)" /> : <Moon size={18} color="var(--topbar-fg)" />}
     </button>
   )
 }
@@ -86,15 +86,16 @@ export default function Topbar({
         position: 'fixed',
         top: 0,
         left: 0,
-        backgroundColor: '#0F1A0F',
-        backgroundImage: 'linear-gradient(to right, #0F1A0F 0%, #1B2E1B 50%, #254025 100%)',
+        backgroundColor: 'var(--topbar-bg)',
+        backdropFilter: 'blur(22px) saturate(140%)',
+        WebkitBackdropFilter: 'blur(22px) saturate(140%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 22px',
         zIndex: 2000,
-        boxShadow: '0 6px 28px rgba(0,0,0,0.4)',
-        borderBottom: '1px solid rgba(212,175,55,0.3)'
+        boxShadow: 'var(--panel-shadow)',
+        borderBottom: '1px solid var(--topbar-border)'
       }}
     >
       {/* 1. ICON-FIRST BRANDING - LEFT ALIGNED & SYMMETRICAL */}
@@ -193,12 +194,12 @@ export default function Topbar({
             border: '1px solid rgba(212,175,55,0.22)'
           }}
         >
-          <Search size={18} color="#F5E6C8" style={{ opacity: 0.6 }} />
+          <Search size={18} color="var(--topbar-fg)" style={{ opacity: 0.6 }} />
           <input 
             type="text" 
             placeholder="Search family..." 
             style={{
-              background: 'none', border: 'none', outline: 'none', color: '#F5E6C8',
+              background: 'none', border: 'none', outline: 'none', color: 'var(--topbar-fg)',
               fontSize: '13px', marginLeft: '12px', width: '100%', fontWeight: '600'
             }}
           />
@@ -230,7 +231,7 @@ export default function Topbar({
           title="Añadir Familiar"
           style={{ width: '38px', height: '38px', backgroundColor: 'rgba(232,218,183,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212,175,55,0.18)', cursor: 'pointer' }}
         >
-          <Plus size={18} color="#F5E6C8" />
+          <Plus size={18} color="var(--topbar-fg)" />
         </button>
         <button 
           className="topbar-btn" 
@@ -238,7 +239,7 @@ export default function Topbar({
           title="Ver Tutorial"
           style={{ width: '38px', height: '38px', backgroundColor: 'rgba(232,218,183,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212,175,55,0.18)', cursor: 'pointer' }}
         >
-          <HelpCircle size={18} color="#F5E6C8" />
+          <HelpCircle size={18} color="var(--topbar-fg)" />
         </button>
         <button
           className="topbar-btn"
@@ -246,7 +247,7 @@ export default function Topbar({
           title="Términos y Condiciones"
           style={{ width: '38px', height: '38px', backgroundColor: 'rgba(232,218,183,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212,175,55,0.18)', cursor: 'pointer' }}
         >
-          <Shield size={18} color="#F5E6C8" />
+          <Shield size={18} color="var(--topbar-fg)" />
         </button>
         <ThemeToggle />
         <div style={{ position: 'relative' }}>
@@ -386,5 +387,5 @@ function UserIconWrapper({ url }: { url?: string | null }) {
       />
     )
   }
-  return <User size={18} color="#F5E6C8" />
+  return <User size={18} color="var(--topbar-fg)" />
 }

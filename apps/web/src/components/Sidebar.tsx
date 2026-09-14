@@ -48,17 +48,18 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
         {/* 1. Icon Rail (COLOR: #FAEFBC) */}
         <nav style={{
           width: '76px',
-          backgroundColor: 'rgba(15,26,15,0.72)',
-          backdropFilter: 'blur(18px)',
-          WebkitBackdropFilter: 'blur(18px)',
+          backgroundColor: 'var(--sidebar-bg)',
+          backdropFilter: 'blur(22px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(140%)',
           borderRadius: '20px',
-          boxShadow: '0 14px 40px rgba(0,0,0,0.45)',
+          boxShadow: 'var(--panel-shadow)',
           display: 'flex',
           flexDirection: 'column',
           padding: '14px 0',
-          border: '1px solid rgba(212,175,55,0.22)',
+          border: '1px solid var(--sidebar-border)',
           overflowY: 'auto',
-          flex: 1
+          flex: 1,
+          color: 'var(--sidebar-fg)'
         }}>
           {menuItems.map((item) => (
             <div
@@ -75,13 +76,13 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
                 borderLeft: activeTab === item.label ? '3px solid #D4AF37' : '3px solid transparent'
               }}
             >
-              <div style={{ color: '#E8DAB2', opacity: activeTab === item.label ? 1 : 0.65, marginBottom: '6px' }}>
+              <div style={{ color: 'var(--sidebar-fg)', opacity: activeTab === item.label ? 1 : 0.65, marginBottom: '6px' }}>
                 {item.icon}
               </div>
-              <span style={{ 
-                fontSize: '9px', 
-                fontWeight: '600', 
-                color: '#E8DAB2',
+              <span style={{
+                fontSize: '9px',
+                fontWeight: '600',
+                color: 'var(--sidebar-fg)',
                 textAlign: 'center',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em'
