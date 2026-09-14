@@ -43,21 +43,23 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
          story is open (Notion / Linear / Figma pattern). No backdrop. */}
       <div style={{
         position: 'fixed',
-        top: 0,
-        right: 0,
-        width: 'min(340px, 90vw)',
-        height: '100vh',
+        top: '88px',
+        right: '18px',
+        bottom: '18px',
+        width: 'min(340px, calc(100vw - 36px))',
         backgroundColor: 'var(--drawer-bg)',
         backdropFilter: 'blur(26px) saturate(140%)',
         WebkitBackdropFilter: 'blur(26px) saturate(140%)',
         boxShadow: 'var(--panel-shadow)',
+        borderRadius: '18px',
         zIndex: 4001,
         display: 'flex',
         flexDirection: 'column',
-        transform: isVisible ? 'translateX(0)' : 'translateX(100%)',
+        transform: isVisible ? 'translateX(0)' : 'translateX(calc(100% + 24px))',
         transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-        borderLeft: '1px solid var(--drawer-border)',
+        border: '1px solid var(--drawer-border)',
         color: 'var(--drawer-fg)',
+        overflow: 'hidden',
       }}>
         
         {/* Header / Cover Area — compacto */}
@@ -134,13 +136,13 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
         </div>
 
         {/* Content Area */}
-        <div style={{ 
-          flex: 1, 
-          overflowY: 'auto', 
-          padding: '40px',
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '22px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '35px'
+          gap: '22px'
         }}>
           
           {/* Quick Info Bar */}
