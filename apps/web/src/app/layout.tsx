@@ -13,12 +13,23 @@ export const metadata: Metadata = {
   },
 }
 
+// Runs before React hydrates: reads the saved theme from localStorage and
+// stamps data-theme on <html> so the first paint already matches. Without
+// this the page flashes dark→light on load for light-mode users.
+const THEME_INIT = `
+(function(){try{
+  var t = localStorage.getItem('apple_theme');
+  if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+}catch(e){}})();
+`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
       <body>{children}</body>
     </html>

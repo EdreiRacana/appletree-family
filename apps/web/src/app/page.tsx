@@ -795,7 +795,7 @@ export default function AppleTreeDashboard() {
   }
 
   return (
-    <main style={{ width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#1B2E1B', position: 'relative' }}>
+    <main style={{ width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--body-bg)', position: 'relative' }}>
       <Topbar 
         viewFocus={viewFocus} 
         onViewFocusChange={setViewFocus} 

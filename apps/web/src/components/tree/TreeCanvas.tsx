@@ -543,42 +543,47 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
-        backgroundColor: '#1B2E1B', 
+        backgroundColor: 'var(--canvas-bg)',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         touchAction: 'none',
         overscrollBehavior: 'none'
       }}
     >
-      {/* 1. BACKGROUND IMAGE LAYER */}
+      {/* 1. BACKGROUND IMAGE LAYER — theme-aware: dark keeps the tree as-is,
+         light lifts + desaturates it into a watermark. */}
       <div style={{
         position: 'absolute',
         inset: 0,
         backgroundImage: 'url("/assets/arbol-base.png")',
         backgroundSize: 'cover',
         backgroundPosition: 'center bottom',
-        opacity: bgOpacity,
+        opacity: `calc(${bgOpacity} * var(--canvas-tree-opacity))`,
+        filter: 'var(--canvas-tree-filter)',
         zIndex: 1,
         pointerEvents: 'none',
-        transform: 'translateY(120px) scale(1.5)' 
+        transform: 'translateY(120px) scale(1.5)'
       }} />
 
       {/* Shadow Overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,46,26,0.2)', pointerEvents: 'none', zIndex: 5 }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--canvas-overlay)', pointerEvents: 'none', zIndex: 5 }} />
 
       {/* Premium radial vignette — draws the eye to the family cluster in
          the visible band (past sidebar, before drawer), so the canvas
-         reads as an intentional composition rather than an infinite grid. */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: profilePanelOpen
-          ? 'radial-gradient(ellipse at 42% 55%, transparent 40%, rgba(10,20,10,0.55) 100%)'
-          : 'radial-gradient(ellipse at 55% 55%, transparent 45%, rgba(10,20,10,0.55) 100%)',
-        pointerEvents: 'none',
-        zIndex: 6,
-        mixBlendMode: 'multiply'
-      }} />
+         reads as an intentional composition rather than an infinite grid.
+         Class-based mix-blend-mode so light/dark can swap it. */}
+      <div
+        className="tree-canvas-vignette"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: profilePanelOpen
+            ? 'radial-gradient(ellipse at 42% 55%, var(--canvas-vignette-in) 40%, var(--canvas-vignette-out) 100%)'
+            : 'radial-gradient(ellipse at 55% 55%, var(--canvas-vignette-in) 45%, var(--canvas-vignette-out) 100%)',
+          pointerEvents: 'none',
+          zIndex: 6
+        }}
+      />
 
       {/* PAN + ZOOM WRAPPER (For performance during dragging) */}
       <div style={{
@@ -624,7 +629,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 key={`path-trunk-${child.id}`}
                 d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
                 fill="none"
-                stroke="#D4AF37"
+                stroke="var(--tree-line)"
                 strokeWidth={1.5}
                 strokeLinecap="round"
                 opacity={lineOpacity}
@@ -655,7 +660,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   <line
                     key={`spouse-line-${rel.id}`}
                     x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke="#D4AF37"
+                    stroke="var(--tree-line)"
                     strokeWidth={1.5}
                     strokeDasharray="4, 4"
                     strokeLinecap="round"
@@ -768,9 +773,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   transform: 'translateX(-50%)',
                   padding: '4px 10px',
                   borderRadius: '999px',
-                  border: '1px solid rgba(212, 175, 55, 0.7)',
-                  backgroundColor: 'rgba(20, 35, 20, 0.9)',
-                  color: '#D4AF37',
+                  border: '1px solid var(--panel-border)',
+                  backgroundColor: 'var(--panel-bg)',
+                  color: 'var(--accent-gold)',
                   fontSize: '11px',
                   fontWeight: 700,
                   letterSpacing: '0.3px',
@@ -802,9 +807,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         gap: '4px',
         padding: '6px',
         borderRadius: '14px',
-        backgroundColor: 'rgba(20, 35, 20, 0.85)',
-        border: '1px solid rgba(212, 175, 55, 0.35)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+        backgroundColor: 'var(--panel-bg)',
+        border: '1px solid var(--panel-border)',
+        boxShadow: 'var(--panel-shadow)',
         backdropFilter: 'blur(8px)',
         zIndex: 500
       }}>
@@ -824,7 +829,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               borderRadius: '10px',
               border: 'none',
               backgroundColor: 'transparent',
-              color: '#D4AF37',
+              color: 'var(--accent-gold)',
               fontSize: btn.label === '⊡' ? '18px' : '20px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -840,7 +845,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           </button>
         ))}
         <span style={{
-          color: 'rgba(212,175,55,0.7)',
+          color: 'var(--text-lo)',
           fontSize: '11px',
           minWidth: '38px',
           textAlign: 'center',
@@ -864,11 +869,11 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             right: profilePanelOpen ? `${DRAWER_WIDTH + 24}px` : '24px',
             width: `${MINIMAP_W}px`,
             height: `${MINIMAP_H}px`,
-            backgroundColor: 'rgba(20, 35, 20, 0.85)',
-            border: '1px solid rgba(212, 175, 55, 0.35)',
+            backgroundColor: 'var(--panel-bg)',
+            border: '1px solid var(--panel-border)',
             borderRadius: '10px',
             backdropFilter: 'blur(8px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            boxShadow: 'var(--panel-shadow)',
             overflow: 'hidden',
             zIndex: 500,
             transition: 'right 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -895,8 +900,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   r={isFocused ? 3.2 : isKin ? 2 : 1.4}
                   fill={
                     isFocused ? '#FFD873'
-                      : isKin ? '#D4AF37'
-                      : 'rgba(212, 175, 55, 0.35)'
+                      : isKin ? 'var(--accent-gold)'
+                      : 'var(--accent-gold-soft)'
                   }
                 />
               )
@@ -912,8 +917,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   y={(treeTop - treeBounds.minY) * miniMapInfo.s + miniMapInfo.offsetY}
                   width={(treeRight - treeLeft) * miniMapInfo.s}
                   height={(treeBottom - treeTop) * miniMapInfo.s}
-                  fill="rgba(212, 175, 55, 0.10)"
-                  stroke="#D4AF37"
+                  fill="var(--accent-gold-soft)"
+                  stroke="var(--accent-gold)"
                   strokeWidth={1.2}
                   pointerEvents="none"
                 />
@@ -936,15 +941,15 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             transform: 'translateX(-50%)',
             padding: '8px 18px',
             borderRadius: '999px',
-            border: '1px solid rgba(212, 175, 55, 0.35)',
-            backgroundColor: 'rgba(20, 35, 20, 0.85)',
-            color: '#D4AF37',
+            border: '1px solid var(--panel-border)',
+            backgroundColor: 'var(--panel-bg)',
+            color: 'var(--accent-gold)',
             fontSize: '12px',
             fontWeight: 600,
             letterSpacing: '0.5px',
             cursor: 'pointer',
             backdropFilter: 'blur(8px)',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+            boxShadow: 'var(--panel-shadow)',
             zIndex: 600,
             display: 'flex',
             alignItems: 'center',
@@ -953,7 +958,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         >
           <span style={{ fontSize: '14px', lineHeight: 1 }}>✕</span>
           Salir del enfoque
-          <span style={{ opacity: 0.55, fontSize: '10px', border: '1px solid rgba(212,175,55,0.4)', padding: '1px 5px', borderRadius: '4px' }}>Esc</span>
+          <span style={{ opacity: 0.7, fontSize: '10px', border: '1px solid var(--panel-border)', padding: '1px 5px', borderRadius: '4px' }}>Esc</span>
         </button>
       )}
 
