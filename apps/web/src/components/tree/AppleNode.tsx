@@ -104,19 +104,40 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
           flexShrink: 0,
           pointerEvents: 'none'
         }}>
-      {/* 1. Base Apple */}
-      <img 
-        src={getAppleImage()} 
-        alt="Apple" 
-        style={{ 
-          width: '100%', 
-          height: '100%', 
+      {/* 1. Base Apple. Deceased members keep their color but read as ancestors:
+         translucent body + golden memorial halo. No grayscale — dignifies the legacy. */}
+      <img
+        src={getAppleImage()}
+        alt="Apple"
+        style={{
+          width: '100%',
+          height: '100%',
           objectFit: 'contain',
-          filter: isDeceased 
-            ? 'grayscale(100%) drop-shadow(0 10px 25px rgba(0,0,0,0.5))' 
+          opacity: isDeceased ? 0.62 : 1,
+          filter: isDeceased
+            ? 'drop-shadow(0 0 22px rgba(212,175,55,0.55)) drop-shadow(0 10px 25px rgba(0,0,0,0.5))'
             : 'drop-shadow(0 10px 25px rgba(0,0,0,0.5))'
-        }} 
+        }}
       />
+      {isDeceased && (
+        <span
+          style={{
+            position: 'absolute',
+            top: '18%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: '#D4AF37',
+            fontSize: '13px',
+            fontWeight: 700,
+            textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+            pointerEvents: 'none',
+            zIndex: 11
+          }}
+          aria-hidden="true"
+        >
+          ✝
+        </span>
+      )}
 
       {/* 2. CENTERED INTERNAL BLOCK */}
       <div style={{

@@ -21,10 +21,10 @@ import type { Member, Relationship } from './types'
 // NODE_SIZE controls the apple diameter AND every spacing value below it.
 // All gaps derive from NODE_SIZE, so apples never overlap at any family size.
 // To resize the whole tree, change ONLY this number.
-export const NODE_SIZE = 140                       // apple diameter in px
+export const NODE_SIZE = 112                       // apple diameter in px
 export const SPOUSE_SPACING = NODE_SIZE * 1.0      // couples: apples kiss (organic cluster look)
-export const UNIT_AIR = NODE_SIZE * 0.32           // clear air between separate family units
-export const GENERATION_GAP = NODE_SIZE * 1.5      // vertical gap between generations
+export const UNIT_AIR = NODE_SIZE * 0.22           // clear air between separate family units
+export const GENERATION_GAP = NODE_SIZE * 1.7      // vertical gap between generations
 
 export function computeTreeLayout(members: Member[] = [], relationships: Relationship[] = []) {
   if (!members || members.length === 0) return []
