@@ -1,30 +1,133 @@
 import type { Member, Relationship } from './types'
 
 /**
- * Genealogy Tree Layout Engine v14 — "Magnetic Rows"
- * ──────────────────────────────────────────────────
- * Professional-grade row layout (Sugiyama barycenter method):
- *
- *  1. One row per generation. Units (couples / singles) are ordered by the
- *     X position of their parents → connector lines NEVER cross, even with
- *     two root trees (paternal + maternal) joined by a marriage.
- *  2. Every unit is magnetically pulled to sit EXACTLY under the midpoint
- *     of its parents. Collisions between neighboring families are resolved
- *     with isotonic regression (Pool Adjacent Violators) — the provably
- *     optimal minimum displacement that keeps order and minimum gaps.
- *  3. Result: siblings cluster tightly under their parents, separate
- *     families read as visual groups, and each row is as compact as the
- *     geometry allows. Zero overlaps, fully deterministic.
+ * Layout Engine v15 — "Honeycomb"
+ * ────────────────────────────────
+ * Apple-Watch style hexagonal packing. Todos los miembros se colocan en
+ * una espiral hexagonal partiendo del proband (persona central). El
+ * orden lo decide un BFS por relaciones (spouse → children → parents →
+ * siblings), así los familiares cercanos quedan visualmente cerca.
+ * Combinado con la lente radial del canvas se ve como el home screen
+ * del watchOS: cluster denso, todo cabe, escala infinita.
  */
 
-// ── LAYOUT CONSTANTS · single source of truth ──────────────────────
-// NODE_SIZE controls the apple diameter AND every spacing value below it.
-// All gaps derive from NODE_SIZE, so apples never overlap at any family size.
-// To resize the whole tree, change ONLY this number.
-export const NODE_SIZE = 92                        // apple diameter in px
-export const SPOUSE_SPACING = NODE_SIZE * 0.95     // couples kiss with slight overlap
-export const UNIT_AIR = NODE_SIZE * 0.18           // tight air between family units
-export const GENERATION_GAP = NODE_SIZE * 2.0      // vertical gap between generations
+export const NODE_SIZE = 92
+// Hex cell radius — la distancia del centro de una celda a un vecino.
+// 1.05 x NODE_SIZE deja aire suficiente para que las manzanas no se toquen.
+export const HEX_R = NODE_SIZE * 1.05
+// Se mantienen para el layout viejo (por si algún módulo lo importa),
+// aunque el default es ahora honeycomb.
+export const SPOUSE_SPACING = NODE_SIZE * 0.95
+export const UNIT_AIR = NODE_SIZE * 0.18
+export const GENERATION_GAP = NODE_SIZE * 2.0
+
+// Generador de espiral hexagonal — produce coords axiales (q, r) partiendo
+// del origen y creciendo por anillos. El ring n tiene 6n celdas.
+function hexSpiral(count: number): Array<[number, number]> {
+  const cells: Array<[number, number]> = [[0, 0]]
+  if (count <= 1) return cells
+  const dirs: Array<[number, number]> = [
+    [1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1],
+  ]
+  let ring = 1
+  while (cells.length < count) {
+    // arrancar en (0, -ring) — arriba del centro
+    let q = 0
+    let r = -ring
+    for (let side = 0; side < 6; side++) {
+      const [dq, dr] = dirs[side]
+      for (let step = 0; step < ring; step++) {
+        cells.push([q, r])
+        if (cells.length >= count) return cells
+        q += dq
+        r += dr
+      }
+    }
+    ring++
+  }
+  return cells
+}
+
+// Convierte coords axiales a pixel (pointy-top hex layout)
+function hexToPixel(q: number, r: number): [number, number] {
+  const x = HEX_R * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r)
+  const y = HEX_R * (1.5 * r)
+  return [x, y]
+}
+
+// Elige el proband — miembro raíz del árbol. Prioriza:
+//   1. El más joven que tenga hijos (jefe de familia actual)
+//   2. Fallback: primer miembro por id
+function pickProband(members: Member[]): Member {
+  const withChildren = new Set<string>()
+  members.forEach(m => (m.parents || []).forEach(p => withChildren.add(p)))
+  const parentsOfLiving = members.filter(m => withChildren.has(m.id))
+  if (parentsOfLiving.length > 0) {
+    // El de generación más baja (más viejo) o el primero por id
+    parentsOfLiving.sort((a, b) => (a.generation ?? 0) - (b.generation ?? 0) || a.id.localeCompare(b.id))
+    return parentsOfLiving[0]
+  }
+  return [...members].sort((a, b) => a.id.localeCompare(b.id))[0]
+}
+
+// BFS por relaciones: partiendo del proband, expande a spouse → hijos →
+// padres → hermanos, para que los cercanos queden en anillos interiores.
+function bfsOrder(proband: Member, members: Member[], relationships: Relationship[]): Member[] {
+  const byId = new Map<string, Member>()
+  members.forEach(m => byId.set(m.id, m))
+  const adjacency = new Map<string, string[]>()
+  const addLink = (a: string, b: string) => {
+    if (!byId.has(a) || !byId.has(b)) return
+    if (!adjacency.has(a)) adjacency.set(a, [])
+    const arr = adjacency.get(a)!
+    if (!arr.includes(b)) arr.push(b)
+  }
+  members.forEach(m => (m.parents || []).forEach(p => { addLink(m.id, p); addLink(p, m.id) }))
+  relationships.forEach(rel => {
+    if (rel.relationship === 'spouse') {
+      addLink(rel.member1Id, rel.member2Id)
+      addLink(rel.member2Id, rel.member1Id)
+    }
+  })
+
+  const visited = new Set<string>([proband.id])
+  const queue: string[] = [proband.id]
+  const ordered: Member[] = []
+  while (queue.length > 0) {
+    const id = queue.shift()!
+    ordered.push(byId.get(id)!)
+    const neighbors = adjacency.get(id) || []
+    // Ordenar vecinos para determinismo (misma vista siempre)
+    neighbors.sort((a, b) => a.localeCompare(b))
+    for (const n of neighbors) {
+      if (!visited.has(n)) {
+        visited.add(n)
+        queue.push(n)
+      }
+    }
+  }
+  // Añadir miembros aislados (sin conexiones al cluster principal)
+  members.forEach(m => { if (!visited.has(m.id)) ordered.push(m) })
+  return ordered
+}
+
+// ─── HONEYCOMB LAYOUT — nueva función principal ────────────────────
+export function computeHoneycombLayout(
+  members: Member[] = [],
+  relationships: Relationship[] = [],
+) {
+  if (!members || members.length === 0) return []
+  const proband = pickProband(members)
+  const ordered = bfsOrder(proband, members, relationships)
+  const cells = hexSpiral(ordered.length)
+  const CENTER_X = 960
+  const CENTER_Y = 500
+  return ordered.map((m, i) => {
+    const [q, r] = cells[i]
+    const [px, py] = hexToPixel(q, r)
+    return { ...m, canvasX: CENTER_X + px, canvasY: CENTER_Y + py }
+  })
+}
 
 export function computeTreeLayout(members: Member[] = [], relationships: Relationship[] = []) {
   if (!members || members.length === 0) return []
