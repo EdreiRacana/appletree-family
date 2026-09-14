@@ -40,7 +40,7 @@ interface TreeCanvasProps {
 // Chrome insets — the fixed UI edges the canvas must avoid.
 // Sidebar occupies left:28px + 76px width = 104px, +12px breathing room.
 const SIDEBAR_INSET = 116
-const DRAWER_WIDTH = 450
+const DRAWER_WIDTH = 340
 
 export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
   const isMobile = useIsMobile()
@@ -798,8 +798,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 top: member.lensedY,
                 zIndex: isFocused ? 3000 : hoveredMemberId === member.id ? 2000 : (fisheyeScale > 1.1 ? 70 : 50),
                 pointerEvents: 'auto',
-                padding: '20px',
-                margin: '-20px',
+                width: `${NODE_SIZE}px`,
+                height: `${NODE_SIZE}px`,
                 opacity: isKin ? 1 : 0.28,
                 transform: `scale(${composedScale})`,
                 transformOrigin: 'center center',
