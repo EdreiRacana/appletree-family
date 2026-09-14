@@ -45,7 +45,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
         position: 'fixed',
         top: 0,
         right: 0,
-        width: '450px',
+        width: 'min(340px, 90vw)',
         height: '100vh',
         backgroundColor: 'var(--drawer-bg)',
         backdropFilter: 'blur(26px) saturate(140%)',
@@ -60,50 +60,52 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
         color: 'var(--drawer-fg)',
       }}>
         
-        {/* Header / Cover Area */}
+        {/* Header / Cover Area — compacto */}
         <div style={{
-          height: '240px',
+          padding: '52px 22px 20px',
           backgroundColor: 'transparent',
           borderBottom: '1px solid var(--drawer-border)',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
           overflow: 'hidden'
         }}>
           {/* Close Button */}
-          <button 
+          <button
             onClick={onClose}
             style={{
               position: 'absolute',
-              top: '20px',
-              right: '20px',
+              top: '14px',
+              right: '14px',
               background: 'var(--accent-gold-soft)',
               border: '1px solid var(--drawer-border)',
               borderRadius: '50%',
-              padding: '8px',
+              width: '30px',
+              height: '30px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               cursor: 'pointer',
               color: 'var(--drawer-accent)'
             }}
           >
-            <X size={24} />
+            <X size={16} />
           </button>
 
-          {/* Medallion */}
+          {/* Medallion — más pequeño */}
           <div style={{
-            width: '130px',
-            height: '130px',
+            width: '76px',
+            height: '76px',
             borderRadius: '50%',
-            border: '4px solid #D4822A',
+            border: '2px solid var(--drawer-accent)',
             overflow: 'hidden',
             backgroundColor: '#FFF',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-            marginBottom: '15px'
+            boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
+            marginBottom: '10px'
           }}>
-            <img 
-              src={member.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`} 
+            <img
+              src={member.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`}
               alt={member.firstName}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
@@ -111,19 +113,20 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
 
           <h2 style={{
             fontFamily: 'var(--font-display)',
-            fontSize: '32px',
+            fontSize: '22px',
             color: 'var(--drawer-fg)',
             margin: 0,
-            textAlign: 'center'
+            textAlign: 'center',
+            lineHeight: 1.2
           }}>
             {member.firstName} {member.lastName}
-            {member.nickname && <span style={{ fontSize: '18px', opacity: 0.7, display: 'block', fontStyle: 'italic' }}>"{member.nickname}"</span>}
+            {member.nickname && <span style={{ fontSize: '13px', opacity: 0.7, display: 'block', fontStyle: 'italic' }}>&quot;{member.nickname}&quot;</span>}
           </h2>
           <p style={{
             color: 'var(--drawer-accent)',
-            fontSize: '14px',
-            fontWeight: '700', 
-            marginTop: '5px',
+            fontSize: '11px',
+            fontWeight: '700',
+            marginTop: '4px',
             letterSpacing: '0.1em'
           }}>
             {lifeSpan.toUpperCase()}
