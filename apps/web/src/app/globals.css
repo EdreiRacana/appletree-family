@@ -38,9 +38,9 @@
      Every surface below the topbar reads from these, so switching
      data-theme on <html> swaps the whole canvas atomically. */
   --canvas-bg:            #1E2A22;
-  --canvas-tree-filter:   none;
-  --canvas-tree-opacity:  1;
-  --canvas-overlay:       rgba(26,46,26,0.2);
+  --canvas-tree-filter:   saturate(0.9);
+  --canvas-tree-opacity:  0.85;
+  --canvas-overlay:       rgba(26,46,26,0.15);
   --canvas-vignette-in:   transparent;
   --canvas-vignette-out:  rgba(10,20,10,0.55);
   --canvas-vignette-blend: multiply;
@@ -106,9 +106,9 @@
 
 :root[data-theme="light"] {
   --canvas-bg:            #EDF1E4;
-  --canvas-tree-filter:   brightness(1.35) contrast(0.65) saturate(0.75);
-  --canvas-tree-opacity:  0.35;
-  --canvas-overlay:       rgba(255,255,255,0.25);
+  --canvas-tree-filter:   brightness(1.15) contrast(0.85) saturate(0.7);
+  --canvas-tree-opacity:  0.55;
+  --canvas-overlay:       rgba(255,255,255,0.15);
   --canvas-vignette-in:   transparent;
   --canvas-vignette-out:  rgba(120,150,100,0.22);
   --canvas-vignette-blend: normal;
