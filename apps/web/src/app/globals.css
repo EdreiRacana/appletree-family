@@ -34,6 +34,65 @@
   --color-text:       #2C1810;
   --color-text-muted: #7A6558;
 
+  /* ── THEME TOKENS · defaults = DARK ────────────────────────────────
+     Every surface below the topbar reads from these, so switching
+     data-theme on <html> swaps the whole canvas atomically. */
+  --canvas-bg:            #1E2A22;
+  --canvas-tree-filter:   none;
+  --canvas-tree-opacity:  1;
+  --canvas-overlay:       rgba(26,46,26,0.2);
+  --canvas-vignette-in:   transparent;
+  --canvas-vignette-out:  rgba(10,20,10,0.55);
+  --canvas-vignette-blend: multiply;
+
+  --panel-bg:             rgba(20, 35, 20, 0.85);
+  --panel-border:         rgba(212, 175, 55, 0.35);
+  --panel-shadow:         0 8px 24px rgba(0,0,0,0.45);
+
+  --tree-line:            #D4AF37;
+  --tree-line-alpha:      0.55;
+
+  --text-hi:              #F5E6C8;
+  --text-mid:             #D4AF37;
+  --text-lo:              rgba(212,175,55,0.7);
+
+  --accent-gold:          #D4AF37;
+  --accent-gold-soft:     rgba(212,175,55,0.15);
+
+  --body-bg:              #1B2E1B;
+}
+
+:root[data-theme="light"] {
+  --canvas-bg:            #EDF1E4;
+  --canvas-tree-filter:   brightness(1.35) contrast(0.65) saturate(0.75);
+  --canvas-tree-opacity:  0.35;
+  --canvas-overlay:       rgba(255,255,255,0.25);
+  --canvas-vignette-in:   transparent;
+  --canvas-vignette-out:  rgba(120,150,100,0.22);
+  --canvas-vignette-blend: normal;
+
+  --panel-bg:             rgba(255, 255, 255, 0.72);
+  --panel-border:         rgba(120, 140, 100, 0.28);
+  --panel-shadow:         0 8px 24px rgba(60, 80, 40, 0.18);
+
+  --tree-line:            #7A8A5C;
+  --tree-line-alpha:      0.75;
+
+  --text-hi:              #2C3A20;
+  --text-mid:             #5A6B3E;
+  --text-lo:              rgba(90,107,62,0.7);
+
+  --accent-gold:          #B8860B;
+  --accent-gold-soft:     rgba(184,134,11,0.14);
+
+  --body-bg:              #E5EDD8;
+}
+
+/* Vignette blend mode is per-theme: multiply in dark deepens the corners
+   without dimming the mid; normal in light keeps sage haze translucent. */
+.tree-canvas-vignette { mix-blend-mode: multiply; }
+:root[data-theme="light"] .tree-canvas-vignette { mix-blend-mode: normal; }
+
   /* Shadows */
   --shadow-apple: 0 8px 24px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
   --shadow-lux:   0 12px 40px rgba(44, 24, 16, 0.15);

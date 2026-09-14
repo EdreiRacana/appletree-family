@@ -1,8 +1,46 @@
 'use client'
 
 import React from 'react'
-import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut } from 'lucide-react'
+import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut, Sun, Moon } from 'lucide-react'
 import type { AppNotification } from '@/lib/useNotifications'
+
+// Theme toggle — stamps data-theme on <html> and persists in localStorage.
+// Reads its initial state from the DOM (set by the pre-hydration script in
+// layout.tsx) so there's no flash.
+function ThemeToggle() {
+  const [theme, setTheme] = React.useState<'dark' | 'light'>('dark')
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return
+    const attr = document.documentElement.getAttribute('data-theme')
+    setTheme(attr === 'light' ? 'light' : 'dark')
+  }, [])
+  const toggle = () => {
+    const next: 'dark' | 'light' = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    if (typeof document !== 'undefined') {
+      if (next === 'dark') document.documentElement.removeAttribute('data-theme')
+      else document.documentElement.setAttribute('data-theme', 'light')
+      try { localStorage.setItem('apple_theme', next) } catch { /* ignore */ }
+    }
+  }
+  return (
+    <button
+      className="topbar-btn"
+      onClick={toggle}
+      title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+      style={{
+        width: '38px', height: '38px',
+        backgroundColor: 'rgba(232,218,183,0.08)',
+        borderRadius: '10px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        border: '1px solid rgba(212,175,55,0.18)',
+        cursor: 'pointer'
+      }}
+    >
+      {theme === 'dark' ? <Sun size={18} color="#F5E6C8" /> : <Moon size={18} color="#F5E6C8" />}
+    </button>
+  )
+}
 
 interface TopbarProps {
   onAdd?: () => void
@@ -202,14 +240,15 @@ export default function Topbar({
         >
           <HelpCircle size={18} color="#F5E6C8" />
         </button>
-        <button 
-          className="topbar-btn" 
+        <button
+          className="topbar-btn"
           onClick={onShowTerms}
           title="Términos y Condiciones"
           style={{ width: '38px', height: '38px', backgroundColor: 'rgba(232,218,183,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(212,175,55,0.18)', cursor: 'pointer' }}
         >
           <Shield size={18} color="#F5E6C8" />
         </button>
+        <ThemeToggle />
         <div style={{ position: 'relative' }}>
           <button 
             className="topbar-btn" 
