@@ -30,9 +30,18 @@ interface TreeCanvasProps {
   onEditMember: (member: Member) => void
   onAddStory: (member: Member) => void
   bgOpacity: number
+  // When the profile drawer (~450px on the right) is mounted, the minimap
+  // and fit-to-view math treat that band as reserved so the tree stays
+  // visually centered in the remaining space.
+  profilePanelOpen?: boolean
 }
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity }: TreeCanvasProps) {
+// Chrome insets — the fixed UI edges the canvas must avoid.
+// Sidebar occupies left:28px + 76px width = 104px, +12px breathing room.
+const SIDEBAR_INSET = 116
+const DRAWER_WIDTH = 450
+
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
   const isMobile = useIsMobile()
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
@@ -225,25 +234,33 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     }
   }, [positionedMembers])
 
-  // ── FIT TO VIEW: scale + center so the WHOLE tree is visible ──
+  // ── FIT TO VIEW: scale + center so the WHOLE tree is visible in the
+  // area NOT covered by fixed chrome (sidebar + optional profile drawer).
+  // Prior version centered on the raw container, which pushed the tree
+  // under the sidebar and made the ⊡ button look "off-center".
   const fitToView = useCallback(() => {
     if (!treeBounds || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    const PAD = 70
+    const PAD = 40
+    const leftInset = SIDEBAR_INSET
+    const rightInset = profilePanelOpen ? DRAWER_WIDTH + 24 : 24
+    const usableW = Math.max(rect.width - leftInset - rightInset, 200)
+    const usableH = Math.max(rect.height - PAD * 2, 200)
     const treeW = treeBounds.maxX - treeBounds.minX
     const treeH = treeBounds.maxY - treeBounds.minY
-    const fitScale = Math.min(
-      (rect.width - PAD * 2) / treeW,
-      (rect.height - PAD * 2) / treeH,
-      1 // never zoom IN beyond 100% automatically
-    )
+    const fitScale = Math.min(usableW / treeW, usableH / treeH, 1)
     const newScale = Math.max(fitScale, MIN_SCALE)
+    // Center on the usable band [leftInset, rect.width - rightInset]
+    const usableCenterX = leftInset + usableW / 2
+    const usableCenterY = rect.height / 2
+    const treeCenterX = (treeBounds.minX + treeBounds.maxX) / 2
+    const treeCenterY = (treeBounds.minY + treeBounds.maxY) / 2
     setScale(newScale)
     setOffset({
-      x: (rect.width - treeW * newScale) / 2 - treeBounds.minX * newScale,
-      y: (rect.height - treeH * newScale) / 2 - treeBounds.minY * newScale
+      x: usableCenterX - treeCenterX * newScale,
+      y: usableCenterY - treeCenterY * newScale
     })
-  }, [treeBounds])
+  }, [treeBounds, profilePanelOpen])
 
   // ── ZOOM AROUND A SCREEN POINT (cursor or viewport center) ──
   const zoomAt = useCallback((screenX: number, screenY: number, factor: number) => {
@@ -262,10 +279,12 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   const zoomFromCenter = (factor: number) => {
     if (!containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    zoomAt(rect.width / 2, rect.height / 2, factor)
+    const cx = SIDEBAR_INSET + (rect.width - SIDEBAR_INSET - (profilePanelOpen ? DRAWER_WIDTH + 24 : 24)) / 2
+    zoomAt(cx, rect.height / 2, factor)
   }
 
-  // ── FOCUS EFFECT: animate camera so the focused member lands centered ──
+  // ── FOCUS EFFECT: animate camera so the focused member lands in the
+  // usable center (sidebar + drawer excluded), not the raw viewport middle.
   useEffect(() => {
     if (!focusedMemberId || !containerRef.current) return
     const focused = positionedMembers.find(m => m.id === focusedMemberId)
@@ -274,15 +293,17 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     const targetScale = Math.max(scaleRef.current, 0.9)
     const nodeCenterX = focused.canvasX ?? 0
     const nodeCenterY = (focused.canvasY ?? 0) + NODE_SIZE / 2
+    const rightInset = profilePanelOpen ? DRAWER_WIDTH + 24 : 24
+    const usableCenterX = SIDEBAR_INSET + (rect.width - SIDEBAR_INSET - rightInset) / 2
     setAnimatingTransform(true)
     setScale(targetScale)
     setOffset({
-      x: rect.width / 2 - nodeCenterX * targetScale,
+      x: usableCenterX - nodeCenterX * targetScale,
       y: rect.height / 2 - nodeCenterY * targetScale
     })
     const t = setTimeout(() => setAnimatingTransform(false), 600)
     return () => clearTimeout(t)
-  }, [focusedMemberId, positionedMembers])
+  }, [focusedMemberId, positionedMembers, profilePanelOpen])
 
   // ── ESC exits focus mode ──
   useEffect(() => {
@@ -334,13 +355,15 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     const my = e.clientY - svgRect.top
     const treeX = (mx - miniMapInfo.offsetX) / miniMapInfo.s + treeBounds.minX
     const treeY = (my - miniMapInfo.offsetY) / miniMapInfo.s + treeBounds.minY
+    const rightInset = profilePanelOpen ? DRAWER_WIDTH + 24 : 24
+    const usableCenterX = SIDEBAR_INSET + (containerRect.width - SIDEBAR_INSET - rightInset) / 2
     setAnimatingTransform(true)
     setOffset({
-      x: containerRect.width / 2 - treeX * scaleRef.current,
+      x: usableCenterX - treeX * scaleRef.current,
       y: containerRect.height / 2 - treeY * scaleRef.current
     })
     setTimeout(() => setAnimatingTransform(false), 600)
-  }, [treeBounds, miniMapInfo, containerRect])
+  }, [treeBounds, miniMapInfo, containerRect, profilePanelOpen])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.apple-node-clickable')) return
@@ -542,6 +565,20 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
 
       {/* Shadow Overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,46,26,0.2)', pointerEvents: 'none', zIndex: 5 }} />
+
+      {/* Premium radial vignette — draws the eye to the family cluster in
+         the visible band (past sidebar, before drawer), so the canvas
+         reads as an intentional composition rather than an infinite grid. */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: profilePanelOpen
+          ? 'radial-gradient(ellipse at 42% 55%, transparent 40%, rgba(10,20,10,0.55) 100%)'
+          : 'radial-gradient(ellipse at 55% 55%, transparent 45%, rgba(10,20,10,0.55) 100%)',
+        pointerEvents: 'none',
+        zIndex: 6,
+        mixBlendMode: 'multiply'
+      }} />
 
       {/* PAN + ZOOM WRAPPER (For performance during dragging) */}
       <div style={{
@@ -814,15 +851,17 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         </span>
       </div>
 
-      {/* MINI-MAP · anchored bottom-LEFT past the 80px sidebar. Was bottom-right
-         but the profile drawer covered it there; the left side stays clean at
-         every viewport width, no repositioning needed. */}
+      {/* MINI-MAP · anchored TOP-RIGHT under the topbar. This is the
+         professional canonical location (Figma, Miro, Notion, Linear
+         canvas) — always visible, never fights the sidebar (zIndex:1000
+         to the left) or the zoom controls (bottom center). Slides left
+         when the profile drawer is open so it stays visible. */}
       {treeBounds && miniMapInfo && (
         <div
           style={{
             position: 'absolute',
-            bottom: '24px',
-            left: '100px',
+            top: '16px',
+            right: profilePanelOpen ? `${DRAWER_WIDTH + 24}px` : '24px',
             width: `${MINIMAP_W}px`,
             height: `${MINIMAP_H}px`,
             backgroundColor: 'rgba(20, 35, 20, 0.85)',
@@ -831,7 +870,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             backdropFilter: 'blur(8px)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
             overflow: 'hidden',
-            zIndex: 500
+            zIndex: 500,
+            transition: 'right 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
