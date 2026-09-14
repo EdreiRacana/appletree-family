@@ -61,16 +61,32 @@
 
   --body-bg:              #1B2E1B;
 
-  --topbar-bg:            rgba(15,26,15,0.55);
-  --topbar-border:        rgba(212,175,55,0.28);
-  --topbar-fg:            #F5E6C8;
+  /* Chrome glass — todos los paneles (topbar, sidebar, stories, drawer)
+     comparten la MISMA base translúcida para que la app se lea como una
+     sola familia de vidrio en vez de piezas pegadas. */
+  --chrome-bg:            rgba(15,26,15,0.55);
+  --chrome-border:        rgba(212,175,55,0.28);
+  --chrome-fg:            #D4AF37;
+  --chrome-fg-strong:     #F5E6C8;
 
-  --sidebar-bg:           rgba(15,26,15,0.55);
-  --sidebar-border:       rgba(212,175,55,0.22);
-  --sidebar-fg:           #F5E6C8;
+  --topbar-bg:            var(--chrome-bg);
+  --topbar-border:        var(--chrome-border);
+  --topbar-fg:            var(--chrome-fg);
 
-  /* Tree bg watermark sizing — dark ships the full painting subdued;
-     light shows a smaller inscribed silhouette so it doesn't dominate. */
+  --sidebar-bg:           var(--chrome-bg);
+  --sidebar-border:       var(--chrome-border);
+  --sidebar-fg:           var(--chrome-fg);
+
+  --stories-bg:           var(--chrome-bg);
+  --stories-border:       var(--chrome-border);
+  --stories-fg:           var(--chrome-fg);
+  --stories-title:        var(--chrome-fg-strong);
+
+  --drawer-bg:            var(--chrome-bg);
+  --drawer-border:        var(--chrome-border);
+  --drawer-fg:            var(--chrome-fg-strong);
+  --drawer-accent:        var(--chrome-fg);
+
   --canvas-tree-size:     140% auto;
   --canvas-tree-pos:      center 30%;
 
@@ -113,16 +129,16 @@
 
   --body-bg:              #E5EDD8;
 
-  --topbar-bg:            rgba(255,255,255,0.55);
-  --topbar-border:        rgba(120,140,100,0.28);
-  --topbar-fg:            #2C3A20;
+  /* Modo claro: chrome verde pálido con transparencia (opción B) —
+     conserva el ADN "árbol" en vez de un blanco genérico. Iconos y
+     letras siguen dorados para mantener la identidad de la marca. */
+  --chrome-bg:            rgba(220,235,205,0.55);
+  --chrome-border:        rgba(120,140,100,0.35);
+  --chrome-fg:            #8B6508;
+  --chrome-fg-strong:     #5A6B3E;
 
-  --sidebar-bg:           rgba(255,255,255,0.65);
-  --sidebar-border:       rgba(120,140,100,0.28);
-  --sidebar-fg:           #2C3A20;
-
-  --canvas-tree-size:     contain;
-  --canvas-tree-pos:      center 55%;
+  --canvas-tree-size:     140% auto;
+  --canvas-tree-pos:      center 30%;
 }
 
 /* Vignette blend mode is per-theme: multiply in dark deepens the corners
