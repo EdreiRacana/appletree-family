@@ -260,8 +260,13 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     const usableH = Math.max(rect.height - PAD * 2, 200)
     const treeW = treeBounds.maxX - treeBounds.minX
     const treeH = treeBounds.maxY - treeBounds.minY
-    const fitScale = Math.min(usableW / treeW, usableH / treeH, 1)
-    const newScale = Math.max(fitScale, MIN_SCALE)
+    // ZOOM_BOOST: fit-to-view natural mostraría el árbol completo con aire
+    // extra; multiplicamos por 1.2 para que las manzanas se vean más
+    // grandes al arrancar. El sphere global se encarga de que las orillas
+    // encogidas visualmente sigan cabiendo.
+    const ZOOM_BOOST = 1.2
+    const fitScale = Math.min(usableW / treeW, usableH / treeH, 1) * ZOOM_BOOST
+    const newScale = Math.max(Math.min(fitScale, MAX_SCALE), MIN_SCALE)
     // Center on the usable band [leftInset, rect.width - rightInset]
     const usableCenterX = leftInset + usableW / 2
     const usableCenterY = rect.height / 2
@@ -740,12 +745,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               const screenY = ((member.canvasY ?? 0) + NODE_SIZE / 2) * scale + offset.y
               const cx = containerRect.width / 2
               const cy = containerRect.height / 2
-              const R = Math.min(containerRect.width, containerRect.height) * 0.55
+              // Radio mayor: la esfera cubre el 70% del min-dim para que
+              // muchas manzanas sean parte del "domo"
+              const R = Math.min(containerRect.width, containerRect.height) * 0.7
               const d = Math.hypot(screenX - cx, screenY - cy)
               const t = 1 - Math.min(d / R, 1)         // 1 centro, 0 borde
               const eased = t * t * (3 - 2 * t)
-              const CENTER_S = 1.18
-              const EDGE_S = 0.72
+              const CENTER_S = 1.35   // manzana central: +35%
+              const EDGE_S = 0.55     // manzana en el borde: -45% (se hunden)
               globalSphereScale = EDGE_S + (CENTER_S - EDGE_S) * eased
             }
 
