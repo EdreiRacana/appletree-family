@@ -739,21 +739,34 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             //    aunque no muevas el cursor.
             // B) Fisheye del cursor (encima) — bajo cursor: 2.0x, en su
             //    radio: transición suave. Se combina multiplicativamente.
+            // Sphere REAL: además de scale, aplico un TRANSLATE que jala las
+            // manzanas de las orillas hacia el centro del viewport. Ese
+            // desplazamiento es el que hace ver la forma de domo/bola —
+            // sin translate el efecto solo shrink es sutil.
             let globalSphereScale = 1
+            let spherePullX = 0
+            let spherePullY = 0
             if (containerRect) {
               const screenX = (member.canvasX ?? 0) * scale + offset.x
               const screenY = ((member.canvasY ?? 0) + NODE_SIZE / 2) * scale + offset.y
               const cx = containerRect.width / 2
               const cy = containerRect.height / 2
-              // Radio mayor: la esfera cubre el 70% del min-dim para que
-              // muchas manzanas sean parte del "domo"
               const R = Math.min(containerRect.width, containerRect.height) * 0.7
               const d = Math.hypot(screenX - cx, screenY - cy)
               const t = 1 - Math.min(d / R, 1)         // 1 centro, 0 borde
               const eased = t * t * (3 - 2 * t)
-              const CENTER_S = 1.35   // manzana central: +35%
-              const EDGE_S = 0.55     // manzana en el borde: -45% (se hunden)
+              const CENTER_S = 1.35
+              const EDGE_S = 0.55
               globalSphereScale = EDGE_S + (CENTER_S - EDGE_S) * eased
+
+              // Jala hacia el centro proporcional a qué tan lejos está.
+              // (1 - eased) es alto en las orillas y 0 en el centro.
+              // Divido entre scale para que el translate se aplique en tree
+              // coords (el wrapper vive dentro del pan/zoom transform).
+              const PULL_STRENGTH = 0.32
+              const pullFactor = (1 - eased) * PULL_STRENGTH
+              spherePullX = (cx - screenX) * pullFactor / scale
+              spherePullY = (cy - screenY) * pullFactor / scale
             }
 
             let cursorFisheye = 1
@@ -799,7 +812,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 padding: '20px',
                 margin: '-20px',
                 opacity: isKin ? 1 : 0.28,
-                transform: `scale(${composedScale})`,
+                // El translate(spherePullX, spherePullY) es lo que crea la
+                // ilusión de esfera — las orillas se acercan al centro.
+                // Combinado con scale da el fisheye completo.
+                transform: `translate(${spherePullX}px, ${spherePullY}px) scale(${composedScale})`,
                 transformOrigin: 'center center',
                 transition: cursorTreeXY
                   ? 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1)'
@@ -816,44 +832,94 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               viewportScale={scale}
             />
 
-            {/* HOVER STAGE 1: pill compacto — nombre + contacto + expandir */}
-            {hoveredMemberId === member.id && expandedMenuId !== member.id && (
-              <HoverPeek
-                member={member}
-                onMouseEnter={() => {
-                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-                  setHoveredMemberId(member.id)
-                }}
-                onMouseLeave={() => {
-                  hoverTimeoutRef.current = setTimeout(() => {
-                    setHoveredMemberId(null)
-                  }, 300)
-                }}
+            {/* HOVER STAGE 1: pill compacto — nombre + contacto + expandir.
+                Se renderiza con position:fixed en HoverPeek, escapa del
+                pan/zoom transform y del stacking context — z:10000 lo pone
+                sobre el topbar (z:2000). Auto-flip abajo si la manzana
+                está en el top del viewport. */}
+            {(() => {
+              if (hoveredMemberId !== member.id || expandedMenuId === member.id) return null
+              // Screen coords del centro de la manzana (respetando el
+              // desplazamiento sphere y el scale compuesto).
+              const appleScreenX = ((member.canvasX ?? 0) + spherePullX) * scale + offset.x
+              const appleScreenY = ((member.canvasY ?? 0) + spherePullY) * scale + offset.y
+              const appleH = NODE_SIZE * scale * composedScale
+              const TOPBAR_H = 76
+              const FLIP_MARGIN = 60
+              const flipBelow = appleScreenY < TOPBAR_H + FLIP_MARGIN
+              const peekY = flipBelow
+                ? appleScreenY + appleH + 14
+                : appleScreenY - 14
+              const peekX = appleScreenX + (NODE_SIZE / 2) * scale
+              return (
+                <HoverPeek
+                  member={member}
+                  screenX={peekX}
+                  screenY={peekY}
+                  flipBelow={flipBelow}
+                  onMouseEnter={() => {
+                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+                    setHoveredMemberId(member.id)
+                  }}
+                  onMouseLeave={() => {
+                    hoverTimeoutRef.current = setTimeout(() => {
+                      setHoveredMemberId(null)
+                    }, 300)
+                  }}
                 onQuickContact={() => {
                   console.log('Contact quick action for', member.id)
                 }}
                 onExpand={() => setExpandedMenuId(member.id)}
               />
-            )}
+              )
+            })()}
 
-            {/* HOVER STAGE 2: menú completo — solo cuando el owner lo pide */}
-            {expandedMenuId === member.id && (
-              <HoverMenu
-                member={member}
-                onClose={() => { setExpandedMenuId(null); setHoveredMemberId(null) }}
-                onMouseEnter={() => {
-                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-                }}
-                onEdit={(m) => { onEditMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                onAdd={(m) => { setAddingToMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                onDelete={(m) => handleDeleteMember(m)}
-                onViewProfile={(m) => { onViewProfile(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                onAddStory={(m) => { onAddStory(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                hasDescendants={memberHasDescendants}
-                isCollapsed={isCollapsed}
-                onToggleCollapse={(m) => { toggleCollapsed(m.id); setExpandedMenuId(null); setHoveredMemberId(null) }}
-              />
-            )}
+            {/* HOVER STAGE 2: menú completo — se posiciona con fixedStyle
+                (position:fixed en screen coords) para escapar del pan/zoom
+                container y del stacking context. Auto-flip abajo cuando la
+                manzana está en la parte alta del viewport. */}
+            {expandedMenuId === member.id && (() => {
+              const appleScreenX = ((member.canvasX ?? 0) + spherePullX) * scale + offset.x
+              const appleScreenY = ((member.canvasY ?? 0) + spherePullY) * scale + offset.y
+              const appleH = NODE_SIZE * scale * composedScale
+              const MENU_H_ESTIMATE = 300
+              const TOPBAR_H = 76
+              const flipBelow = appleScreenY - MENU_H_ESTIMATE < TOPBAR_H + 12
+              const centerX = appleScreenX + (NODE_SIZE / 2) * scale
+              const fixedStyle: React.CSSProperties = flipBelow
+                ? {
+                    position: 'fixed',
+                    top: `${appleScreenY + appleH + 12}px`,
+                    left: `${centerX}px`,
+                    transform: 'translateX(-50%)',
+                    zIndex: 10001,
+                  }
+                : {
+                    position: 'fixed',
+                    top: `${appleScreenY - 12}px`,
+                    left: `${centerX}px`,
+                    transform: 'translate(-50%, -100%)',
+                    zIndex: 10001,
+                  }
+              return (
+                <HoverMenu
+                  member={member}
+                  fixedStyle={fixedStyle}
+                  onClose={() => { setExpandedMenuId(null); setHoveredMemberId(null) }}
+                  onMouseEnter={() => {
+                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+                  }}
+                  onEdit={(m) => { onEditMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                  onAdd={(m) => { setAddingToMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                  onDelete={(m) => handleDeleteMember(m)}
+                  onViewProfile={(m) => { onViewProfile(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                  onAddStory={(m) => { onAddStory(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                  hasDescendants={memberHasDescendants}
+                  isCollapsed={isCollapsed}
+                  onToggleCollapse={(m) => { toggleCollapsed(m.id); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                />
+              )
+            })()}
 
             {/* COLLAPSED BRANCH BADGE · click to expand */}
             {isCollapsed && collapsedCount > 0 && (

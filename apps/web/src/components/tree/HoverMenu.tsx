@@ -16,6 +16,10 @@ interface HoverMenuProps {
   hasDescendants?: boolean
   isCollapsed?: boolean
   onToggleCollapse?: (member: Member) => void
+  // Positioning override — cuando se define, el menu escapa del container
+  // (position:fixed en screen coords) para no ser clip'eado por el pan/zoom
+  // ni por el topbar. Se usa desde TreeCanvas para manzanas cerca del top.
+  fixedStyle?: React.CSSProperties
 }
 
 const menuItems = [
@@ -28,7 +32,7 @@ const menuItems = [
   { id: 'profile',     icon: User,          label: () => 'Ver Perfil', isContact: false },
 ]
 
-export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onMouseEnter, hasDescendants, isCollapsed, onToggleCollapse }: HoverMenuProps) {
+export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onMouseEnter, hasDescendants, isCollapsed, onToggleCollapse, fixedStyle }: HoverMenuProps) {
   
   // LOGIC: Check if member is a minor (< 18 years old or is marked as baby)
   const isMinor = () => {
@@ -81,6 +85,7 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
       onMouseLeave={onClose}
       onMouseEnter={onMouseEnter}
       id={`hover-menu-${member.id}`}
+      style={fixedStyle}
     >
       {hasDescendants && onToggleCollapse && (
         <button
