@@ -171,10 +171,10 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
         title={isCollapsed ? 'Mostrar Family Stories' : 'Ocultar Family Stories'}
         style={{
           width: '30px',
-          backgroundColor: 'rgba(15,26,15,0.72)',
-          backdropFilter: 'blur(18px)',
-          WebkitBackdropFilter: 'blur(18px)',
-          border: '1px solid rgba(212,175,55,0.22)',
+          backgroundColor: 'var(--stories-bg)',
+          backdropFilter: 'blur(22px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(140%)',
+          border: '1px solid var(--stories-border)',
           borderRight: 'none',
           borderRadius: '16px 0 0 16px',
           cursor: 'pointer',
@@ -184,14 +184,12 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           justifyContent: 'center',
           gap: '10px',
           padding: '14px 0',
-          boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
+          boxShadow: 'var(--panel-shadow)',
           flexShrink: 0,
         }}
-        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(15,26,15,0.88)')}
-        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(15,26,15,0.72)')}
       >
         {/* Chevron icon */}
-        <span style={{ color: '#E8DAB2', opacity: 0.6, lineHeight: 1 }}>
+        <span style={{ color: 'var(--stories-fg)', opacity: 0.8, lineHeight: 1 }}>
           {isCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
         </span>
 
@@ -201,17 +199,17 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           transform: 'rotate(180deg)',
           fontSize: '9px',
           fontWeight: '900',
-          color: '#E8DAB2',
+          color: 'var(--stories-fg)',
           textTransform: 'uppercase',
           letterSpacing: '0.14em',
-          opacity: 0.6,
+          opacity: 0.85,
           userSelect: 'none',
         }}>
           Stories
         </span>
 
         {/* Icon */}
-        <span style={{ color: '#E8DAB2', opacity: 0.45, lineHeight: 1 }}>
+        <span style={{ color: 'var(--stories-fg)', opacity: 0.65, lineHeight: 1 }}>
           <BookOpen size={13} />
         </span>
       </button>
@@ -373,27 +371,27 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
 // STYLES
 const panelStyle: React.CSSProperties = {
   width: '226px',
-  backgroundColor: 'rgba(250,239,188,0.16)',
+  backgroundColor: 'var(--stories-bg)',
   backdropFilter: 'blur(26px) saturate(140%)',
   WebkitBackdropFilter: 'blur(26px) saturate(140%)',
   borderRadius: '0 20px 20px 0',
   display: 'flex',
   flexDirection: 'column',
-  border: '1px solid rgba(212,175,55,0.3)',
+  border: '1px solid var(--stories-border)',
   borderLeft: 'none',
   overflow: 'hidden',
-  boxShadow: '0 16px 48px rgba(0,0,0,0.38)',
+  boxShadow: 'var(--panel-shadow)',
 }
 
-const headerStyle: React.CSSProperties = { 
-  padding: '13px 15px', borderBottom: '1px solid rgba(212,175,55,0.2)', 
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+const headerStyle: React.CSSProperties = {
+  padding: '13px 15px', borderBottom: '1px solid var(--stories-border)',
+  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
 }
-const titleStyle: React.CSSProperties = { margin: 0, fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#2C1810', fontWeight: '600', letterSpacing: '0.01em' }
-const subtitleStyle: React.CSSProperties = { margin: '2px 0 0', fontSize: '11px', color: '#2C1810', opacity: 0.6, fontWeight: '700' }
+const titleStyle: React.CSSProperties = { margin: 0, fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: 'var(--stories-title)', fontWeight: '600', letterSpacing: '0.01em' }
+const subtitleStyle: React.CSSProperties = { margin: '2px 0 0', fontSize: '11px', color: 'var(--stories-fg)', opacity: 0.75, fontWeight: '700' }
 
 const addButtonStyle: React.CSSProperties = {
-  width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#2C1810', color: '#FAEFBC',
+  width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'var(--stories-fg)', color: 'var(--body-bg)',
   display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none',
   boxShadow: '0 4px 10px rgba(0,0,0,0.2)', transition: 'all 0.2s ease'
 }
