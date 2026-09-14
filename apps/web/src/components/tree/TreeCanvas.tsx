@@ -66,6 +66,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   // can compute the viewport rectangle without depending on a stale ref read.
   const [containerRect, setContainerRect] = useState<{ width: number; height: number } | null>(null)
 
+  // ── FISHEYE LENS ──────────────────────────────────────────────
+  // Apple-Watch honeycomb feel: whichever apple sits under the cursor grows,
+  // its neighbors get a softer boost, and the rest of the tree stays at
+  // baseline. cursorTreeXY is in TREE coordinates (pan+zoom already undone)
+  // so the effect works at every zoom level.
+  const [cursorTreeXY, setCursorTreeXY] = useState<{ x: number; y: number } | null>(null)
+  const rafPending = useRef(false)
+
   // ── COLLAPSIBLE BRANCHES ─────────────────────────────────────
   // Members in collapsedIds hide their descendants from the canvas.
   // A golden "+N" badge appears on the collapsed apple; clicking it re-expands.
@@ -372,6 +380,29 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     mouseDownPosRef.current = { x: e.clientX, y: e.clientY }
   }
 
+  // Track cursor in TREE coords for the fisheye lens. rAF-throttled so 20+
+  // apples don't rebalance on every raw mousemove event.
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (rafPending.current) return
+    const clientX = e.clientX
+    const clientY = e.clientY
+    rafPending.current = true
+    requestAnimationFrame(() => {
+      rafPending.current = false
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const sx = clientX - rect.left
+      const sy = clientY - rect.top
+      const s = scaleRef.current
+      const o = offsetRef.current
+      setCursorTreeXY({ x: (sx - o.x) / s, y: (sy - o.y) / s })
+    })
+  }, [])
+
+  const handleCanvasMouseLeave = useCallback(() => {
+    setCursorTreeXY(null)
+  }, [])
+
   useEffect(() => {
     const handleOpenModal = (e: any) => {
       if (e.detail) setAddingToMember(e.detail)
@@ -537,6 +568,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     <div
       ref={containerRef}
       onMouseDown={handleMouseDown}
+      onMouseMove={handleCanvasMouseMove}
+      onMouseLeave={handleCanvasMouseLeave}
       onTouchStart={handleTouchStart}
       style={{
         width: '100%',
@@ -675,6 +708,27 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             const isCollapsed = collapsedIds.has(member.id)
             const collapsedCount = descendantCounts.get(member.id) ?? 0
             const memberHasDescendants = hasDescendantsMap.get(member.id) ?? false
+
+            // Fisheye lens (Apple-Watch honeycomb feel): apples near the
+            // cursor smoothstep-scale up to +35%. Radius set to ~3.5 apples
+            // so 3-5 neighbors participate — the "focus cluster" grows,
+            // the rest of the tree stays at baseline.
+            let fisheyeScale = 1
+            if (cursorTreeXY && !isDragging) {
+              const FISHEYE_R = NODE_SIZE * 3.5
+              const FISHEYE_MAX = 0.35
+              const dx = (member.canvasX ?? 0) - cursorTreeXY.x
+              const dy = ((member.canvasY ?? 0) + NODE_SIZE / 2) - cursorTreeXY.y
+              const d = Math.hypot(dx, dy)
+              if (d < FISHEYE_R) {
+                const t = 1 - d / FISHEYE_R
+                const eased = t * t * (3 - 2 * t) // smoothstep
+                fisheyeScale = 1 + FISHEYE_MAX * eased
+              }
+            }
+            const kinScale = isKin ? 1 : 0.92
+            const composedScale = fisheyeScale * kinScale
+
             return (
             <div
               key={member.id}
@@ -696,14 +750,16 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 position: 'absolute',
                 left: member.canvasX - NODE_SIZE / 2,
                 top: member.canvasY,
-                zIndex: isFocused ? 3000 : hoveredMemberId === member.id ? 2000 : 50,
+                zIndex: isFocused ? 3000 : hoveredMemberId === member.id ? 2000 : (fisheyeScale > 1.1 ? 70 : 50),
                 pointerEvents: 'auto',
                 padding: '20px',
                 margin: '-20px',
                 opacity: isKin ? 1 : 0.28,
-                transform: isKin ? 'scale(1)' : 'scale(0.92)',
+                transform: `scale(${composedScale})`,
                 transformOrigin: 'center center',
-                transition: 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)',
+                transition: cursorTreeXY
+                  ? 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1)'
+                  : 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)',
                 filter: isFocused ? 'drop-shadow(0 0 22px rgba(212,175,55,0.75))' : 'none'
               }}
             >
