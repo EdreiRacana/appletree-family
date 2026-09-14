@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
-import { computeTreeLayout, NODE_SIZE } from '@/lib/treeLayout'
+import { computeHoneycombLayout, NODE_SIZE } from '@/lib/treeLayout'
 import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
 import HoverPeek from './HoverPeek'
@@ -104,7 +104,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   useEffect(() => { focusedMemberIdRef.current = focusedMemberId }, [focusedMemberId])
 
   const positionedMembers = useMemo(() => {
-    return computeTreeLayout(members, relationships)
+    return computeHoneycombLayout(members, relationships)
   }, [members, relationships])
 
   // ── RADIAL SPHERE LENS ────────────────────────────────────────
@@ -701,30 +701,35 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             let parents = positionedMembers.filter(p => parentIds.includes(p.id))
             if (parents.length === 0) return null
 
-            // Usar posiciones LENSED para que las líneas sigan la deformación
-            // radial de la esfera. Sin esto, las líneas se despegan de las
-            // manzanas en las orillas.
+            // Honeycomb: posiciones NO son jerárquicas verticalmente.
+            // Se dibuja un bezier suave del centro del padre-promedio al
+            // centro del hijo. Las coords lenseadas hacen que la línea
+            // siga la deformación de la esfera.
             const childLensed = lensedById.get(child.id)
-            const childX = childLensed ? childLensed.lensedX : (child.canvasX ?? 0)
-            const childY = childLensed ? childLensed.lensedY : (child.canvasY ?? 0)
-            const midX = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedX ?? p.canvasX ?? 0), 0) / parents.length
-            const midY = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedY ?? p.canvasY ?? 0), 0) / parents.length
-
-            if (childY >= midY) return null
+            const childX = (childLensed ? childLensed.lensedX : (child.canvasX ?? 0)) + NODE_SIZE / 2
+            const childY = (childLensed ? childLensed.lensedY : (child.canvasY ?? 0)) + NODE_SIZE / 2
+            const midX = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedX ?? p.canvasX ?? 0), 0) / parents.length + NODE_SIZE / 2
+            const midY = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedY ?? p.canvasY ?? 0), 0) / parents.length + NODE_SIZE / 2
 
             const x1 = midX
-            const y1 = midY + NODE_SIZE / 2
+            const y1 = midY
             const x2 = childX
-            const y2 = childY + NODE_SIZE
+            const y2 = childY
 
             const lineIsKin = kinIds
               ? kinIds.has(child.id) && parents.some(p => kinIds.has(p.id))
               : true
             const lineOpacity = kinIds ? (lineIsKin ? 0.9 : 0.12) : 0.5
+            // Bezier suave con curvatura perpendicular al vector padre→hijo
+            // (dibuja un arco corto en vez de una S vertical fea)
+            const dx = x2 - x1
+            const dy = y2 - y1
+            const midCX = (x1 + x2) / 2 + dy * 0.15
+            const midCY = (y1 + y2) / 2 - dx * 0.15
             return (
               <path
                 key={`path-trunk-${child.id}`}
-                d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
+                d={`M ${x1} ${y1} Q ${midCX} ${midCY} ${x2} ${y2}`}
                 fill="none"
                 stroke="var(--tree-line)"
                 strokeWidth={1.5}
@@ -878,7 +883,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                     }, 300)
                   }}
                 onQuickContact={() => {
-                  console.log('Contact quick action for', member.id)
+                  // Abre el perfil (drawer) — desde ahí hay Chatear, Enviar
+                  // saludo, Invitar. Es el flujo unificado de "contactar".
+                  onViewProfile(member)
+                  setHoveredMemberId(null)
                 }}
                 onExpand={() => setExpandedMenuId(member.id)}
               />
