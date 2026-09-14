@@ -61,6 +61,19 @@
 
   --body-bg:              #1B2E1B;
 
+  --topbar-bg:            rgba(15,26,15,0.55);
+  --topbar-border:        rgba(212,175,55,0.28);
+  --topbar-fg:            #F5E6C8;
+
+  --sidebar-bg:           rgba(15,26,15,0.55);
+  --sidebar-border:       rgba(212,175,55,0.22);
+  --sidebar-fg:           #F5E6C8;
+
+  /* Tree bg watermark sizing — dark ships the full painting subdued;
+     light shows a smaller inscribed silhouette so it doesn't dominate. */
+  --canvas-tree-size:     140% auto;
+  --canvas-tree-pos:      center 30%;
+
   /* Shadows */
   --shadow-apple: 0 8px 24px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
   --shadow-lux:   0 12px 40px rgba(44, 24, 16, 0.15);
@@ -99,6 +112,17 @@
   --accent-gold-soft:     rgba(184,134,11,0.14);
 
   --body-bg:              #E5EDD8;
+
+  --topbar-bg:            rgba(255,255,255,0.55);
+  --topbar-border:        rgba(120,140,100,0.28);
+  --topbar-fg:            #2C3A20;
+
+  --sidebar-bg:           rgba(255,255,255,0.65);
+  --sidebar-border:       rgba(120,140,100,0.28);
+  --sidebar-fg:           #2C3A20;
+
+  --canvas-tree-size:     contain;
+  --canvas-tree-pos:      center 55%;
 }
 
 /* Vignette blend mode is per-theme: multiply in dark deepens the corners

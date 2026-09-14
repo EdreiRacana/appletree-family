@@ -551,18 +551,20 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
       }}
     >
       {/* 1. BACKGROUND IMAGE LAYER — theme-aware: dark keeps the tree as-is,
-         light lifts + desaturates it into a watermark. */}
+         light lifts + desaturates it into a watermark. Size + position are
+         theme-driven so light mode can inscribe a smaller silhouette instead
+         of showing a zoomed slice. No forced scale — respects the image. */}
       <div style={{
         position: 'absolute',
         inset: 0,
         backgroundImage: 'url("/assets/arbol-base.png")',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center bottom',
+        backgroundSize: 'var(--canvas-tree-size)',
+        backgroundPosition: 'var(--canvas-tree-pos)',
+        backgroundRepeat: 'no-repeat',
         opacity: `calc(${bgOpacity} * var(--canvas-tree-opacity))`,
         filter: 'var(--canvas-tree-filter)',
         zIndex: 1,
-        pointerEvents: 'none',
-        transform: 'translateY(120px) scale(1.5)'
+        pointerEvents: 'none'
       }} />
 
       {/* Shadow Overlay */}
@@ -856,27 +858,26 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         </span>
       </div>
 
-      {/* MINI-MAP · anchored TOP-RIGHT under the topbar. This is the
-         professional canonical location (Figma, Miro, Notion, Linear
-         canvas) — always visible, never fights the sidebar (zIndex:1000
-         to the left) or the zoom controls (bottom center). Slides left
-         when the profile drawer is open so it stays visible. */}
+      {/* MINI-MAP · anchored TOP-LEFT, right after the sidebar (76px wide
+         at left:28, so left:118 clears it). Zona 100% segura: la topbar
+         está encima (top:0-76), el sidebar a la izquierda, y el drawer y
+         Stories abren a la DERECHA — nada de eso alcanza esta esquina. */}
       {treeBounds && miniMapInfo && (
         <div
           style={{
             position: 'absolute',
-            top: '16px',
-            right: profilePanelOpen ? `${DRAWER_WIDTH + 24}px` : '24px',
+            top: '92px',
+            left: '118px',
             width: `${MINIMAP_W}px`,
             height: `${MINIMAP_H}px`,
             backgroundColor: 'var(--panel-bg)',
             border: '1px solid var(--panel-border)',
             borderRadius: '10px',
-            backdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(12px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(140%)',
             boxShadow: 'var(--panel-shadow)',
             overflow: 'hidden',
-            zIndex: 500,
-            transition: 'right 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+            zIndex: 500
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
