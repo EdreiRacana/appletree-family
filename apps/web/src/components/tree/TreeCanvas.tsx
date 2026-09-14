@@ -850,27 +850,31 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         </span>
       </div>
 
-      {/* MINI-MAP · anchored TOP-LEFT, right after the sidebar (76px wide
-         at left:28, so left:118 clears it). Zona 100% segura: la topbar
-         está encima (top:0-76), el sidebar a la izquierda, y el drawer y
-         Stories abren a la DERECHA — nada de eso alcanza esta esquina. */}
+      {/* MINI-MAP · bottom-LEFT past the sidebar (donde el owner lo señaló).
+         Zona 100% segura: sidebar a la izquierda + zoom pill al centro +
+         drawer/Stories a la derecha, nada lo cubre. Tamaño más compacto
+         y muy translúcido para que sea guía, no obstáculo visual. */}
       {treeBounds && miniMapInfo && (
         <div
           style={{
             position: 'absolute',
-            top: '92px',
-            left: '118px',
+            bottom: '24px',
+            left: '120px',
             width: `${MINIMAP_W}px`,
             height: `${MINIMAP_H}px`,
-            backgroundColor: 'var(--panel-bg)',
+            backgroundColor: 'rgba(255,255,255,0.06)',
             border: '1px solid var(--panel-border)',
-            borderRadius: '10px',
-            backdropFilter: 'blur(12px) saturate(140%)',
-            WebkitBackdropFilter: 'blur(12px) saturate(140%)',
-            boxShadow: 'var(--panel-shadow)',
+            borderRadius: '12px',
+            backdropFilter: 'blur(14px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
             overflow: 'hidden',
-            zIndex: 500
+            zIndex: 500,
+            opacity: 0.72,
+            transition: 'opacity 0.2s ease'
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.72' }}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <svg
