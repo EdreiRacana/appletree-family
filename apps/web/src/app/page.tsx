@@ -278,9 +278,33 @@ export default function AppleTreeDashboard() {
     return { filteredMembers: members, filteredRelationships: relationships }
   }, [treeData, viewFocus])
 
-  const handleSendInvite = (email: string, side: string, message: string) => {
-    console.log('Invitation sent to:', email, 'for side:', side)
-    setInvitingMember(null)
+  const handleSendInvite = async (email: string, side: string, message: string) => {
+    if (!invitingMember) return
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmail: email,
+          memberName: `${invitingMember.firstName} ${invitingMember.lastName || ''}`.trim(),
+          memberSide: side,
+          senderName: loginInputUser || 'Tu familia',
+          personalMessage: message,
+          treeUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(`No se pudo enviar la invitación: ${data.error || res.statusText}`)
+        throw new Error(data.error || res.statusText)
+      }
+      setInvitingMember(null)
+    } catch (err) {
+      // el catch del modal manejará el UI; ya alertamos si no fue red-error
+      if (!(err instanceof Error && err.message.includes('fetch'))) throw err
+      alert(`Error de red al enviar la invitación: ${err instanceof Error ? err.message : 'desconocido'}`)
+      throw err
+    }
   }
 
   const handleLogin = () => {

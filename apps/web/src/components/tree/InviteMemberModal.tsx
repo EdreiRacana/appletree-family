@@ -7,7 +7,7 @@ import type { Member } from '@/lib/types'
 interface InviteMemberModalProps {
   member: Member
   onClose: () => void
-  onSend: (email: string, side: string, message: string) => void
+  onSend: (email: string, side: string, message: string) => void | Promise<void>
 }
 
 export default function InviteMemberModal({ member, onClose, onSend }: InviteMemberModalProps) {
@@ -24,15 +24,15 @@ export default function InviteMemberModal({ member, onClose, onSend }: InviteMem
   const handleSend = async () => {
     if (!email) return
     setIsSending(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    onSend(email, side, message)
-    setIsSending(false)
-    setSuccess(true)
-    
-    setTimeout(onClose, 2000)
+    try {
+      await onSend(email, side, message)
+      setSuccess(true)
+      setTimeout(onClose, 1800)
+    } catch {
+      // el padre ya mostró el alert; solo desmarcar loading
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
