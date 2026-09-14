@@ -107,6 +107,52 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return computeTreeLayout(members, relationships)
   }, [members, relationships])
 
+  // ── RADIAL SPHERE LENS ────────────────────────────────────────
+  // Cada manzana se remapea con una distorsión barrel radial centrada en
+  // el viewport: r' = r * (1 - K*(r/R)²). Es lo que da la ilusión de
+  // esfera 3D — las filas rectas se curvan como si estuvieran sobre una
+  // bola. Como calculo AQUÍ las posiciones lenseadas, las líneas SVG
+  // (que se dibujan entre estas posiciones) siguen la curva automática-
+  // mente, sin quedar despegadas de las manzanas.
+  const spherizedMembers = useMemo(() => {
+    if (!containerRect) {
+      return positionedMembers.map(m => ({
+        ...m,
+        lensedX: m.canvasX,
+        lensedY: m.canvasY,
+        lensScale: 1,
+      }))
+    }
+    const cx = containerRect.width / 2
+    const cy = containerRect.height / 2
+    const R = Math.min(containerRect.width, containerRect.height) * 0.6
+    const PULL = 0.35     // fuerza del barrel (0 = plano, 0.5 = fisheye extremo)
+    const S_CENTER = 1.28 // manzana central: +28%
+    const S_EDGE = 0.62   // manzana en el borde: -38%
+    return positionedMembers.map(m => {
+      const sx = (m.canvasX ?? 0) * scale + offset.x
+      const sy = ((m.canvasY ?? 0) + NODE_SIZE / 2) * scale + offset.y
+      const dx = sx - cx
+      const dy = sy - cy
+      const d = Math.hypot(dx, dy)
+      const t = Math.min(d / R, 1)          // 0 centro, 1 borde
+      const compress = 1 - PULL * t * t     // barrel radial
+      const newSx = cx + dx * compress
+      const newSy = cy + dy * compress
+      const lensedX = (newSx - offset.x) / scale
+      const lensedY = (newSy - offset.y) / scale - NODE_SIZE / 2
+      const closeness = 1 - t * t * (3 - 2 * t) // smoothstep
+      const lensScale = S_EDGE + (S_CENTER - S_EDGE) * closeness
+      return { ...m, lensedX, lensedY, lensScale }
+    })
+  }, [positionedMembers, containerRect, scale, offset.x, offset.y])
+
+  const lensedById = useMemo(() => {
+    const map = new Map<string, { lensedX: number; lensedY: number; lensScale: number }>()
+    spherizedMembers.forEach(m => map.set(m.id, { lensedX: m.lensedX, lensedY: m.lensedY, lensScale: m.lensScale }))
+    return map
+  }, [spherizedMembers])
+
   // Set of member IDs that count as "direct kin" of the focused member.
   // null → no focus active, all members render at full opacity.
   const kinIds = useMemo<Set<string> | null>(() => {
@@ -655,20 +701,21 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             let parents = positionedMembers.filter(p => parentIds.includes(p.id))
             if (parents.length === 0) return null
 
-            // The visual fallback for single parents has been removed per user request.
-            // If a child is only linked to one parent, the line will stem directly from that parent,
-            // reflecting that it is a child from a different relationship.
+            // Usar posiciones LENSED para que las líneas sigan la deformación
+            // radial de la esfera. Sin esto, las líneas se despegan de las
+            // manzanas en las orillas.
+            const childLensed = lensedById.get(child.id)
+            const childX = childLensed ? childLensed.lensedX : (child.canvasX ?? 0)
+            const childY = childLensed ? childLensed.lensedY : (child.canvasY ?? 0)
+            const midX = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedX ?? p.canvasX ?? 0), 0) / parents.length
+            const midY = parents.reduce((sum, p) => sum + (lensedById.get(p.id)?.lensedY ?? p.canvasY ?? 0), 0) / parents.length
 
-            const midX = parents.reduce((sum, p) => sum + (p.canvasX ?? 0), 0) / parents.length
-            const midY = parents.reduce((sum, p) => sum + (p.canvasY ?? 0), 0) / parents.length
-
-            // SEGURIDAD: Solo dibujar si el hijo es de una generación superior (Y menor en canvas)
-            if (child.canvasY >= midY) return null
+            if (childY >= midY) return null
 
             const x1 = midX
-            const y1 = midY + NODE_SIZE / 2 // Exactamente desde la línea de la pareja
-            const x2 = (child.canvasX ?? 0)
-            const y2 = (child.canvasY ?? 0) + NODE_SIZE // Hasta la base del hijo
+            const y1 = midY + NODE_SIZE / 2
+            const x2 = childX
+            const y2 = childY + NODE_SIZE
 
             const lineIsKin = kinIds
               ? kinIds.has(child.id) && parents.some(p => kinIds.has(p.id))
@@ -688,20 +735,22 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             )
           })}
 
-          {/* Spouse Lines (Direct) */}
+          {/* Spouse Lines (Direct) — también sobre posiciones lenseadas */}
           {positionedMembers.map((m1) => {
             return relationships
               .filter(rel => rel.relationship === 'spouse' && (rel.member1Id === m1.id || rel.member2Id === m1.id))
               .map(rel => {
                 const otherId = rel.member1Id === m1.id ? rel.member2Id : rel.member1Id
                 const m2 = positionedMembers.find(m => m.id === otherId)
-                if (!m2 || m1.id > m2.id) return null // Draw once per pair
+                if (!m2 || m1.id > m2.id) return null
                 if (hiddenIds.has(m1.id) || hiddenIds.has(m2.id)) return null
-                
-                const x1 = m1.canvasX
-                const y1 = m1.canvasY + NODE_SIZE / 2 // Center of node
-                const x2 = m2.canvasX
-                const y2 = m2.canvasY + NODE_SIZE / 2 // Center of node
+
+                const l1 = lensedById.get(m1.id)
+                const l2 = lensedById.get(m2.id)
+                const x1 = l1 ? l1.lensedX : m1.canvasX
+                const y1 = (l1 ? l1.lensedY : m1.canvasY) + NODE_SIZE / 2
+                const x2 = l2 ? l2.lensedX : m2.canvasX
+                const y2 = (l2 ? l2.lensedY : m2.canvasY) + NODE_SIZE / 2
                 
                 const spouseLineOpacity = kinIds
                   ? (kinIds.has(m1.id) && kinIds.has(m2.id) ? 0.85 : 0.12)
@@ -724,7 +773,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
 
         {/* Nodes Layer */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
-          {positionedMembers.map((member) => {
+          {spherizedMembers.map((member) => {
             if (hiddenIds.has(member.id)) return null
             const isKin = !kinIds || kinIds.has(member.id)
             const isFocused = focusedMemberId === member.id
@@ -732,47 +781,12 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             const collapsedCount = descendantCounts.get(member.id) ?? 0
             const memberHasDescendants = hasDescendantsMap.get(member.id) ?? false
 
-            // ── LENTE ESFERA DOBLE ───────────────────────────────
-            // A) Sphere GLOBAL anclada al centro del viewport — la manzana
-            //    del centro es +15%, las de las orillas se hunden a 0.7x.
-            //    Simula que TODO el árbol es una bola/domo, siempre visible
-            //    aunque no muevas el cursor.
-            // B) Fisheye del cursor (encima) — bajo cursor: 2.0x, en su
-            //    radio: transición suave. Se combina multiplicativamente.
-            // Sphere REAL: además de scale, aplico un TRANSLATE que jala las
-            // manzanas de las orillas hacia el centro del viewport. Ese
-            // desplazamiento es el que hace ver la forma de domo/bola —
-            // sin translate el efecto solo shrink es sutil.
-            let globalSphereScale = 1
-            let spherePullX = 0
-            let spherePullY = 0
-            if (containerRect) {
-              const screenX = (member.canvasX ?? 0) * scale + offset.x
-              const screenY = ((member.canvasY ?? 0) + NODE_SIZE / 2) * scale + offset.y
-              const cx = containerRect.width / 2
-              const cy = containerRect.height / 2
-              const R = Math.min(containerRect.width, containerRect.height) * 0.7
-              const d = Math.hypot(screenX - cx, screenY - cy)
-              const t = 1 - Math.min(d / R, 1)         // 1 centro, 0 borde
-              const eased = t * t * (3 - 2 * t)
-              const CENTER_S = 1.35
-              const EDGE_S = 0.55
-              globalSphereScale = EDGE_S + (CENTER_S - EDGE_S) * eased
-
-              // Jala hacia el centro proporcional a qué tan lejos está.
-              // (1 - eased) es alto en las orillas y 0 en el centro.
-              // Divido entre scale para que el translate se aplique en tree
-              // coords (el wrapper vive dentro del pan/zoom transform).
-              const PULL_STRENGTH = 0.32
-              const pullFactor = (1 - eased) * PULL_STRENGTH
-              spherePullX = (cx - screenX) * pullFactor / scale
-              spherePullY = (cy - screenY) * pullFactor / scale
-            }
-
+            // La lente radial ya remapeó posición Y escala. Solo agrego
+            // encima el cursor-fisheye local.
             let cursorFisheye = 1
             if (cursorTreeXY && !isDragging) {
               const SPHERE_R = NODE_SIZE * 5
-              const PEAK = 2.0
+              const PEAK = 1.85
               const dx = (member.canvasX ?? 0) - cursorTreeXY.x
               const dy = ((member.canvasY ?? 0) + NODE_SIZE / 2) - cursorTreeXY.y
               const d = Math.hypot(dx, dy)
@@ -782,7 +796,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 cursorFisheye = 1 + (PEAK - 1) * eased
               }
             }
-            const fisheyeScale = globalSphereScale * cursorFisheye
+            const fisheyeScale = member.lensScale * cursorFisheye
             const kinScale = isKin ? 1 : 0.92
             const composedScale = fisheyeScale * kinScale
 
@@ -805,17 +819,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               }}
               style={{
                 position: 'absolute',
-                left: member.canvasX - NODE_SIZE / 2,
-                top: member.canvasY,
+                left: member.lensedX - NODE_SIZE / 2,
+                top: member.lensedY,
                 zIndex: isFocused ? 3000 : hoveredMemberId === member.id ? 2000 : (fisheyeScale > 1.1 ? 70 : 50),
                 pointerEvents: 'auto',
                 padding: '20px',
                 margin: '-20px',
                 opacity: isKin ? 1 : 0.28,
-                // El translate(spherePullX, spherePullY) es lo que crea la
-                // ilusión de esfera — las orillas se acercan al centro.
-                // Combinado con scale da el fisheye completo.
-                transform: `translate(${spherePullX}px, ${spherePullY}px) scale(${composedScale})`,
+                transform: `scale(${composedScale})`,
                 transformOrigin: 'center center',
                 transition: cursorTreeXY
                   ? 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1)'
@@ -841,8 +852,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               if (hoveredMemberId !== member.id || expandedMenuId === member.id) return null
               // Screen coords del centro de la manzana (respetando el
               // desplazamiento sphere y el scale compuesto).
-              const appleScreenX = ((member.canvasX ?? 0) + spherePullX) * scale + offset.x
-              const appleScreenY = ((member.canvasY ?? 0) + spherePullY) * scale + offset.y
+              const appleScreenX = (member.lensedX ?? 0) * scale + offset.x
+              const appleScreenY = (member.lensedY ?? 0) * scale + offset.y
               const appleH = NODE_SIZE * scale * composedScale
               const TOPBAR_H = 76
               const FLIP_MARGIN = 60
@@ -879,8 +890,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 container y del stacking context. Auto-flip abajo cuando la
                 manzana está en la parte alta del viewport. */}
             {expandedMenuId === member.id && (() => {
-              const appleScreenX = ((member.canvasX ?? 0) + spherePullX) * scale + offset.x
-              const appleScreenY = ((member.canvasY ?? 0) + spherePullY) * scale + offset.y
+              const appleScreenX = (member.lensedX ?? 0) * scale + offset.x
+              const appleScreenY = (member.lensedY ?? 0) * scale + offset.y
               const appleH = NODE_SIZE * scale * composedScale
               const MENU_H_ESTIMATE = 300
               const TOPBAR_H = 76
