@@ -709,21 +709,25 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             const collapsedCount = descendantCounts.get(member.id) ?? 0
             const memberHasDescendants = hasDescendantsMap.get(member.id) ?? false
 
-            // Fisheye lens (Apple-Watch honeycomb feel): apples near the
-            // cursor smoothstep-scale up to +35%. Radius set to ~3.5 apples
-            // so 3-5 neighbors participate — the "focus cluster" grows,
-            // the rest of the tree stays at baseline.
+            // Sphere/dome lens (Apple-Watch style): apples near the cursor
+            // BULGE up to 2.4x, apples far away SHRINK to 0.55x. Gives the
+            // "bola de esfera" feel — el centro sobresale y los bordes se
+            // hunden. Radio grande para que la esfera cubra el cluster.
             let fisheyeScale = 1
             if (cursorTreeXY && !isDragging) {
-              const FISHEYE_R = NODE_SIZE * 3.5
-              const FISHEYE_MAX = 0.35
+              const SPHERE_R = NODE_SIZE * 6      // radio de influencia
+              const PEAK_SCALE = 2.4              // manzana bajo cursor
+              const EDGE_SCALE = 0.72             // manzana justo al borde
+              const FAR_SCALE = 0.55              // manzana lejos
               const dx = (member.canvasX ?? 0) - cursorTreeXY.x
               const dy = ((member.canvasY ?? 0) + NODE_SIZE / 2) - cursorTreeXY.y
               const d = Math.hypot(dx, dy)
-              if (d < FISHEYE_R) {
-                const t = 1 - d / FISHEYE_R
-                const eased = t * t * (3 - 2 * t) // smoothstep
-                fisheyeScale = 1 + FISHEYE_MAX * eased
+              if (d >= SPHERE_R) {
+                fisheyeScale = FAR_SCALE
+              } else {
+                const t = 1 - d / SPHERE_R         // 1 en centro, 0 en borde
+                const eased = t * t * (3 - 2 * t)  // smoothstep
+                fisheyeScale = EDGE_SCALE + (PEAK_SCALE - EDGE_SCALE) * eased
               }
             }
             const kinScale = isKin ? 1 : 0.92
