@@ -6,6 +6,7 @@ import type { Member, Relationship } from '@/lib/types'
 import { computeTreeLayout, NODE_SIZE } from '@/lib/treeLayout'
 import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
+import HoverPeek from './HoverPeek'
 import EditMemberModal from './EditMemberModal'
 import AddMemberModal from './AddMemberModal'
 import MobileTreeView from './MobileTreeView'
@@ -44,6 +45,9 @@ const DRAWER_WIDTH = 450
 export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
   const isMobile = useIsMobile()
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
+  // Two-stage hover: hover shows the compact HoverPeek pill; clicking its
+  // "…" opens the full HoverMenu identified here.
+  const [expandedMenuId, setExpandedMenuId] = useState<string | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -427,9 +431,23 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
       setOffset({ x: rect.width / 2 - only.canvasX, y: rect.height / 2 - only.canvasY })
       return
     }
-    // Defer one frame so treeBounds/fitToView have the latest positions
     requestAnimationFrame(() => fitToView())
   }, [positionedMembers, fitToView])
+
+  // RESPONSIVE GROWTH: cuando la familia crece o el viewport cambia, el
+  // árbol se re-encuadra solo. El usuario ya no tiene que ⊡ manualmente
+  // al agregar generaciones nuevas.
+  const lastFittedCount = useRef(0)
+  useEffect(() => {
+    if (!didInitialFit.current) return
+    const count = positionedMembers.length
+    if (count === 0) return
+    // Solo re-fit si crecio o encogio significativamente (evita jitter)
+    if (Math.abs(count - lastFittedCount.current) >= 1) {
+      lastFittedCount.current = count
+      requestAnimationFrame(() => fitToView())
+    }
+  }, [positionedMembers.length, containerRect?.width, containerRect?.height, fitToView])
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return
@@ -709,27 +727,42 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             const collapsedCount = descendantCounts.get(member.id) ?? 0
             const memberHasDescendants = hasDescendantsMap.get(member.id) ?? false
 
-            // Sphere/dome lens (Apple-Watch style): apples near the cursor
-            // BULGE up to 2.4x, apples far away SHRINK to 0.55x. Gives the
-            // "bola de esfera" feel — el centro sobresale y los bordes se
-            // hunden. Radio grande para que la esfera cubra el cluster.
-            let fisheyeScale = 1
+            // ── LENTE ESFERA DOBLE ───────────────────────────────
+            // A) Sphere GLOBAL anclada al centro del viewport — la manzana
+            //    del centro es +15%, las de las orillas se hunden a 0.7x.
+            //    Simula que TODO el árbol es una bola/domo, siempre visible
+            //    aunque no muevas el cursor.
+            // B) Fisheye del cursor (encima) — bajo cursor: 2.0x, en su
+            //    radio: transición suave. Se combina multiplicativamente.
+            let globalSphereScale = 1
+            if (containerRect) {
+              const screenX = (member.canvasX ?? 0) * scale + offset.x
+              const screenY = ((member.canvasY ?? 0) + NODE_SIZE / 2) * scale + offset.y
+              const cx = containerRect.width / 2
+              const cy = containerRect.height / 2
+              const R = Math.min(containerRect.width, containerRect.height) * 0.55
+              const d = Math.hypot(screenX - cx, screenY - cy)
+              const t = 1 - Math.min(d / R, 1)         // 1 centro, 0 borde
+              const eased = t * t * (3 - 2 * t)
+              const CENTER_S = 1.18
+              const EDGE_S = 0.72
+              globalSphereScale = EDGE_S + (CENTER_S - EDGE_S) * eased
+            }
+
+            let cursorFisheye = 1
             if (cursorTreeXY && !isDragging) {
-              const SPHERE_R = NODE_SIZE * 6      // radio de influencia
-              const PEAK_SCALE = 2.4              // manzana bajo cursor
-              const EDGE_SCALE = 0.72             // manzana justo al borde
-              const FAR_SCALE = 0.55              // manzana lejos
+              const SPHERE_R = NODE_SIZE * 5
+              const PEAK = 2.0
               const dx = (member.canvasX ?? 0) - cursorTreeXY.x
               const dy = ((member.canvasY ?? 0) + NODE_SIZE / 2) - cursorTreeXY.y
               const d = Math.hypot(dx, dy)
-              if (d >= SPHERE_R) {
-                fisheyeScale = FAR_SCALE
-              } else {
-                const t = 1 - d / SPHERE_R         // 1 en centro, 0 en borde
-                const eased = t * t * (3 - 2 * t)  // smoothstep
-                fisheyeScale = EDGE_SCALE + (PEAK_SCALE - EDGE_SCALE) * eased
+              if (d < SPHERE_R) {
+                const t = 1 - d / SPHERE_R
+                const eased = t * t * (3 - 2 * t)
+                cursorFisheye = 1 + (PEAK - 1) * eased
               }
             }
+            const fisheyeScale = globalSphereScale * cursorFisheye
             const kinScale = isKin ? 1 : 0.92
             const composedScale = fisheyeScale * kinScale
 
@@ -776,38 +809,42 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               viewportScale={scale}
             />
 
-            {/* INTERACTIVE HOVER MENU */}
-            {hoveredMemberId === member.id && (
-              <HoverMenu
+            {/* HOVER STAGE 1: pill compacto — nombre + contacto + expandir */}
+            {hoveredMemberId === member.id && expandedMenuId !== member.id && (
+              <HoverPeek
                 member={member}
-                onClose={() => setHoveredMemberId(null)}
                 onMouseEnter={() => {
                   if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
                   setHoveredMemberId(member.id)
                 }}
-                onEdit={(m) => {
-                  onEditMember(m)
-                  setHoveredMemberId(null)
+                onMouseLeave={() => {
+                  hoverTimeoutRef.current = setTimeout(() => {
+                    setHoveredMemberId(null)
+                  }, 300)
                 }}
-                onAdd={(m) => {
-                  setAddingToMember(m)
-                  setHoveredMemberId(null)
+                onQuickContact={() => {
+                  console.log('Contact quick action for', member.id)
                 }}
+                onExpand={() => setExpandedMenuId(member.id)}
+              />
+            )}
+
+            {/* HOVER STAGE 2: menú completo — solo cuando el owner lo pide */}
+            {expandedMenuId === member.id && (
+              <HoverMenu
+                member={member}
+                onClose={() => { setExpandedMenuId(null); setHoveredMemberId(null) }}
+                onMouseEnter={() => {
+                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+                }}
+                onEdit={(m) => { onEditMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                onAdd={(m) => { setAddingToMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
                 onDelete={(m) => handleDeleteMember(m)}
-                onViewProfile={(m) => {
-                  onViewProfile(m)
-                  setHoveredMemberId(null)
-                }}
-                onAddStory={(m) => {
-                  onAddStory(m)
-                  setHoveredMemberId(null)
-                }}
+                onViewProfile={(m) => { onViewProfile(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                onAddStory={(m) => { onAddStory(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
                 hasDescendants={memberHasDescendants}
                 isCollapsed={isCollapsed}
-                onToggleCollapse={(m) => {
-                  toggleCollapsed(m.id)
-                  setHoveredMemberId(null)
-                }}
+                onToggleCollapse={(m) => { toggleCollapsed(m.id); setExpandedMenuId(null); setHoveredMemberId(null) }}
               />
             )}
 
