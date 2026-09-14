@@ -87,8 +87,8 @@
   --drawer-fg:            var(--chrome-fg-strong);
   --drawer-accent:        var(--chrome-fg);
 
-  --canvas-tree-size:     140% auto;
-  --canvas-tree-pos:      center 30%;
+  --canvas-tree-size:     cover;
+  --canvas-tree-pos:      center center;
 
   /* Shadows */
   --shadow-apple: 0 8px 24px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
@@ -137,8 +137,8 @@
   --chrome-fg:            #8B6508;
   --chrome-fg-strong:     #5A6B3E;
 
-  --canvas-tree-size:     140% auto;
-  --canvas-tree-pos:      center 30%;
+  --canvas-tree-size:     cover;
+  --canvas-tree-pos:      center center;
 }
 
 /* Vignette blend mode is per-theme: multiply in dark deepens the corners
