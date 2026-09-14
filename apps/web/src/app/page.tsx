@@ -796,6 +796,23 @@ export default function AppleTreeDashboard() {
 
   return (
     <main style={{ width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--body-bg)', position: 'relative' }}>
+      {/* GLOBAL TREE BACKDROP · fixed layer that spans the full viewport,
+         including BEHIND the topbar. Every glass panel above (topbar,
+         sidebar, stories, drawer) blurs THIS layer, which is what makes
+         the "vidrio" actually feel like glass. */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundImage: 'url("/assets/arbol-base.png")',
+        backgroundSize: 'var(--canvas-tree-size)',
+        backgroundPosition: 'var(--canvas-tree-pos)',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: 'var(--body-bg)',
+        opacity: 'var(--canvas-tree-opacity)',
+        filter: 'var(--canvas-tree-filter)',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
       <Topbar 
         viewFocus={viewFocus} 
         onViewFocusChange={setViewFocus} 

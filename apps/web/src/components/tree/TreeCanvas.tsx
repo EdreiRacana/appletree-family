@@ -543,32 +543,24 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
-        backgroundColor: 'var(--canvas-bg)',
+        backgroundColor: 'transparent',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         touchAction: 'none',
         overscrollBehavior: 'none'
       }}
     >
-      {/* 1. BACKGROUND IMAGE LAYER — theme-aware: dark keeps the tree as-is,
-         light lifts + desaturates it into a watermark. Size + position are
-         theme-driven so light mode can inscribe a smaller silhouette instead
-         of showing a zoomed slice. No forced scale — respects the image. */}
+      {/* Tree background lives on <main> now (fixed, full viewport), so every
+         glass panel above can blur it. Overlay tint stays per-canvas so the
+         apple cluster reads against a slightly softened band. */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        backgroundImage: 'url("/assets/arbol-base.png")',
-        backgroundSize: 'var(--canvas-tree-size)',
-        backgroundPosition: 'var(--canvas-tree-pos)',
-        backgroundRepeat: 'no-repeat',
-        opacity: `calc(${bgOpacity} * var(--canvas-tree-opacity))`,
-        filter: 'var(--canvas-tree-filter)',
-        zIndex: 1,
-        pointerEvents: 'none'
+        background: 'var(--canvas-overlay)',
+        opacity: bgOpacity,
+        pointerEvents: 'none',
+        zIndex: 5
       }} />
-
-      {/* Shadow Overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'var(--canvas-overlay)', pointerEvents: 'none', zIndex: 5 }} />
 
       {/* Premium radial vignette — draws the eye to the family cluster in
          the visible band (past sidebar, before drawer), so the canvas
