@@ -5,17 +5,28 @@ import type { Member } from '@/lib/types'
 
 interface HoverPeekProps {
   member: Member
+  // Screen coordinates (viewport pixels) — se computan en TreeCanvas a partir
+  // de la posición de la manzana en pan/zoom. Como usamos position: fixed el
+  // peek nunca queda contenido dentro del transform del container ni clipped
+  // por el topbar/sidebar.
+  screenX: number
+  screenY: number
+  flipBelow: boolean
   onExpand: () => void
   onQuickContact: () => void
   onMouseEnter?: () => void
   onMouseLeave?: () => void
 }
 
-// Pill discreto: solo nombre + botón de contacto rápido + botón de expandir.
-// Aparece al hover sobre la manzana. Es invisible en el flujo hasta que se
-// necesite algo específico — no invade el árbol como el menu completo.
+// Pill discreto: nombre + botón contacto + botón expandir. Aparece al hover
+// sobre la manzana. Se auto-voltea abajo si la manzana está cerca del top
+// del viewport (para no quedar bajo el topbar). Fallecidos no ven el botón
+// de contacto (isDeceased) porque ya no se les puede contactar.
 export default function HoverPeek({
   member,
+  screenX,
+  screenY,
+  flipBelow,
   onExpand,
   onQuickContact,
   onMouseEnter,
@@ -24,15 +35,16 @@ export default function HoverPeek({
   const fullName = `${member.firstName}${member.lastName ? ' ' + member.lastName : ''}`
   const isDeceased = !!member.dateOfDeath
   const isBaby = member.isBaby
+  const canContact = !isDeceased && !isBaby
 
   return (
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       style={{
-        position: 'absolute',
-        top: '-58px',
-        left: '50%',
+        position: 'fixed',
+        left: `${screenX}px`,
+        top: `${screenY}px`,
         transform: 'translateX(-50%)',
         display: 'flex',
         alignItems: 'center',
@@ -50,15 +62,16 @@ export default function HoverPeek({
         fontWeight: 600,
         letterSpacing: '0.02em',
         whiteSpace: 'nowrap',
-        zIndex: 5000,
+        zIndex: 10000,
         pointerEvents: 'auto',
-        animation: 'peekFadeUp 0.18s cubic-bezier(0.22, 0.61, 0.36, 1)',
+        animation: flipBelow
+          ? 'peekFadeDown 0.18s cubic-bezier(0.22, 0.61, 0.36, 1)'
+          : 'peekFadeUp 0.18s cubic-bezier(0.22, 0.61, 0.36, 1)',
       }}
     >
       <span style={{ paddingRight: '2px' }}>{fullName}</span>
 
-      {/* Botón contacto (solo si no es fallecido ni bebé) */}
-      {!isDeceased && !isBaby && (
+      {canContact && (
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -66,8 +79,8 @@ export default function HoverPeek({
           }}
           title="Contactar"
           style={{
-            width: '26px',
-            height: '26px',
+            width: '28px',
+            height: '28px',
             borderRadius: '50%',
             border: '1px solid var(--chrome-border)',
             background: 'var(--accent-gold-soft)',
@@ -78,11 +91,10 @@ export default function HoverPeek({
             cursor: 'pointer',
           }}
         >
-          <MessageCircle size={13} />
+          <MessageCircle size={14} />
         </button>
       )}
 
-      {/* Botón expandir menú completo */}
       <button
         onClick={(e) => {
           e.stopPropagation()
@@ -90,8 +102,8 @@ export default function HoverPeek({
         }}
         title="Más opciones"
         style={{
-          width: '26px',
-          height: '26px',
+          width: '28px',
+          height: '28px',
           borderRadius: '50%',
           border: '1px solid var(--chrome-border)',
           background: 'transparent',
@@ -102,12 +114,16 @@ export default function HoverPeek({
           cursor: 'pointer',
         }}
       >
-        <MoreHorizontal size={14} />
+        <MoreHorizontal size={16} />
       </button>
 
       <style jsx>{`
         @keyframes peekFadeUp {
           from { opacity: 0; transform: translate(-50%, 6px); }
+          to   { opacity: 1; transform: translate(-50%, 0); }
+        }
+        @keyframes peekFadeDown {
+          from { opacity: 0; transform: translate(-50%, -6px); }
           to   { opacity: 1; transform: translate(-50%, 0); }
         }
       `}</style>
