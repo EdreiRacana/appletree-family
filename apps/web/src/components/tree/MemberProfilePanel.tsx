@@ -39,22 +39,8 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
 
   return (
     <>
-      {/* Backdrop Backdrop */}
-      <div 
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 4000,
-          opacity: isVisible ? 1 : 0,
-          transition: 'opacity 0.4s ease',
-          pointerEvents: isVisible ? 'auto' : 'none'
-        }}
-      />
-
-      {/* Main Panel */}
+      {/* Non-modal drawer: keeps the tree and minimap navigable while the
+         story is open (Notion / Linear / Figma pattern). No backdrop. */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -62,7 +48,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
         width: '450px',
         height: '100vh',
         backgroundColor: '#FAEFBC', // Warm parchment
-        boxShadow: '-10px 0 50px rgba(0,0,0,0.3)',
+        boxShadow: '-16px 0 40px rgba(0,0,0,0.35)',
         zIndex: 4001,
         display: 'flex',
         flexDirection: 'column',

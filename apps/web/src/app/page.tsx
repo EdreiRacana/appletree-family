@@ -832,6 +832,7 @@ export default function AppleTreeDashboard() {
               onEditMember={setEditingMember}
               onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); }}
               bgOpacity={bgOpacity}
+              profilePanelOpen={!!selectedMember}
             />
           )}
 

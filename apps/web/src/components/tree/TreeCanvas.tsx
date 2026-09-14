@@ -30,9 +30,12 @@ interface TreeCanvasProps {
   onEditMember: (member: Member) => void
   onAddStory: (member: Member) => void
   bgOpacity: number
+  // When the side profile drawer is mounted (~450px on the right) the minimap
+  // slides left so the drawer never covers it.
+  profilePanelOpen?: boolean
 }
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
   const isMobile = useIsMobile()
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   const [addingToMember, setAddingToMember] = useState<Member | null>(null)
@@ -149,10 +152,16 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return map
   }, [positionedMembers, childrenByParent])
 
-  // hiddenIds: members currently hidden because an ancestor is collapsed.
+  // hiddenIds: members currently hidden because an ancestor is collapsed
+  // (manual toggle) OR because focus mode auto-collapsed a far lateral branch.
+  //
+  // Smart lateral compression: when the user focuses on a member, distant
+  // uncle/aunt branches (>4×NODE_SIZE horizontally away from the kin cluster
+  // and not part of it) collapse automatically so the family in focus reads
+  // clearly. The badge counter still shows how many descendants were tucked
+  // away; a click on it (or exiting focus mode) restores them.
   const hiddenIds = useMemo(() => {
     const hidden = new Set<string>()
-    if (collapsedIds.size === 0) return hidden
     const visit = (id: string) => {
       const kids = childrenByParent.get(id) || []
       kids.forEach(k => {
@@ -163,8 +172,30 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
       })
     }
     collapsedIds.forEach(id => visit(id))
+
+    if (focusedMemberId && kinIds) {
+      const kinXs = positionedMembers
+        .filter(m => kinIds.has(m.id))
+        .map(m => m.canvasX ?? 0)
+      if (kinXs.length > 0) {
+        const kinMinX = Math.min(...kinXs)
+        const kinMaxX = Math.max(...kinXs)
+        const LATERAL_BUFFER = NODE_SIZE * 4
+        positionedMembers.forEach(m => {
+          if (kinIds.has(m.id)) return
+          if (hidden.has(m.id)) return
+          const x = m.canvasX ?? 0
+          const beyondLeft = x < kinMinX - LATERAL_BUFFER
+          const beyondRight = x > kinMaxX + LATERAL_BUFFER
+          if (beyondLeft || beyondRight) {
+            hidden.add(m.id)
+            visit(m.id)
+          }
+        })
+      }
+    }
     return hidden
-  }, [collapsedIds, childrenByParent])
+  }, [collapsedIds, childrenByParent, focusedMemberId, kinIds, positionedMembers])
 
   // descendantCount: id → total descendants (only computed for collapsed nodes).
   const descendantCounts = useMemo(() => {
@@ -787,13 +818,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         </span>
       </div>
 
-      {/* MINI-MAP · overview of the whole tree with a viewport indicator */}
+      {/* MINI-MAP · overview of the whole tree with a viewport indicator.
+         Slides left when the profile drawer is open so it stays visible. */}
       {treeBounds && miniMapInfo && (
         <div
           style={{
             position: 'absolute',
             bottom: '24px',
-            right: '24px',
+            right: profilePanelOpen ? '474px' : '24px',
             width: `${MINIMAP_W}px`,
             height: `${MINIMAP_H}px`,
             backgroundColor: 'rgba(20, 35, 20, 0.85)',
@@ -802,7 +834,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             backdropFilter: 'blur(8px)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
             overflow: 'hidden',
-            zIndex: 500
+            zIndex: 500,
+            transition: 'right 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
