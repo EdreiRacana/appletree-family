@@ -14,7 +14,6 @@ import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
 import MobileBottomSheet from '@/components/MobileBottomSheet'
 import MobileBottomNav from '@/components/MobileBottomNav'
-import MobileLayout from '@/components/MobileLayout'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { Member, Relationship } from '@/lib/types'
@@ -896,30 +895,11 @@ export default function AppleTreeDashboard() {
     setTutorialStep(0)
   }
 
-  if (isMobile) {
-    return (
-      <MobileLayout 
-        members={treeData.members}
-        relationships={treeData.relationships}
-        activeTab={mobileActiveTab}
-        onTabChange={setMobileActiveTab}
-        currentUser={loginInputUser}
-        currentTreeId={currentTreeId}
-        onViewProfile={(m) => setMobileSheetMember(m)}
-        onEditMember={(m) => setEditingMember(m)}
-        onAddMember={(m) => window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m }))}
-        onDeleteMember={async (m) => {
-          if (!window.confirm(`¿Eliminar a ${m.firstName} ${m.lastName}? Esta acción no se puede deshacer.`)) return
-          try {
-            await supabase.from('relationships').delete().or(`member1_id.eq.${m.id},member2_id.eq.${m.id}`)
-            await supabase.from('members').delete().eq('id', m.id)
-            fetchFamilyData()
-          } catch { /* ignored */ }
-        }}
-        onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); }}
-      />
-    )
-  }
+  // Nota: no hay early return para móvil. El layout principal (<main>) usa
+  // `.hide-on-mobile` en Sidebar/FeedPanel, TreeCanvas conmuta a MobileTreeView
+  // adentro, y MobileBottomSheet + MobileBottomNav ya viven en el árbol de
+  // renderizado principal. El componente MobileLayout era un stub placeholder
+  // ("Mobile OK") que se comía toda la pantalla del teléfono.
 
   return (
     <main style={{ width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: 'var(--body-bg)', position: 'relative' }}>
