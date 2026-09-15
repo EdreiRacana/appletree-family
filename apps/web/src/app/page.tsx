@@ -280,29 +280,27 @@ export default function AppleTreeDashboard() {
 
   const handleSendInvite = async (email: string, side: string, message: string) => {
     if (!invitingMember) return
+    const payload = {
+      toEmail: email,
+      memberName: `${invitingMember.firstName} ${invitingMember.lastName || ''}`.trim(),
+      memberSide: side,
+      senderName: loginInputUser || 'Tu familia',
+      personalMessage: message,
+      treeUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+    }
     try {
-      const res = await fetch('/api/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          toEmail: email,
-          memberName: `${invitingMember.firstName} ${invitingMember.lastName || ''}`.trim(),
-          memberSide: side,
-          senderName: loginInputUser || 'Tu familia',
-          personalMessage: message,
-          treeUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
-        }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        alert(`No se pudo enviar la invitación: ${data.error || res.statusText}`)
-        throw new Error(data.error || res.statusText)
+      // Envío por Supabase Edge Function `send-invite` (Resend detrás).
+      const { data, error } = await supabase.functions.invoke('send-invite', { body: payload })
+      if (error) {
+        alert(`No se pudo enviar la invitación: ${error.message}`)
+        throw error
+      }
+      if (data && (data as { error?: string }).error) {
+        alert(`No se pudo enviar la invitación: ${(data as { error: string }).error}`)
+        throw new Error((data as { error: string }).error)
       }
       setInvitingMember(null)
     } catch (err) {
-      // el catch del modal manejará el UI; ya alertamos si no fue red-error
-      if (!(err instanceof Error && err.message.includes('fetch'))) throw err
-      alert(`Error de red al enviar la invitación: ${err instanceof Error ? err.message : 'desconocido'}`)
       throw err
     }
   }
