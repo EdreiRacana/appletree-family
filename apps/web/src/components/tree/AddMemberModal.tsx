@@ -1,8 +1,9 @@
 'use client' 
 
 import React, { useState } from 'react'
-import { X, Save, User as UserIcon, Calendar, ImageIcon, Baby, UserPlus, Heart } from 'lucide-react'
+import { X, User as UserIcon, Calendar, ImageIcon, Baby, UserPlus, Heart, Upload } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { fileToDownscaledDataUrl } from '@/lib/imageUtils'
 import { Member, Relationship } from '@/lib/types'
 
 interface AddMemberModalProps {
@@ -31,6 +32,24 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
   })
   
   const [isSaving, setIsSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { alert('Selecciona un archivo de imagen.'); return }
+    setUploadingPhoto(true)
+    try {
+      const dataUrl = await fileToDownscaledDataUrl(file, 320, 0.72)
+      setFormData(prev => ({ ...prev, avatarUrl: dataUrl }))
+    } catch (err) {
+      console.error('Error procesando imagen:', err)
+      alert('No se pudo procesar la imagen.')
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ''
+    }
+  }
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -171,6 +190,46 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
           </div>
         ) : (
           <div style={formWrapperStyle}>
+            {/* Photo Upload */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', backgroundColor: 'rgba(139,69,19,0.05)', padding: '16px', borderRadius: '16px' }}>
+              <div style={{
+                width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden',
+                border: '3px solid #F2D241', boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                backgroundColor: '#fff', flexShrink: 0
+              }}>
+                <img
+                  src={formData.avatarUrl || '/assets/default-avatar.png'}
+                  alt="Preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px', opacity: 0.7 }}>
+                  <ImageIcon size={14} /> FOTOGRAFÍA
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <label style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '8px 14px', borderRadius: '8px', cursor: uploadingPhoto ? 'wait' : 'pointer',
+                    backgroundColor: '#8B4513', color: '#FFF', fontSize: '12px', fontWeight: 'bold',
+                    opacity: uploadingPhoto ? 0.6 : 1
+                  }}>
+                    <Upload size={14} /> {uploadingPhoto ? 'Procesando…' : 'Subir imagen'}
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} style={{ display: 'none' }} />
+                  </label>
+                  {formData.avatarUrl && (
+                    <button type="button" onClick={() => setFormData({...formData, avatarUrl: ''})}
+                      style={{ background: 'none', border: 'none', color: '#8B4513', fontSize: '11px', cursor: 'pointer', opacity: 0.7, textDecoration: 'underline' }}>
+                      Quitar
+                    </button>
+                  )}
+                </div>
+                <span style={{ fontSize: '10px', opacity: 0.55, display: 'block', marginTop: '6px' }}>
+                  Se optimiza automáticamente (máx. 320px).
+                </span>
+              </div>
+            </div>
+
             {/* Form Fields */}
             <div style={grid2Style}>
               <div>
