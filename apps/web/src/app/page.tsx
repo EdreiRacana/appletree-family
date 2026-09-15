@@ -10,6 +10,7 @@ import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import EditMemberModal from '@/components/tree/EditMemberModal'
 import InviteMemberModal from '@/components/tree/InviteMemberModal'
 import ChatPanel from '@/components/chat/ChatPanel'
+import AccountSettingsModal from '@/components/AccountSettingsModal'
 import PhotoAlbums from '@/components/PhotoAlbums'
 import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
@@ -31,6 +32,7 @@ export default function AppleTreeDashboard() {
   const [bgOpacity, setBgOpacity] = useState(0.3)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [chattingWithMember, setChattingWithMember] = useState<Member | null>(null)
+  const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [invitingMember, setInvitingMember] = useState<Member | null>(null)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
@@ -1069,6 +1071,7 @@ export default function AppleTreeDashboard() {
         userAvatarUrl={userProfileAvatar}
         currentUser={loginInputUser}
         onLogout={handleLogout}
+        onOpenAccountSettings={session ? () => setIsAccountSettingsOpen(true) : undefined}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
@@ -1129,6 +1132,13 @@ export default function AppleTreeDashboard() {
             member={chattingWithMember}
             onClose={() => setChattingWithMember(null)}
             onInvite={(m) => { setInvitingMember(m); setChattingWithMember(null); }}
+          />
+        )}
+
+        {isAccountSettingsOpen && session?.user?.email && (
+          <AccountSettingsModal
+            currentEmail={session.user.email}
+            onClose={() => setIsAccountSettingsOpen(false)}
           />
         )}
 

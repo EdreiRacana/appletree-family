@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut, Sun, Moon } from 'lucide-react'
+import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut, Sun, Moon, KeyRound } from 'lucide-react'
 import type { AppNotification } from '@/lib/useNotifications'
 
 // Theme toggle — stamps data-theme on <html> and persists in localStorage.
@@ -56,16 +56,17 @@ interface TopbarProps {
   userAvatarUrl?: string | null
   currentUser?: string
   onLogout?: () => void
+  onOpenAccountSettings?: () => void
   showStartTreeBtn?: boolean
 }
 
-export default function Topbar({ 
-  onAdd, 
-  viewFocus = 'all', 
-  onViewFocusChange, 
+export default function Topbar({
+  onAdd,
+  viewFocus = 'all',
+  onViewFocusChange,
   notificationCount = 0,
   notifications = [],
-  onStartMyTree, 
+  onStartMyTree,
   onShowTutorial,
   onShowTerms,
   onClearNotifications,
@@ -73,7 +74,8 @@ export default function Topbar({
   userAvatarUrl,
   currentUser,
   onLogout,
-  showStartTreeBtn = false 
+  onOpenAccountSettings,
+  showStartTreeBtn = false
 }: TopbarProps) {
   const [showNotifications, setShowNotifications] = React.useState(false)
   const [showUserMenu, setShowUserMenu] = React.useState(false)
@@ -286,6 +288,16 @@ export default function Topbar({
                     <p style={{ margin: '1px 0 0', fontSize: '10px', color: '#2C1810', opacity: 0.55 }}>Sesión activa</p>
                   </div>
                 </div>
+                {onOpenAccountSettings && (
+                  <button
+                    onClick={() => { setShowUserMenu(false); onOpenAccountSettings() }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 16px', background: 'none', border: 'none', borderBottom: '1px solid rgba(44,24,16,0.08)', cursor: 'pointer', color: '#2C1810', fontSize: '13px', fontWeight: 700, textAlign: 'left' }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(44,24,16,0.06)')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <KeyRound size={16} /> Cambiar contraseña o correo
+                  </button>
+                )}
                 <button
                   onClick={() => { setShowUserMenu(false); onLogout?.() }}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '13px 16px', background: 'none', border: 'none', cursor: 'pointer', color: '#8B2C1C', fontSize: '13px', fontWeight: 700, textAlign: 'left' }}
