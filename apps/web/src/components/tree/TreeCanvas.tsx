@@ -835,15 +835,17 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 está en el top del viewport. */}
             {(() => {
               if (hoveredMemberId !== member.id || expandedMenuId === member.id) return null
-              // Screen coords del CENTRO real de la manzana en pantalla.
-              // - lensedX ya es la coord central en tree-space (el wrapper hace
-              //   `left: lensedX - NODE_SIZE/2`).
-              // - lensedY es el TOP del wrapper → sumar NODE_SIZE/2 da el centro.
-              // El outer container aplica translate(offset) + scale(scale), y
-              // el wrapper aplica scale(composedScale) alrededor del centro, así
-              // que la mitad del alto visible es (NODE_SIZE * scale * composedScale)/2.
-              const appleCenterScreenX = (member.lensedX ?? 0) * scale + offset.x
-              const appleCenterScreenY = ((member.lensedY ?? 0) + NODE_SIZE / 2) * scale + offset.y
+              // HoverPeek usa position:fixed → necesitamos VIEWPORT coords.
+              // Cadena: viewport → container (bounding rect) → pan/zoom
+              // transform → apple wrapper. lensedX ya es el centro X de la
+              // manzana en tree-space (el wrapper hace `left: lensedX - NODE_SIZE/2`);
+              // lensedY es su top. Le sumamos NODE_SIZE/2 para el centro Y.
+              // La escala compuesta (fisheye + kin) va alrededor del centro.
+              const containerBox = containerRef.current?.getBoundingClientRect()
+              const cLeft = containerBox?.left ?? 0
+              const cTop = containerBox?.top ?? 0
+              const appleCenterScreenX = cLeft + (member.lensedX ?? 0) * scale + offset.x
+              const appleCenterScreenY = cTop + ((member.lensedY ?? 0) + NODE_SIZE / 2) * scale + offset.y
               const scaledHalfH = (NODE_SIZE * scale * composedScale) / 2
               const appleTopScreenY = appleCenterScreenY - scaledHalfH
               const appleBottomScreenY = appleCenterScreenY + scaledHalfH
@@ -887,25 +889,31 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 container y del stacking context. Auto-flip abajo cuando la
                 manzana está en la parte alta del viewport. */}
             {expandedMenuId === member.id && (() => {
-              const appleScreenX = (member.lensedX ?? 0) * scale + offset.x
-              const appleScreenY = (member.lensedY ?? 0) * scale + offset.y
-              const appleH = NODE_SIZE * scale * composedScale
+              // Mismo cálculo que HoverPeek — sumar container bounding rect
+              // para convertir de container-space a viewport-space.
+              const containerBox = containerRef.current?.getBoundingClientRect()
+              const cLeft = containerBox?.left ?? 0
+              const cTop = containerBox?.top ?? 0
+              const appleCenterScreenX = cLeft + (member.lensedX ?? 0) * scale + offset.x
+              const appleCenterScreenY = cTop + ((member.lensedY ?? 0) + NODE_SIZE / 2) * scale + offset.y
+              const scaledHalfH = (NODE_SIZE * scale * composedScale) / 2
+              const appleTopScreenY = appleCenterScreenY - scaledHalfH
+              const appleBottomScreenY = appleCenterScreenY + scaledHalfH
               const MENU_H_ESTIMATE = 300
               const TOPBAR_H = 76
-              const flipBelow = appleScreenY - MENU_H_ESTIMATE < TOPBAR_H + 12
-              const centerX = appleScreenX + (NODE_SIZE / 2) * scale
+              const flipBelow = appleTopScreenY - MENU_H_ESTIMATE < TOPBAR_H + 12
               const fixedStyle: React.CSSProperties = flipBelow
                 ? {
                     position: 'fixed',
-                    top: `${appleScreenY + appleH + 12}px`,
-                    left: `${centerX}px`,
+                    top: `${appleBottomScreenY + 12}px`,
+                    left: `${appleCenterScreenX}px`,
                     transform: 'translateX(-50%)',
                     zIndex: 10001,
                   }
                 : {
                     position: 'fixed',
-                    top: `${appleScreenY - 12}px`,
-                    left: `${centerX}px`,
+                    top: `${appleTopScreenY - 12}px`,
+                    left: `${appleCenterScreenX}px`,
                     transform: 'translate(-50%, -100%)',
                     zIndex: 10001,
                   }
