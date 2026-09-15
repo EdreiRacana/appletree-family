@@ -25,6 +25,18 @@ interface InviteBody {
   senderName?: string
   personalMessage?: string
   treeUrl?: string
+  // Nuevos: identificar árbol y miembro para crear el token
+  treeId?: string
+  memberId?: string
+  invitedByUserId?: string
+}
+
+function randomToken(): string {
+  // 32 bytes base64url ≈ 43 chars, ~192 bits entropía
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 function isValidEmail(email: string): boolean {
@@ -40,13 +52,13 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
-function renderEmail(body: InviteBody, treeUrl: string): string {
+function renderEmail(body: InviteBody, treeUrl: string, baseUrl: string): string {
   const memberName = escapeHtml(body.memberName)
   const sender = escapeHtml(body.senderName || 'Tu familia')
   const message = escapeHtml(body.personalMessage || '')
-  // El logo se sirve desde el mismo dominio del árbol; email clients lo
-  // cargan directo desde HTTPS. Se centra sobre el header verde-slate.
-  const logoUrl = `${treeUrl.replace(/\/$/, '')}/assets/logo.png`
+  // Logo se carga desde el BASE url del árbol (sin el ?invite=), para que
+  // no quede rompida la ruta con query params encima.
+  const logoUrl = `${baseUrl.replace(/\/$/, '')}/assets/logo.png`
   return `<!doctype html>
 <html>
   <head><meta charset="utf-8" /><title>Invitación a AppleFamily Tree</title></head>
@@ -141,8 +153,46 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const treeUrl = body.treeUrl || defaultUrl
-    const html = renderEmail(body, treeUrl)
+    // Crear el token de invitación en Supabase (si tenemos tree/member).
+    // Sin tree_id no podemos crear el registro — el correo se envía igual
+    // pero sin token (fallback: el invitado tendrá que ser agregado manualmente).
+    let inviteToken: string | null = null
+    if (body.treeId) {
+      inviteToken = randomToken()
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (supabaseUrl && serviceRoleKey) {
+        const insertRes = await fetch(`${supabaseUrl}/rest/v1/invites`, {
+          method: 'POST',
+          headers: {
+            'apikey': serviceRoleKey,
+            'Authorization': `Bearer ${serviceRoleKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            token: inviteToken,
+            tree_id: body.treeId,
+            member_id: body.memberId ?? null,
+            email: body.toEmail,
+            invited_by: body.invitedByUserId ?? null,
+            side: body.memberSide ?? null,
+            personal_message: body.personalMessage ?? null,
+          }),
+        })
+        if (!insertRes.ok) {
+          const errTxt = await insertRes.text().catch(() => '')
+          console.error('Failed to insert invite token:', insertRes.status, errTxt)
+          inviteToken = null  // el correo se envía sin token → link genérico
+        }
+      }
+    }
+
+    const baseTreeUrl = body.treeUrl || defaultUrl
+    const treeUrl = inviteToken
+      ? `${baseTreeUrl.replace(/\/$/, '')}/?invite=${inviteToken}`
+      : baseTreeUrl
+    const html = renderEmail(body, treeUrl, baseTreeUrl)
     const subject = `${body.senderName || 'Tu familia'} te invita a AppleFamily Tree`
 
     const resendRes = await fetch('https://api.resend.com/emails', {
