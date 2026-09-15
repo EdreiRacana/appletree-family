@@ -19,7 +19,12 @@ interface Photo {
   caption?: string
 }
 
-export default function PhotoAlbums({ treeId }: { treeId: string }) {
+interface PhotoAlbumsProps {
+  treeId: string
+  onClose?: () => void
+}
+
+export default function PhotoAlbums({ treeId, onClose }: PhotoAlbumsProps) {
   const [albums, setAlbums] = useState<Album[]>([])
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -28,6 +33,8 @@ export default function PhotoAlbums({ treeId }: { treeId: string }) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newAlbumName, setNewAlbumName] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const [renamingAlbumId, setRenamingAlbumId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   const CURRENT_USER_NAME = 'Familiar'
 
@@ -153,27 +160,62 @@ export default function PhotoAlbums({ treeId }: { treeId: string }) {
     } finally { setIsUploading(false) }
   }
 
+  // Rename album helper — el mismo path que fetchAlbums (Supabase + fallback local)
+  const handleRenameAlbum = async (album: Album) => {
+    const trimmed = renameValue.trim()
+    if (!trimmed || trimmed === album.name) { setRenamingAlbumId(null); return }
+    try {
+      if (!album.id.startsWith('local-')) {
+        const { error } = await supabase.from('albums').update({ name: trimmed }).eq('id', album.id)
+        if (error) throw error
+      }
+      const updated = albums.map(a => a.id === album.id ? { ...a, name: trimmed } : a)
+      setAlbums(updated)
+      if (album.id.startsWith('local-')) {
+        localStorage.setItem('apple_demo_albums', JSON.stringify(updated))
+      }
+      if (selectedAlbum?.id === album.id) setSelectedAlbum({ ...selectedAlbum, name: trimmed })
+    } catch (err) {
+      console.error('Rename error:', err)
+    } finally {
+      setRenamingAlbumId(null)
+    }
+  }
+
   return (
-    <div style={{ 
-      position: 'absolute', top: '100px', left: '340px',
-      width: '450px', height: '620px',
-      backgroundColor: '#FAEFBC', borderRadius: '30px', border: '3px solid #2C1810',
-      boxShadow: '0 25px 90px rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column',
+    <div style={{
+      // Panel flotante centrado y responsive — antes era absolute con
+      // top/left/width/height hardcoded → se cortaba en pantallas chicas
+      // y no había forma de cerrarlo.
+      position: 'fixed',
+      top: '92px',
+      right: '18px',
+      bottom: '18px',
+      width: 'min(460px, calc(100vw - 40px))',
+      backgroundColor: '#FAEFBC', borderRadius: '20px', border: '2px solid rgba(44,24,16,0.35)',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.45)', display: 'flex', flexDirection: 'column',
       zIndex: 1000, overflow: 'hidden'
     }}>
-      <div style={{ padding: '20px 25px', borderBottom: '1px solid rgba(44,24,16,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(44,24,16,0.02)' }}>
-        <div>
+      <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(44,24,16,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(44,24,16,0.02)', gap: '10px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           {selectedAlbum && <button onClick={() => setSelectedAlbum(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2C1810', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', marginBottom: '3px', opacity: 0.7 }}><ChevronLeft size={14} /> Volver</button>}
-          <h2 style={{ fontSize: '19px', fontFamily: 'serif', margin: 0, color: '#2C1810', fontWeight: '950' }}>{selectedAlbum ? selectedAlbum.name : 'Mis Álbumes'}</h2>
+          <h2 style={{ fontSize: '18px', fontFamily: 'serif', margin: 0, color: '#2C1810', fontWeight: '950', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedAlbum ? selectedAlbum.name : 'Mis Álbumes'}</h2>
         </div>
-        {!selectedAlbum ? (
-           <button onClick={() => setShowCreateModal(true)} style={{ padding: '8px 16px', backgroundColor: '#2C1810', color: '#FAEFBC', borderRadius: '12px', border: 'none', fontWeight: '900', cursor: 'pointer', fontSize: '11px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>+ Nuevo</button>
-        ) : (
-           <label style={{ padding: '8px 16px', backgroundColor: '#2C1810', color: '#FAEFBC', borderRadius: '12px', border: 'none', fontWeight: '900', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
-             <Upload size={14} /> Subir
-             <input type="file" accept="image/*" hidden onChange={handleUploadPhoto} />
-           </label>
-        )}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+          {!selectedAlbum ? (
+            <button onClick={() => setShowCreateModal(true)} style={{ padding: '8px 14px', backgroundColor: '#2C1810', color: '#FAEFBC', borderRadius: '12px', border: 'none', fontWeight: '900', cursor: 'pointer', fontSize: '11px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>+ Nuevo</button>
+          ) : (
+            <label style={{ padding: '8px 14px', backgroundColor: '#2C1810', color: '#FAEFBC', borderRadius: '12px', border: 'none', fontWeight: '900', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
+              <Upload size={14} /> Subir
+              <input type="file" accept="image/*" hidden onChange={handleUploadPhoto} />
+            </label>
+          )}
+          {onClose && (
+            <button onClick={onClose} title="Cerrar" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid rgba(44,24,16,0.25)', background: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2C1810' }}>
+              <X size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '15px' }}>
@@ -181,19 +223,45 @@ export default function PhotoAlbums({ treeId }: { treeId: string }) {
           <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}><Loader2 className="animate-spin" size={32} color="#2C1810" /></div>
         ) : !selectedAlbum ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {albums.map(album => (
-              <div key={album.id} onClick={() => { setSelectedAlbum(album); fetchPhotos(album.id); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: 'white', borderRadius: '18px', border: '2.5px solid #2C1810', cursor: 'pointer', transition: 'transform 0.2s' }} className="album-card-item">
-                <div style={{ width: '50px', height: '50px', flexShrink: 0, backgroundImage: `url(${album.cover_url || 'https://via.placeholder.com/100?text=A'})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '10px', border: '1.5px solid #2C1810' }} />
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: 0, fontSize: '15px', color: '#2C1810', fontWeight: '950' }}>{album.name}</h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
-                    <p style={{ margin: 0, fontSize: '9px', color: '#D4822A', fontWeight: '800' }}>por: {album.created_by_name}</p>
-                    {album.privacy === 'private' ? <Lock size={10} color="#D4822A" /> : <Globe size={10} color="#D4822A" />}
+            {albums.map(album => {
+              const isRenaming = renamingAlbumId === album.id
+              return (
+                <div key={album.id}
+                  onClick={() => { if (!isRenaming) { setSelectedAlbum(album); fetchPhotos(album.id) } }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', backgroundColor: 'white', borderRadius: '18px', border: '2.5px solid #2C1810', cursor: isRenaming ? 'default' : 'pointer', transition: 'transform 0.2s', minWidth: 0 }} className="album-card-item">
+                  <div style={{ width: '50px', height: '50px', flexShrink: 0, backgroundImage: album.cover_url ? `url(${album.cover_url})` : 'linear-gradient(135deg,#D4822A,#B8691A)', backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '10px', border: '1.5px solid #2C1810', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {!album.cover_url && <ImageIcon size={18} color="#FAEFBC" />}
                   </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {isRenaming ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onBlur={() => handleRenameAlbum(album)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleRenameAlbum(album); if (e.key === 'Escape') setRenamingAlbumId(null) }}
+                        style={{ width: '100%', padding: '4px 8px', borderRadius: '8px', border: '1.5px solid #2C1810', fontSize: '14px', fontWeight: 800, fontFamily: 'inherit', outline: 'none' }}
+                      />
+                    ) : (
+                      <h4 style={{ margin: 0, fontSize: '15px', color: '#2C1810', fontWeight: '950', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{album.name}</h4>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
+                      <p style={{ margin: 0, fontSize: '9px', color: '#D4822A', fontWeight: '800' }}>por: {album.created_by_name}</p>
+                      {album.privacy === 'private' ? <Lock size={10} color="#D4822A" /> : <Globe size={10} color="#D4822A" />}
+                    </div>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); setRenameValue(album.name); setRenamingAlbumId(album.id) }}
+                    title="Renombrar"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2C1810', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6 }}
+                  >
+                    <Save size={14} />
+                  </button>
+                  <ChevronRight size={16} opacity={0.3} />
                 </div>
-                <ChevronRight size={16} opacity={0.3} />
-              </div>
-            ))}
+              )
+            })}
           </div>
         ) : (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px', padding: '10px' }}>
