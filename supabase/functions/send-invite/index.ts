@@ -29,6 +29,10 @@ interface InviteBody {
   treeId?: string
   memberId?: string
   invitedByUserId?: string
+  // Cuando es 'link-only' se genera el token e inserta el invite pero NO se
+  // manda correo. Sirve para WhatsApp/copiar-link donde el usuario elige el
+  // canal. En ese modo no se valida toEmail (puede ser placeholder).
+  mode?: 'email' | 'link-only'
 }
 
 function randomToken(): string {
@@ -132,17 +136,12 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const apiKey = Deno.env.get('RESEND_API_KEY')
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'RESEND_API_KEY missing in Supabase secrets' }), {
-        status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-      })
-    }
-    const from = Deno.env.get('INVITE_FROM') || 'AppleFamily Tree <no-reply@sthenova.com>'
     const defaultUrl = Deno.env.get('APP_URL') || 'https://appletree-family.vercel.app'
-
     const body = (await req.json()) as InviteBody
-    if (!body?.toEmail || !isValidEmail(body.toEmail)) {
+    const isLinkOnly = body?.mode === 'link-only'
+
+    // Validaciones — en modo link-only no exigimos correo válido.
+    if (!isLinkOnly && (!body?.toEmail || !isValidEmail(body.toEmail))) {
       return new Response(JSON.stringify({ error: 'Correo destino inválido' }), {
         status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       })
@@ -152,6 +151,22 @@ Deno.serve(async (req: Request) => {
         status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       })
     }
+    if (isLinkOnly && !body?.treeId) {
+      return new Response(JSON.stringify({ error: 'Falta treeId para generar el link' }), {
+        status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Modo email: Resend key es requerido. En link-only lo cargamos abajo solo
+    // si vamos a mandar correo, para que la función pueda operar sin ella si
+    // el proyecto solo usa WhatsApp/copiar-link.
+    const apiKey = isLinkOnly ? null : Deno.env.get('RESEND_API_KEY')
+    if (!isLinkOnly && !apiKey) {
+      return new Response(JSON.stringify({ error: 'RESEND_API_KEY missing in Supabase secrets' }), {
+        status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
+    const from = Deno.env.get('INVITE_FROM') || 'AppleFamily Tree <no-reply@sthenova.com>'
 
     // Crear el token de invitación en Supabase (si tenemos tree/member).
     // Sin tree_id no podemos crear el registro — el correo se envía igual
@@ -174,7 +189,10 @@ Deno.serve(async (req: Request) => {
             token: inviteToken,
             tree_id: body.treeId,
             member_id: body.memberId ?? null,
-            email: body.toEmail,
+            // En modo link-only usamos un placeholder claro; al aceptar la
+            // invitación no importa que no coincida con la sesión real, ya
+            // que el auto-accept del frontend usa el correo del auth.user.
+            email: isLinkOnly ? `link-share-${Date.now()}@invite.local` : body.toEmail,
             invited_by: body.invitedByUserId ?? null,
             side: body.memberSide ?? null,
             personal_message: body.personalMessage ?? null,
@@ -192,6 +210,19 @@ Deno.serve(async (req: Request) => {
     const treeUrl = inviteToken
       ? `${baseTreeUrl.replace(/\/$/, '')}/?invite=${inviteToken}`
       : baseTreeUrl
+
+    // Modo link-only: devolver el URL sin mandar correo.
+    if (isLinkOnly) {
+      if (!inviteToken) {
+        return new Response(JSON.stringify({ error: 'No se pudo generar el token' }), {
+          status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({ ok: true, url: treeUrl, token: inviteToken }), {
+        status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
+
     const html = renderEmail(body, treeUrl, baseTreeUrl)
     const subject = `${body.senderName || 'Tu familia'} te invita a AppleFamily Tree`
 
@@ -209,7 +240,7 @@ Deno.serve(async (req: Request) => {
         status: 502, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       })
     }
-    return new Response(JSON.stringify({ ok: true, id: data?.id }), {
+    return new Response(JSON.stringify({ ok: true, id: data?.id, url: treeUrl }), {
       status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     })
   } catch (err) {

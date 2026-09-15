@@ -475,31 +475,41 @@ export default function AppleTreeDashboard() {
     return { filteredMembers: members, filteredRelationships: relationships }
   }, [treeData, viewFocus])
 
-  // Genera un token de invitación y lo persiste en Supabase SIN enviar correo.
-  // Devuelve la URL con `?invite=<token>` lista para compartir por WhatsApp/copiar.
-  // Usa RLS: solo el owner del árbol puede insertar → invita a familiares del árbol propio.
+  // Genera un token de invitación via Edge Function (bypasa RLS con
+  // service_role). Antes lo hacíamos con supabase.from('invites').insert
+  // directo, pero RLS pide que seas owner del tree — falla si el owner_id
+  // no fue enlazado a tu auth.uid. La Edge Function ya arma todo bien.
   const createInviteLink = async (side: string, message: string): Promise<string | null> => {
     if (!invitingMember || !session?.user?.id) return null
-    // 192 bits de entropía → base64url ~32 chars. Mismo formato que la Edge Function.
-    const bytes = new Uint8Array(24)
-    crypto.getRandomValues(bytes)
-    const token = btoa(String.fromCharCode(...bytes))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-    const { error } = await supabase.from('invites').insert({
-      token,
-      tree_id: currentTreeId,
-      member_id: invitingMember.id,
-      email: 'link-share@invite.local', // Placeholder — la columna es NOT NULL. Al aceptar da igual.
-      invited_by: session.user.id,
-      side,
-      personal_message: message,
-    })
-    if (error) {
-      alert(`No se pudo crear el link: ${error.message}`)
+    const payload = {
+      // Placeholder — la Edge Function lo reemplaza con link-share-<ts>@invite.local
+      toEmail: 'placeholder@invite.local',
+      memberName: `${invitingMember.firstName} ${invitingMember.lastName || ''}`.trim(),
+      memberSide: side,
+      senderName: loginInputUser || 'Tu familia',
+      personalMessage: message,
+      treeUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+      treeId: currentTreeId,
+      memberId: invitingMember.id,
+      invitedByUserId: session.user.id,
+      mode: 'link-only' as const,
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('send-invite', { body: payload })
+      if (error) {
+        alert(`No se pudo crear el link: ${error.message}`)
+        return null
+      }
+      const result = data as { ok?: boolean; url?: string; error?: string }
+      if (result?.error) {
+        alert(`No se pudo crear el link: ${result.error}`)
+        return null
+      }
+      return result?.url ?? null
+    } catch (err) {
+      alert(`No se pudo crear el link: ${err instanceof Error ? err.message : 'error desconocido'}`)
       return null
     }
-    const base = typeof window !== 'undefined' ? window.location.origin : 'https://appletree-family.vercel.app'
-    return `${base}/?invite=${token}`
   }
 
   const handleSendInvite = async (email: string, side: string, message: string) => {
