@@ -229,11 +229,13 @@ export default function InviteMemberModal({ member, onClose, onSend }: InviteMem
               )}
             </button>
             
-            <button 
+            <button
               onClick={() => {
-                const encodedMessage = encodeURIComponent(`${message}\n\nEntra aquí: https://appletree.family/invite/token123`);
-                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-                onClose();
+                const treeUrl = typeof window !== 'undefined' ? window.location.origin : 'https://appletree-family.vercel.app'
+                const familyName = `${member.firstName}${member.lastName ? ' ' + member.lastName : ''}`
+                const text = `${message}\n\nEstás invitado como *${familyName}* a nuestro árbol familiar.\nEntra aquí: ${treeUrl}`
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+                onClose()
               }}
               style={{
                 width: '100%',
