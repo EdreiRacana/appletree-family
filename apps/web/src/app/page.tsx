@@ -9,6 +9,7 @@ import TreeCanvas from '@/components/tree/TreeCanvas'
 import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import EditMemberModal from '@/components/tree/EditMemberModal'
 import InviteMemberModal from '@/components/tree/InviteMemberModal'
+import ChatPanel from '@/components/chat/ChatPanel'
 import PhotoAlbums from '@/components/PhotoAlbums'
 import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
@@ -29,6 +30,7 @@ export default function AppleTreeDashboard() {
   const [loading, setLoading] = useState(true)
   const [bgOpacity, setBgOpacity] = useState(0.3)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [chattingWithMember, setChattingWithMember] = useState<Member | null>(null)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [invitingMember, setInvitingMember] = useState<Member | null>(null)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
@@ -63,6 +65,18 @@ export default function AppleTreeDashboard() {
     handleResize()
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // ── Listener global para abrir el ChatPanel ───────────────────
+  // TreeCanvas (o cualquier otro descendiente) dispara `open-chat`
+  // con el Member como detail. Aquí lo capturamos y montamos el panel.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<Member>).detail
+      if (detail) setChattingWithMember(detail)
+    }
+    window.addEventListener('open-chat', handler)
+    return () => window.removeEventListener('open-chat', handler)
   }, [])
 
   // ── Detección de token de invitación en la URL ──────────────────
@@ -251,7 +265,8 @@ export default function AppleTreeDashboard() {
         isBaby: m.is_baby,
         biography: m.biography,
         occupation: m.occupation,
-        birthPlace: m.birth_place
+        birthPlace: m.birth_place,
+        userId: m.user_id ?? null,
       }))
 
       const mappedRels: Relationship[] = (relsData || []).map((r: any) => ({
@@ -995,7 +1010,16 @@ export default function AppleTreeDashboard() {
             window.dispatchEvent(new CustomEvent('focus-branch', { detail: m }))
             setSelectedMember(null)
           }}
+          onChat={(m) => { setChattingWithMember(m); setSelectedMember(null); }}
         />
+
+        {chattingWithMember && (
+          <ChatPanel
+            member={chattingWithMember}
+            onClose={() => setChattingWithMember(null)}
+            onInvite={(m) => { setInvitingMember(m); setChattingWithMember(null); }}
+          />
+        )}
 
         {editingMember && <EditMemberModal member={editingMember} onClose={() => setEditingMember(null)} onSave={fetchFamilyData} />}
         

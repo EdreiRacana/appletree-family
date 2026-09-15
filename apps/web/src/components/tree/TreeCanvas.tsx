@@ -874,9 +874,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                     }, 1200)
                   }}
                 onQuickContact={() => {
-                  // Abre el perfil (drawer) — desde ahí hay Chatear, Enviar
-                  // saludo, Invitar. Es el flujo unificado de "contactar".
-                  onViewProfile(member)
+                  // Dispara evento — page.tsx captura y abre ChatPanel.
+                  // Así TreeCanvas no necesita conocer al ChatPanel directamente.
+                  window.dispatchEvent(new CustomEvent('open-chat', { detail: member }))
                   setHoveredMemberId(null)
                 }}
                 onExpand={() => setExpandedMenuId(member.id)}
