@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Briefcase, BookOpen, MapPin, Award, Share2, Edit3, UserPlus, Eye } from 'lucide-react'
+import { X, Briefcase, BookOpen, MapPin, Award, Share2, Edit3, UserPlus, Eye, MessageCircle } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface MemberProfilePanelProps {
@@ -11,9 +11,10 @@ interface MemberProfilePanelProps {
   onInvite?: (member: Member) => void
   onAddRelative?: (member: Member) => void
   onFocusBranch?: (member: Member) => void
+  onChat?: (member: Member) => void
 }
 
-export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, onAddRelative, onFocusBranch }: MemberProfilePanelProps) {
+export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, onAddRelative, onFocusBranch, onChat }: MemberProfilePanelProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -238,6 +239,11 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
             {onAddRelative && (
               <button onClick={() => onAddRelative(member)} style={actionButtonStyle}>
                 <UserPlus size={16} /> Añadir familiar
+              </button>
+            )}
+            {onChat && !isDeceased && (
+              <button onClick={() => onChat(member)} style={actionButtonStyle}>
+                <MessageCircle size={16} /> Chatear
               </button>
             )}
             {onInvite && !isDeceased && (
