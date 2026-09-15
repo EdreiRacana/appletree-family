@@ -192,9 +192,44 @@ export default function AppleTreeDashboard() {
       window.localStorage.setItem('apple_session_user', displayName)
       window.localStorage.setItem('currentUser', displayName)
     }
-    // 0. Rescate: si hay invites que este usuario aceptó pero cuyo
-    //    member.user_id sigue en null (bug pre-005 con RLS), reintentar el
-    //    link. Silencioso — si falla no rompe el login.
+    // 0.a Auto-aceptar invites por CORREO: si esta cuenta de Supabase Auth
+    //     tiene un correo que coincide con algún invite pendiente, marcarlo
+    //     como aceptado. Cubre el caso donde el token en localStorage se
+    //     perdió (verificó correo en otro navegador/dispositivo, cerró la
+    //     pestaña antes del confirm, etc). No requiere que el usuario haya
+    //     entrado al link ?invite=... — solo necesita el mismo correo.
+    try {
+      const email = s.user.email
+      if (email) {
+        const { data: pendingByEmail } = await supabase
+          .from('invites')
+          .select('id, member_id, tree_id, expires_at')
+          .eq('email', email)
+          .is('accepted_at', null)
+        if (pendingByEmail && pendingByEmail.length > 0) {
+          for (const inv of pendingByEmail) {
+            if (new Date(inv.expires_at) < new Date()) continue
+            await supabase
+              .from('invites')
+              .update({ accepted_at: new Date().toISOString(), accepted_by: s.user.id })
+              .eq('id', inv.id)
+            if (inv.member_id) {
+              await supabase
+                .from('members')
+                .update({ user_id: s.user.id })
+                .eq('id', inv.member_id)
+                .is('user_id', null)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Auto-accept invites by email failed:', err)
+    }
+
+    // 0.b Rescate: si hay invites que este usuario aceptó pero cuyo
+    //     member.user_id sigue en null (bug pre-005 con RLS), reintentar el
+    //     link. Silencioso — si falla no rompe el login.
     try {
       const { data: orphanInvites } = await supabase
         .from('invites')
