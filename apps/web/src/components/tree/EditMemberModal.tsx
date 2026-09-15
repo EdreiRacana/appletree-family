@@ -101,17 +101,37 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         parents: formData.parents
       }
 
-      const { error } = await supabase
+      // Log del payload de foto para diagnóstico (tamaño y prefijo del data URL)
+      if (formData.avatarUrl) {
+        console.log('[EditMember] avatar_url payload:', {
+          bytes: formData.avatarUrl.length,
+          prefix: formData.avatarUrl.slice(0, 40),
+        })
+      }
+
+      // .select() nos permite ver EXACTAMENTE qué filas fueron actualizadas.
+      // Sin él, un bloqueo silencioso de RLS devuelve "éxito" con 0 filas.
+      const { data: updated, error } = await supabase
         .from('members')
         .update(updateData)
         .eq('id', member.id)
+        .select('id, avatar_url')
 
       if (error) {
         console.error('Error detallado de Supabase:', error.message, error.details, error.hint);
         throw new Error(error.message);
       }
-      
-      console.log('¡Guardado exitoso!');
+
+      if (!updated || updated.length === 0) {
+        throw new Error('El servidor no actualizó ningún registro. Puede ser un bloqueo de RLS o la sesión expiró — cierra sesión y vuelve a entrar.')
+      }
+
+      const savedRow = updated[0] as { id: string; avatar_url: string | null }
+      console.log('[EditMember] guardado en DB:', { id: savedRow.id, avatar_url_len: savedRow.avatar_url?.length ?? 0 })
+
+      if (formData.avatarUrl && !savedRow.avatar_url) {
+        throw new Error(`La foto no se guardó (avatar_url vino vacío del servidor). Payload local: ${formData.avatarUrl.length} bytes. Revisa la consola.`)
+      }
 
       try {
         const currentUser = window.localStorage?.getItem('currentUser') || 'Francisco'
