@@ -788,10 +788,12 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 setHoveredMemberId(member.id)
               }}
               onMouseLeave={() => {
-                // 800ms para dar tiempo de mover el cursor al peek
+                // 1200ms para dar tiempo de sobra a mover el cursor al peek.
+                // El peek entra a 8px de la manzana pero por escala fisheye
+                // o zoom bajo esa distancia puede sentirse más.
                 hoverTimeoutRef.current = setTimeout(() => {
                   setHoveredMemberId(null)
-                }, 800)
+                }, 1200)
               }}
               onClick={(e) => {
                 e.stopPropagation()
@@ -833,18 +835,27 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 está en el top del viewport. */}
             {(() => {
               if (hoveredMemberId !== member.id || expandedMenuId === member.id) return null
-              // Screen coords del centro de la manzana (respetando el
-              // desplazamiento sphere y el scale compuesto).
-              const appleScreenX = (member.lensedX ?? 0) * scale + offset.x
-              const appleScreenY = (member.lensedY ?? 0) * scale + offset.y
-              const appleH = NODE_SIZE * scale * composedScale
+              // Screen coords del CENTRO real de la manzana en pantalla.
+              // - lensedX ya es la coord central en tree-space (el wrapper hace
+              //   `left: lensedX - NODE_SIZE/2`).
+              // - lensedY es el TOP del wrapper → sumar NODE_SIZE/2 da el centro.
+              // El outer container aplica translate(offset) + scale(scale), y
+              // el wrapper aplica scale(composedScale) alrededor del centro, así
+              // que la mitad del alto visible es (NODE_SIZE * scale * composedScale)/2.
+              const appleCenterScreenX = (member.lensedX ?? 0) * scale + offset.x
+              const appleCenterScreenY = ((member.lensedY ?? 0) + NODE_SIZE / 2) * scale + offset.y
+              const scaledHalfH = (NODE_SIZE * scale * composedScale) / 2
+              const appleTopScreenY = appleCenterScreenY - scaledHalfH
+              const appleBottomScreenY = appleCenterScreenY + scaledHalfH
               const TOPBAR_H = 76
               const FLIP_MARGIN = 60
-              const flipBelow = appleScreenY < TOPBAR_H + FLIP_MARGIN
+              const flipBelow = appleTopScreenY < TOPBAR_H + FLIP_MARGIN
+              // Con translateY en HoverPeek (arriba: -100%, abajo: 0) el ancla
+              // queda pegada al borde de la manzana con un aire de 8px.
               const peekY = flipBelow
-                ? appleScreenY + appleH + 14
-                : appleScreenY - 14
-              const peekX = appleScreenX + (NODE_SIZE / 2) * scale
+                ? appleBottomScreenY + 8
+                : appleTopScreenY - 8
+              const peekX = appleCenterScreenX
               return (
                 <HoverPeek
                   member={member}
@@ -858,7 +869,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   onMouseLeave={() => {
                     hoverTimeoutRef.current = setTimeout(() => {
                       setHoveredMemberId(null)
-                    }, 700)
+                    }, 1200)
                   }}
                 onQuickContact={() => {
                   // Abre el perfil (drawer) — desde ahí hay Chatear, Enviar

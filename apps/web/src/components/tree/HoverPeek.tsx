@@ -45,7 +45,11 @@ export default function HoverPeek({
         position: 'fixed',
         left: `${screenX}px`,
         top: `${screenY}px`,
-        transform: 'translateX(-50%)',
+        // Modo arriba: el ancla es el borde superior de la manzana, así que
+        // subimos el peek completo con translateY(-100%). Modo abajo: el
+        // ancla es el borde inferior de la manzana; dejamos el peek pegado
+        // hacia abajo. En ambos casos translateX(-50%) lo centra en X.
+        transform: flipBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
@@ -118,10 +122,13 @@ export default function HoverPeek({
       </button>
 
       <style jsx>{`
+        /* peekFadeUp: peek arriba de la manzana → resting = translate(-50%,-100%).
+           Aparece deslizándose 6px hacia arriba. */
         @keyframes peekFadeUp {
-          from { opacity: 0; transform: translate(-50%, 6px); }
-          to   { opacity: 1; transform: translate(-50%, 0); }
+          from { opacity: 0; transform: translate(-50%, calc(-100% + 6px)); }
+          to   { opacity: 1; transform: translate(-50%, -100%); }
         }
+        /* peekFadeDown: peek abajo de la manzana → resting = translate(-50%,0). */
         @keyframes peekFadeDown {
           from { opacity: 0; transform: translate(-50%, -6px); }
           to   { opacity: 1; transform: translate(-50%, 0); }
