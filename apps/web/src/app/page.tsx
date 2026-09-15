@@ -66,6 +66,35 @@ export default function AppleTreeDashboard() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // ── Detección de token de invitación en la URL ──────────────────
+  // Si el usuario llegó desde un correo de invitación, la URL trae
+  // ?invite=<token>. Lo guardamos en localStorage y pre-llenamos el email
+  // del signup con el email al que se le mandó la invitación. El
+  // procesamiento (marcar aceptada + enlazar al member) sucede en
+  // applySupabaseSession después del login/signup.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('invite')
+    if (!token) return
+    window.localStorage.setItem('apple_pending_invite', token)
+    // Limpiamos la URL para que un refresh no vuelva a leer el token
+    const clean = window.location.pathname + window.location.hash
+    window.history.replaceState({}, '', clean)
+    // Pre-llenar el email consultando el registro público del invite
+    supabase
+      .from('invites')
+      .select('email')
+      .eq('token', token)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.email) {
+          setAuthEmail(data.email)
+          setAuthMode('signup')
+        }
+      })
+  }, [])
+
   // THE MASTER TREE ID (DEMO)
   const DEMO_TREE_ID = '00000000-0000-0000-0000-000000000001'
   const [currentTreeId, setCurrentTreeId] = useState<string>(DEMO_TREE_ID)
@@ -102,6 +131,54 @@ export default function AppleTreeDashboard() {
 
   // Apply a fresh Supabase Auth session to the app: pick a display name and
   // try to auto-load the user's tree. Falls back to the DEMO tree if none.
+  // Procesa un token de invitación pendiente después del login/signup:
+  //   1. Marca el invite como aceptado (accepted_at, accepted_by)
+  //   2. Enlaza el user_id al member correspondiente
+  //   3. Redirige al usuario al árbol que lo invitó
+  const processPendingInvite = React.useCallback(async (userId: string) => {
+    if (typeof window === 'undefined') return null
+    const token = window.localStorage.getItem('apple_pending_invite')
+    if (!token) return null
+    try {
+      const { data: invite, error } = await supabase
+        .from('invites')
+        .select('id, tree_id, member_id, accepted_at, expires_at')
+        .eq('token', token)
+        .maybeSingle()
+      if (error || !invite) {
+        console.warn('Invite lookup failed:', error?.message)
+        window.localStorage.removeItem('apple_pending_invite')
+        return null
+      }
+      if (invite.accepted_at) {
+        window.localStorage.removeItem('apple_pending_invite')
+        return invite.tree_id
+      }
+      if (new Date(invite.expires_at) < new Date()) {
+        alert('Esta invitación expiró. Pide una nueva al familiar que te invitó.')
+        window.localStorage.removeItem('apple_pending_invite')
+        return null
+      }
+      // Marcar aceptada
+      await supabase
+        .from('invites')
+        .update({ accepted_at: new Date().toISOString(), accepted_by: userId })
+        .eq('id', invite.id)
+      // Enlazar el user al member (el owner de ese node ahora es este usuario)
+      if (invite.member_id) {
+        await supabase
+          .from('members')
+          .update({ user_id: userId })
+          .eq('id', invite.member_id)
+      }
+      window.localStorage.removeItem('apple_pending_invite')
+      return invite.tree_id as string
+    } catch (err) {
+      console.warn('processPendingInvite error:', err)
+      return null
+    }
+  }, [])
+
   const applySupabaseSession = React.useCallback(async (s: Session) => {
     setSession(s)
     const displayName =
@@ -113,7 +190,20 @@ export default function AppleTreeDashboard() {
       window.localStorage.setItem('apple_session_user', displayName)
       window.localStorage.setItem('currentUser', displayName)
     }
-    // Auto-load a tree owned by this user, if any
+    // 1. Si hay un token de invitación pendiente, procesarlo — tiene
+    //    prioridad sobre el árbol propio del usuario, porque significa que
+    //    llegó al sitio DESDE una invitación y quiere ver ESE árbol.
+    const invitedTreeId = await processPendingInvite(s.user.id)
+    if (invitedTreeId) {
+      setCurrentTreeId(invitedTreeId)
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('apple_user_tree_id', invitedTreeId)
+      }
+      setIsLoggedIn(true)
+      setTutorialStep(0)
+      return
+    }
+    // 2. Fallback: auto-load a tree owned by this user, if any
     try {
       const { data: trees } = await supabase
         .from('trees')
@@ -126,8 +216,6 @@ export default function AppleTreeDashboard() {
           window.localStorage.setItem('apple_user_tree_id', trees[0].id)
         }
       } else {
-        // No linked tree yet: keep whatever the localStorage flow already has,
-        // so a user that just signed up doesn't lose the demo/legacy tree.
         const saved = typeof window !== 'undefined'
           ? window.localStorage.getItem('apple_user_tree_id')
           : null
@@ -138,7 +226,7 @@ export default function AppleTreeDashboard() {
     }
     setIsLoggedIn(true)
     setTutorialStep(0)
-  }, [])
+  }, [processPendingInvite])
 
   const fetchFamilyData = React.useCallback(async () => {
     try {
@@ -287,6 +375,11 @@ export default function AppleTreeDashboard() {
       senderName: loginInputUser || 'Tu familia',
       personalMessage: message,
       treeUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
+      // Nuevos: para que la Edge Function pueda crear el token en Supabase
+      // y el link del correo enlace al invitado a este árbol/miembro concreto
+      treeId: currentTreeId,
+      memberId: invitingMember.id,
+      invitedByUserId: session?.user?.id,
     }
     try {
       // Envío por Supabase Edge Function `send-invite` (Resend detrás).
