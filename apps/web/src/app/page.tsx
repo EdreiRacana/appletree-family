@@ -67,17 +67,6 @@ export default function AppleTreeDashboard() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // ── Listener global para abrir el ChatPanel ───────────────────
-  // TreeCanvas (o cualquier otro descendiente) dispara `open-chat`
-  // con el Member como detail. Aquí lo capturamos y montamos el panel.
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<Member>).detail
-      if (detail) setChattingWithMember(detail)
-    }
-    window.addEventListener('open-chat', handler)
-    return () => window.removeEventListener('open-chat', handler)
-  }, [])
 
   // ── Detección de token de invitación en la URL ──────────────────
   // Si el usuario llegó desde un correo de invitación, la URL trae
@@ -203,6 +192,29 @@ export default function AppleTreeDashboard() {
       window.localStorage.setItem('apple_session_user', displayName)
       window.localStorage.setItem('currentUser', displayName)
     }
+    // 0. Rescate: si hay invites que este usuario aceptó pero cuyo
+    //    member.user_id sigue en null (bug pre-005 con RLS), reintentar el
+    //    link. Silencioso — si falla no rompe el login.
+    try {
+      const { data: orphanInvites } = await supabase
+        .from('invites')
+        .select('member_id')
+        .eq('accepted_by', s.user.id)
+        .not('member_id', 'is', null)
+      if (orphanInvites && orphanInvites.length > 0) {
+        for (const inv of orphanInvites) {
+          if (!inv.member_id) continue
+          await supabase
+            .from('members')
+            .update({ user_id: s.user.id })
+            .eq('id', inv.member_id)
+            .is('user_id', null)
+        }
+      }
+    } catch (err) {
+      console.warn('Rescue link failed:', err)
+    }
+
     // 1. Si hay un token de invitación pendiente, procesarlo — tiene
     //    prioridad sobre el árbol propio del usuario, porque significa que
     //    llegó al sitio DESDE una invitación y quiere ver ESE árbol.
@@ -228,15 +240,44 @@ export default function AppleTreeDashboard() {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('apple_user_tree_id', trees[0].id)
         }
-      } else {
-        const saved = typeof window !== 'undefined'
-          ? window.localStorage.getItem('apple_user_tree_id')
-          : null
-        if (saved) setCurrentTreeId(saved)
+        setIsLoggedIn(true)
+        setTutorialStep(0)
+        return
       }
     } catch (err) {
-      console.warn('Could not auto-load user tree:', err)
+      console.warn('Could not auto-load owned tree:', err)
     }
+
+    // 3. Fallback crítico para invitados: si esta cuenta ya está enlazada
+    //    como member.user_id en algún árbol (accepted invite previa), cargar
+    //    ese árbol. Cubre el caso donde el token de invite se perdió (verificó
+    //    correo en otro navegador, cerró la pestaña, etc.) pero la aceptación
+    //    ya se procesó una vez.
+    try {
+      const { data: linkedMembers } = await supabase
+        .from('members')
+        .select('tree_id')
+        .eq('user_id', s.user.id)
+        .limit(1)
+      if (linkedMembers && linkedMembers.length > 0) {
+        const tid = linkedMembers[0].tree_id
+        setCurrentTreeId(tid)
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('apple_user_tree_id', tid)
+        }
+        setIsLoggedIn(true)
+        setTutorialStep(0)
+        return
+      }
+    } catch (err) {
+      console.warn('Could not auto-load invited tree:', err)
+    }
+
+    // 4. Último recurso: lo que estuviera en localStorage.
+    const saved = typeof window !== 'undefined'
+      ? window.localStorage.getItem('apple_user_tree_id')
+      : null
+    if (saved) setCurrentTreeId(saved)
     setIsLoggedIn(true)
     setTutorialStep(0)
   }, [processPendingInvite])
@@ -317,14 +358,21 @@ export default function AppleTreeDashboard() {
       }
     }
   }, [isLoggedIn, loginInputUser])
-  // Avatar del usuario logueado — con cascada de fallbacks:
-  //   1. Manzana en el árbol cuyo nombre coincide con loginInputUser
-  //   2. avatar_url del user_metadata de Supabase Auth
-  //   3. DiceBear iniciales generadas a partir del nombre/email
-  //   4. null (topbar renderiza el ícono User genérico)
+  // Avatar del usuario logueado — cascada de fallbacks:
+  //   1. Manzana enlazada al auth.uid del usuario (m.user_id === session.user.id)
+  //   2. Manzana cuyo firstName contiene loginInputUser (heurística legacy)
+  //   3. avatar_url del user_metadata de Supabase Auth
+  //   4. DiceBear iniciales generadas del display name / email
   const userProfileAvatar = React.useMemo(() => {
     if (!isLoggedIn) return null
-    // 1. Manzana con nombre similar
+    // 1. Match por auth.uid — el vínculo REAL entre cuenta y manzana.
+    if (treeData.members.length > 0 && session?.user?.id) {
+      const uidMatch = treeData.members.find(
+        m => m.userId === session.user.id && m.avatarUrl
+      )
+      if (uidMatch?.avatarUrl) return uidMatch.avatarUrl
+    }
+    // 2. Fallback por nombre — para árboles legacy sin user_id enlazado.
     if (treeData.members.length > 0 && loginInputUser) {
       const name = loginInputUser.toLowerCase()
       const match = treeData.members.find(
@@ -332,11 +380,11 @@ export default function AppleTreeDashboard() {
       )
       if (match?.avatarUrl) return match.avatarUrl
     }
-    // 2. Metadata de Supabase Auth
+    // 3. Metadata de Supabase Auth
     const metaAvatar = (session?.user?.user_metadata as { avatar_url?: string; picture?: string } | undefined)
     if (metaAvatar?.avatar_url) return metaAvatar.avatar_url
     if (metaAvatar?.picture) return metaAvatar.picture
-    // 3. Iniciales generadas
+    // 4. Iniciales generadas
     const seed = loginInputUser || session?.user?.email?.split('@')[0] || 'user'
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=1E2A22&textColor=D4AF37`
   }, [isLoggedIn, loginInputUser, treeData.members, session])
@@ -980,6 +1028,7 @@ export default function AppleTreeDashboard() {
               }}
               onEditMember={setEditingMember}
               onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); }}
+              onOpenChat={(m) => setChattingWithMember(m)}
               bgOpacity={bgOpacity}
               profilePanelOpen={!!selectedMember}
             />

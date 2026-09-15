@@ -30,6 +30,7 @@ interface TreeCanvasProps {
   onViewProfile: (member: Member) => void
   onEditMember: (member: Member) => void
   onAddStory: (member: Member) => void
+  onOpenChat?: (member: Member) => void
   bgOpacity: number
   // When the profile drawer (~450px on the right) is mounted, the minimap
   // and fit-to-view math treat that band as reserved so the tree stays
@@ -42,7 +43,7 @@ interface TreeCanvasProps {
 const SIDEBAR_INSET = 116
 const DRAWER_WIDTH = 340
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
   const isMobile = useIsMobile()
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   // Two-stage hover: hover shows the compact HoverPeek pill; clicking its
@@ -874,9 +875,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                     }, 1200)
                   }}
                 onQuickContact={() => {
-                  // Dispara evento — page.tsx captura y abre ChatPanel.
-                  // Así TreeCanvas no necesita conocer al ChatPanel directamente.
-                  window.dispatchEvent(new CustomEvent('open-chat', { detail: member }))
+                  // Callback directo (evita stale closures del CustomEvent bus).
+                  // Si no hay handler cae de vuelta al drawer.
+                  if (onOpenChat) onOpenChat(member)
+                  else onViewProfile(member)
                   setHoveredMemberId(null)
                 }}
                 onExpand={() => setExpandedMenuId(member.id)}
