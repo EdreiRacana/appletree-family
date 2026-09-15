@@ -1,24 +1,26 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Send, Mail, Shield, TreePine, Info, MessageCircle } from 'lucide-react'
+import { X, Send, Mail, Shield, Info, MessageCircle, Link as LinkIcon, Check } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface InviteMemberModalProps {
   member: Member
   onClose: () => void
   onSend: (email: string, side: string, message: string) => void | Promise<void>
+  // Genera el link con token de invitación y lo devuelve. Para WhatsApp/copiar.
+  onCreateLink?: (side: string, message: string) => Promise<string | null>
 }
 
-export default function InviteMemberModal({ member, onClose, onSend }: InviteMemberModalProps) {
+export default function InviteMemberModal({ member, onClose, onSend, onCreateLink }: InviteMemberModalProps) {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState(`¡Hola! Te invito a unirte a nuestro árbol genealógico familiar en AppleTree para que nos ayudes a documentar nuestra historia.`)
   const [isSending, setIsSending] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [sharingWhatsApp, setSharingWhatsApp] = useState(false)
+  const [copyingLink, setCopyingLink] = useState(false)
+  const [copiedOk, setCopiedOk] = useState(false)
 
-  // Automatic side detection based on some logic (mocked for now)
-  // In a real app, we'd check the lineage relationship
-  const suggestedSide = member.lastName === 'Racana' ? 'materna' : 'paterna'
   const [side, setSide] = useState<'paternal' | 'maternal' | 'both'>('both')
 
   const handleSend = async () => {
@@ -50,12 +52,15 @@ export default function InviteMemberModal({ member, onClose, onSend }: InviteMem
       <div style={{
         maxWidth: '550px',
         width: '100%',
+        maxHeight: '92vh',
         backgroundColor: '#FAEFBC',
         borderRadius: '32px',
         border: '3px solid #2C1810',
         boxShadow: '0 30px 100px rgba(0,0,0,0.6)',
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         {/* Success Overlay */}
         {success && (
@@ -94,8 +99,9 @@ export default function InviteMemberModal({ member, onClose, onSend }: InviteMem
           </button>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+        {/* Body — scrollable para pantallas medianas/pequeñas donde
+            los 2-3 botones del final quedaban cortados. */}
+        <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: '22px', overflowY: 'auto', flex: 1 }}>
           
           {/* Email Input */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -230,13 +236,23 @@ export default function InviteMemberModal({ member, onClose, onSend }: InviteMem
             </button>
             
             <button
-              onClick={() => {
-                const treeUrl = typeof window !== 'undefined' ? window.location.origin : 'https://appletree-family.vercel.app'
-                const familyName = `${member.firstName}${member.lastName ? ' ' + member.lastName : ''}`
-                const text = `${message}\n\nEstás invitado como *${familyName}* a nuestro árbol familiar.\nEntra aquí: ${treeUrl}`
-                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-                onClose()
+              onClick={async () => {
+                if (!onCreateLink || sharingWhatsApp) return
+                setSharingWhatsApp(true)
+                try {
+                  // Genera el link con token de invitación real; sin él
+                  // el link llevaba al DEMO en vez de este árbol.
+                  const url = await onCreateLink(side, message)
+                  if (!url) return
+                  const familyName = `${member.firstName}${member.lastName ? ' ' + member.lastName : ''}`
+                  const text = `${message}\n\nEstás invitado como *${familyName}* a nuestro árbol familiar.\nEntra aquí: ${url}`
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+                  onClose()
+                } finally {
+                  setSharingWhatsApp(false)
+                }
               }}
+              disabled={!onCreateLink || sharingWhatsApp}
               style={{
                 width: '100%',
                 padding: '16px',
@@ -246,16 +262,76 @@ export default function InviteMemberModal({ member, onClose, onSend }: InviteMem
                 border: 'none',
                 fontSize: '15px',
                 fontWeight: '900',
-                cursor: 'pointer',
+                cursor: sharingWhatsApp ? 'wait' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '12px',
+                opacity: sharingWhatsApp ? 0.7 : 1,
                 boxShadow: '0 8px 25px rgba(37, 211, 102, 0.3)'
               }}
             >
               <MessageCircle size={18} />
-              Enviar por WhatsApp
+              {sharingWhatsApp ? 'Generando link…' : 'Enviar por WhatsApp'}
+            </button>
+
+            {/* Copiar link — cualquiera que reciba este link (SMS, Telegram,
+                Instagram, chat interno) puede aceptar la invitación. */}
+            <button
+              onClick={async () => {
+                if (!onCreateLink || copyingLink) return
+                setCopyingLink(true)
+                try {
+                  const url = await onCreateLink(side, message)
+                  if (!url) return
+                  await navigator.clipboard.writeText(url)
+                  setCopiedOk(true)
+                  setTimeout(() => setCopiedOk(false), 2000)
+                } catch {
+                  alert('No se pudo copiar. Intenta de nuevo.')
+                } finally {
+                  setCopyingLink(false)
+                }
+              }}
+              disabled={!onCreateLink || copyingLink}
+              style={{
+                width: '100%',
+                padding: '14px',
+                backgroundColor: copiedOk ? '#2E7D32' : 'transparent',
+                color: copiedOk ? 'white' : '#2C1810',
+                borderRadius: '16px',
+                border: '2px solid #2C1810',
+                fontSize: '14px',
+                fontWeight: '800',
+                cursor: copyingLink ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                transition: 'all 0.25s ease'
+              }}
+            >
+              {copiedOk ? <><Check size={16} /> ¡Enlace copiado!</> : <><LinkIcon size={16} /> {copyingLink ? 'Generando…' : 'Copiar enlace'}</>}
+            </button>
+
+            {/* Cancelar — atajo para salir sin enviar nada. Duplica el X del
+                header pero es más visible aquí abajo después de todo el form. */}
+            <button
+              onClick={onClose}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: 'transparent',
+                color: '#7A6558',
+                borderRadius: '16px',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
+            >
+              Cancelar / Volver al árbol
             </button>
           </div>
         </div>

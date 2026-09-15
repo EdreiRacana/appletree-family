@@ -438,6 +438,33 @@ export default function AppleTreeDashboard() {
     return { filteredMembers: members, filteredRelationships: relationships }
   }, [treeData, viewFocus])
 
+  // Genera un token de invitación y lo persiste en Supabase SIN enviar correo.
+  // Devuelve la URL con `?invite=<token>` lista para compartir por WhatsApp/copiar.
+  // Usa RLS: solo el owner del árbol puede insertar → invita a familiares del árbol propio.
+  const createInviteLink = async (side: string, message: string): Promise<string | null> => {
+    if (!invitingMember || !session?.user?.id) return null
+    // 192 bits de entropía → base64url ~32 chars. Mismo formato que la Edge Function.
+    const bytes = new Uint8Array(24)
+    crypto.getRandomValues(bytes)
+    const token = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+    const { error } = await supabase.from('invites').insert({
+      token,
+      tree_id: currentTreeId,
+      member_id: invitingMember.id,
+      email: 'link-share@invite.local', // Placeholder — la columna es NOT NULL. Al aceptar da igual.
+      invited_by: session.user.id,
+      side,
+      personal_message: message,
+    })
+    if (error) {
+      alert(`No se pudo crear el link: ${error.message}`)
+      return null
+    }
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://appletree-family.vercel.app'
+    return `${base}/?invite=${token}`
+  }
+
   const handleSendInvite = async (email: string, side: string, message: string) => {
     if (!invitingMember) return
     const payload = {
@@ -1073,10 +1100,11 @@ export default function AppleTreeDashboard() {
         {editingMember && <EditMemberModal member={editingMember} onClose={() => setEditingMember(null)} onSave={fetchFamilyData} />}
         
         {invitingMember && (
-          <InviteMemberModal 
-            member={invitingMember} 
-            onClose={() => setInvitingMember(null)} 
-            onSend={handleSendInvite} 
+          <InviteMemberModal
+            member={invitingMember}
+            onClose={() => setInvitingMember(null)}
+            onSend={handleSendInvite}
+            onCreateLink={createInviteLink}
           />
         )}
 
