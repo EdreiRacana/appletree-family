@@ -103,10 +103,11 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
 
       // Log del payload de foto para diagnóstico (tamaño y prefijo del data URL)
       if (formData.avatarUrl) {
-        console.log('[EditMember] avatar_url payload:', {
-          bytes: formData.avatarUrl.length,
-          prefix: formData.avatarUrl.slice(0, 40),
-        })
+        console.log(
+          `[EditMember] avatar_url payload: bytes=${formData.avatarUrl.length} prefix="${formData.avatarUrl.slice(0, 40)}"`
+        )
+      } else {
+        console.log('[EditMember] avatar_url payload: EMPTY (formData.avatarUrl is falsy)')
       }
 
       // .select() nos permite ver EXACTAMENTE qué filas fueron actualizadas.
@@ -127,7 +128,10 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
       }
 
       const savedRow = updated[0] as { id: string; avatar_url: string | null }
-      console.log('[EditMember] guardado en DB:', { id: savedRow.id, avatar_url_len: savedRow.avatar_url?.length ?? 0 })
+      const dbLen = savedRow.avatar_url?.length ?? 0
+      console.log(
+        `[EditMember] guardado en DB: id=${savedRow.id} avatar_url_len=${dbLen} avatar_url_prefix="${(savedRow.avatar_url || '').slice(0, 40)}"`
+      )
 
       if (formData.avatarUrl && !savedRow.avatar_url) {
         throw new Error(`La foto no se guardó (avatar_url vino vacío del servidor). Payload local: ${formData.avatarUrl.length} bytes. Revisa la consola.`)
