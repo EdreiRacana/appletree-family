@@ -299,7 +299,9 @@ export default function AppleTreeDashboard() {
         alert(`No se pudo enviar la invitación: ${(data as { error: string }).error}`)
         throw new Error((data as { error: string }).error)
       }
-      setInvitingMember(null)
+      // El modal se cierra solo tras mostrar el estado de éxito (1.8s).
+      // NO cerramos aquí — si lo hacemos, unmontamos el modal antes de que
+      // pueda pintar la pantalla de "¡Invitación Enviada!".
     } catch (err) {
       throw err
     }
