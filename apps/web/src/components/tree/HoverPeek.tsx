@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MessageCircle, MoreHorizontal } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
@@ -37,7 +39,16 @@ export default function HoverPeek({
   const isBaby = member.isBaby
   const canContact = !isDeceased && !isBaby
 
-  return (
+  // Portal a document.body para escapar del pan-zoom transform. Un
+  // position:fixed ADENTRO de un ancestro con transform:translate/scale
+  // se posiciona relativo a ese ancestro, no al viewport. Ese es el bug
+  // que hacía que el peek apareciera lejos aunque las coords fueran las
+  // correctas. Al portalizar, position:fixed sí se ancla al viewport.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  if (!mounted) return null
+
+  const peekNode = (
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -136,4 +147,6 @@ export default function HoverPeek({
       `}</style>
     </div>
   )
+
+  return createPortal(peekNode, document.body)
 }
