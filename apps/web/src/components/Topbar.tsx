@@ -320,6 +320,9 @@ export default function Topbar({
           </button>
 
           {showNotifications && (
+            <div onClick={() => setShowNotifications(false)} style={{ position: 'fixed', inset: 0, zIndex: 2900 }} />
+          )}
+          {showNotifications && (
             <div style={{
               position: 'absolute', top: '40px', right: '0', width: '320px',
               backgroundColor: '#FAEFBC', borderRadius: '20px', border: '2px solid #D4AF37',

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Briefcase, BookOpen, MapPin, Calendar, Award, Heart, MessageCircle, Share2, Edit3 } from 'lucide-react'
+import { X, Briefcase, BookOpen, MapPin, Award, Share2, Edit3, UserPlus, Eye } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface MemberProfilePanelProps {
@@ -9,9 +9,11 @@ interface MemberProfilePanelProps {
   onClose: () => void
   onEdit?: (member: Member) => void
   onInvite?: (member: Member) => void
+  onAddRelative?: (member: Member) => void
+  onFocusBranch?: (member: Member) => void
 }
 
-export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }: MemberProfilePanelProps) {
+export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, onAddRelative, onFocusBranch }: MemberProfilePanelProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
   const birthYear = member.dateOfBirth?.split('-')[0] || '?'
   const deathYear = member.dateOfDeath?.split('-')[0] || ''
   const lifeSpan = deathYear ? `${birthYear} — ${deathYear}` : `Desde ${birthYear}`
+  const isDeceased = !!member.dateOfDeath
 
   // Mock Timeline Data (In a real app, this would come from a 'milestones' table)
   const timeline = [
@@ -209,25 +212,41 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite }
             </div>
           </section>
 
-          {/* Footer Actions */}
+          {/* Footer Actions — grid 2x2. "Chatear" fue reemplazado por
+              "Ver su rama" (útil, no vacío). "Invitar" se oculta para
+              fallecidos. */}
           <div style={{
-            display: 'flex',
-            gap: '15px',
-            marginTop: '20px',
-            paddingTop: '30px',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '10px',
+            marginTop: '10px',
+            paddingTop: '20px',
             borderTop: '1px solid var(--drawer-border)'
           }}>
-            <button style={actionButtonStyle}>
-              <MessageCircle size={18} /> Chatear
-            </button>
-            {onInvite && (
-              <button onClick={() => onInvite(member)} style={{ ...actionButtonStyle, border: '2px solid var(--drawer-accent)', color: 'var(--drawer-accent)' }}>
-                <Share2 size={18} /> Invitar
+            {onFocusBranch && (
+              <button onClick={() => onFocusBranch(member)} style={actionButtonStyle}>
+                <Eye size={16} /> Ver su rama
+              </button>
+            )}
+            {onAddRelative && (
+              <button onClick={() => onAddRelative(member)} style={actionButtonStyle}>
+                <UserPlus size={16} /> Añadir familiar
+              </button>
+            )}
+            {onInvite && !isDeceased && (
+              <button
+                onClick={() => onInvite(member)}
+                style={{ ...actionButtonStyle, border: '2px solid var(--drawer-accent)', color: 'var(--drawer-accent)' }}
+              >
+                <Share2 size={16} /> Invitar
               </button>
             )}
             {onEdit && (
-              <button onClick={() => onEdit(member)} style={{ ...actionButtonStyle, backgroundColor: 'var(--drawer-accent)', color: 'var(--body-bg)', border: 'none' }}>
-                <Edit3 size={18} /> Editar
+              <button
+                onClick={() => onEdit(member)}
+                style={{ ...actionButtonStyle, backgroundColor: 'var(--drawer-accent)', color: 'var(--body-bg)', border: 'none' }}
+              >
+                <Edit3 size={16} /> Editar
               </button>
             )}
           </div>
