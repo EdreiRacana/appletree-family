@@ -22,15 +22,24 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
     setImgHasError(false)
   }, [member.avatarUrl])
   const isBabyMode = () => {
+    // Toggle manual de privacidad — siempre gana
     if (member.isBaby) return true
+    // Los ancestros con fecha de fallecimiento NUNCA son bebés. Si alguien
+    // capturó mal la fecha de nacimiento (ej. 2026 en vez de 1926) no
+    // queremos reemplazar su foto por un icono de bebé.
+    if (member.dateOfDeath) return false
     if (!member.dateOfBirth) return false
-    
+
     const birthDate = new Date(member.dateOfBirth)
+    if (isNaN(birthDate.getTime())) return false
     const today = new Date('2026-04-21') // Demo Context
+    // Fecha de nacimiento en el futuro = typo. No es bebé.
+    if (birthDate > today) return false
+
     let age = today.getFullYear() - birthDate.getFullYear()
     const m = today.getMonth() - birthDate.getMonth()
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--
-    
+
     return age < 3
   }
 
