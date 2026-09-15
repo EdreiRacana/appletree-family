@@ -435,8 +435,15 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     const handleOpenModal = (e: any) => {
       if (e.detail) setAddingToMember(e.detail)
     }
+    const handleFocusBranch = (e: any) => {
+      if (e.detail?.id) setFocusedMemberId(e.detail.id)
+    }
     window.addEventListener('open-add-modal', handleOpenModal)
-    return () => window.removeEventListener('open-add-modal', handleOpenModal)
+    window.addEventListener('focus-branch', handleFocusBranch)
+    return () => {
+      window.removeEventListener('open-add-modal', handleOpenModal)
+      window.removeEventListener('focus-branch', handleFocusBranch)
+    }
   }, [])
 
   // INITIAL VIEW: auto fit-to-view so the WHOLE tree fits the viewport on
@@ -781,9 +788,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 setHoveredMemberId(member.id)
               }}
               onMouseLeave={() => {
+                // 800ms para dar tiempo de mover el cursor al peek
                 hoverTimeoutRef.current = setTimeout(() => {
                   setHoveredMemberId(null)
-                }, 400)
+                }, 800)
               }}
               onClick={(e) => {
                 e.stopPropagation()
@@ -850,7 +858,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   onMouseLeave={() => {
                     hoverTimeoutRef.current = setTimeout(() => {
                       setHoveredMemberId(null)
-                    }, 300)
+                    }, 700)
                   }}
                 onQuickContact={() => {
                   // Abre el perfil (drawer) — desde ahí hay Chatear, Enviar

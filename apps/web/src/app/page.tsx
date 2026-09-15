@@ -303,16 +303,29 @@ export default function AppleTreeDashboard() {
       }
     }
   }, [isLoggedIn, loginInputUser])
-  // Derive the logged-in user's avatar from the already-loaded tree members
-  // (same source used by the apple nodes — no extra DB query needed)
+  // Avatar del usuario logueado — con cascada de fallbacks:
+  //   1. Manzana en el árbol cuyo nombre coincide con loginInputUser
+  //   2. avatar_url del user_metadata de Supabase Auth
+  //   3. DiceBear iniciales generadas a partir del nombre/email
+  //   4. null (topbar renderiza el ícono User genérico)
   const userProfileAvatar = React.useMemo(() => {
-    if (!isLoggedIn || treeData.members.length === 0) return null
-    const name = loginInputUser.toLowerCase()
-    const match = treeData.members.find(
-      m => m.avatarUrl && m.firstName.toLowerCase().includes(name)
-    )
-    return match?.avatarUrl ?? null
-  }, [isLoggedIn, loginInputUser, treeData.members])
+    if (!isLoggedIn) return null
+    // 1. Manzana con nombre similar
+    if (treeData.members.length > 0 && loginInputUser) {
+      const name = loginInputUser.toLowerCase()
+      const match = treeData.members.find(
+        m => m.avatarUrl && m.firstName.toLowerCase().includes(name)
+      )
+      if (match?.avatarUrl) return match.avatarUrl
+    }
+    // 2. Metadata de Supabase Auth
+    const metaAvatar = (session?.user?.user_metadata as { avatar_url?: string; picture?: string } | undefined)
+    if (metaAvatar?.avatar_url) return metaAvatar.avatar_url
+    if (metaAvatar?.picture) return metaAvatar.picture
+    // 3. Iniciales generadas
+    const seed = loginInputUser || session?.user?.email?.split('@')[0] || 'user'
+    return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=1E2A22&textColor=D4AF37`
+  }, [isLoggedIn, loginInputUser, treeData.members, session])
   // LINEAGE FILTERING LOGIC
   const { filteredMembers, filteredRelationships } = useMemo(() => {
     if (viewFocus === 'all' || treeData.members.length === 0) {
@@ -933,7 +946,17 @@ export default function AppleTreeDashboard() {
       <Topbar 
         viewFocus={viewFocus} 
         onViewFocusChange={setViewFocus} 
-        onAdd={() => {}} 
+        onAdd={() => {
+          // Sin manzana referencia — abre el modal para agregar un nuevo
+          // familiar raíz. Se dispara el mismo evento que el HoverMenu usa;
+          // el modal detecta detail === null y se comporta como "agregar
+          // miembro suelto al árbol".
+          const root = treeData.members.find(m => (m.generation ?? 0) === 0)
+            || treeData.members[0]
+          if (root) {
+            window.dispatchEvent(new CustomEvent('open-add-modal', { detail: root }))
+          }
+        }}
         notificationCount={unreadCount}
         notifications={notifications}
         onClearNotifications={markAllRead}
@@ -983,11 +1006,20 @@ export default function AppleTreeDashboard() {
           )}
         </div>
 
-        <MemberProfilePanel 
-          member={selectedMember} 
-          onClose={() => setSelectedMember(null)} 
+        <MemberProfilePanel
+          member={selectedMember}
+          onClose={() => setSelectedMember(null)}
           onEdit={(m) => { setEditingMember(m); setSelectedMember(null); }}
           onInvite={(m) => { setInvitingMember(m); setSelectedMember(null); }}
+          onAddRelative={(m) => {
+            window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m }))
+            setSelectedMember(null)
+          }}
+          onFocusBranch={(m) => {
+            // Foco activado desde el drawer — el evento lo captura TreeCanvas
+            window.dispatchEvent(new CustomEvent('focus-branch', { detail: m }))
+            setSelectedMember(null)
+          }}
         />
 
         {editingMember && <EditMemberModal member={editingMember} onClose={() => setEditingMember(null)} onSave={fetchFamilyData} />}
