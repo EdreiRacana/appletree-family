@@ -326,56 +326,53 @@ export default function AppleTreeDashboard() {
     const seed = loginInputUser || session?.user?.email?.split('@')[0] || 'user'
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=1E2A22&textColor=D4AF37`
   }, [isLoggedIn, loginInputUser, treeData.members, session])
-  // LINEAGE FILTERING LOGIC
+  // LINEAGE FILTERING LOGIC — versión basada en APELLIDO PRINCIPAL
+  // Idea del owner: si todos los miembros comparten el apellido "Elias",
+  // esos son la rama paterna (consanguíneos); los que tienen otro apellido
+  // son cónyuges que se casaron in — rama materna.
   const { filteredMembers, filteredRelationships } = useMemo(() => {
     if (viewFocus === 'all' || treeData.members.length === 0) {
       return { filteredMembers: treeData.members, filteredRelationships: treeData.relationships }
     }
-
-    const proband = [...treeData.members]
-      .filter(m => m.parents && m.parents.length >= 2)
-      .sort((a, b) => (b.generation || 0) - (a.generation || 0))[0] || treeData.members[0]
-
-    if (!proband || !proband.parents || proband.parents.length === 0) {
+    // Contar apellidos y elegir el más frecuente como "apellido principal"
+    const surnameCount = new Map<string, number>()
+    treeData.members.forEach(m => {
+      const last = (m.lastName || '').trim().toLowerCase()
+      if (!last) return
+      // Solo el primer apellido (para casos "Elias Fuentes")
+      const first = last.split(/\s+/)[0]
+      surnameCount.set(first, (surnameCount.get(first) || 0) + 1)
+    })
+    let mainSurname = ''
+    let max = 0
+    surnameCount.forEach((count, name) => { if (count > max) { max = count; mainSurname = name } })
+    if (!mainSurname) {
       return { filteredMembers: treeData.members, filteredRelationships: treeData.relationships }
     }
-
-    const fatherId = treeData.members.find(m => proband.parents?.includes(m.id) && m.gender === 'male')?.id
-    const motherId = treeData.members.find(m => proband.parents?.includes(m.id) && m.gender === 'female')?.id
-
-    const getLineage = (rootId: string) => {
-      const lineageIds = new Set<string>([rootId, proband.id])
-      const stack = [rootId]
-      while (stack.length > 0) {
-        const id = stack.pop()!
-        const member = treeData.members.find(m => m.id === id)
-        if (member?.parents) {
-          member.parents.forEach(pId => {
-            if (!lineageIds.has(pId)) {
-              lineageIds.add(pId); stack.push(pId);
-            }
-          })
-        }
-      }
-      return lineageIds
+    const isMain = (m: Member) => {
+      const first = (m.lastName || '').trim().toLowerCase().split(/\s+/)[0]
+      return first === mainSurname
     }
-
-    const targetId = viewFocus === 'paternal' ? fatherId : motherId
-    if (!targetId) return { filteredMembers: treeData.members, filteredRelationships: treeData.relationships }
-
-    const visibleIds = getLineage(targetId)
-    const finalVisibleIds = new Set(visibleIds)
-    treeData.members.forEach(m => {
-      if (visibleIds.has(m.id)) {
-        m.spouses?.forEach(sId => finalVisibleIds.add(sId))
-      }
-    })
-
-    const members = treeData.members.filter(m => finalVisibleIds.has(m.id))
-    const relationships = treeData.relationships.filter(r => 
-      finalVisibleIds.has(r.member1Id) && finalVisibleIds.has(r.member2Id)
+    // paternal: solo consanguíneos (con el apellido principal) — sus cónyuges NO
+    // maternal: solo cónyuges casados in (con OTRO apellido) — los consanguíneos NO
+    const visibleIds = new Set<string>()
+    if (viewFocus === 'paternal') {
+      treeData.members.forEach(m => { if (isMain(m)) visibleIds.add(m.id) })
+    } else {
+      // maternal: agrega los cónyuges de apellido distinto + sus hijos (para que
+      // no queden líneas colgadas). Empezamos por los que no son main, y les
+      // añadimos también los del main que sean sus hijos (para conectar).
+      const nonMain = treeData.members.filter(m => !isMain(m))
+      nonMain.forEach(m => visibleIds.add(m.id))
+      // Descendientes de non-main (para conectar líneas de hijos mixtos)
+      treeData.members.forEach(m => {
+        if ((m.parents || []).some(pid => visibleIds.has(pid))) visibleIds.add(m.id)
+      })
+    }
+    const members = treeData.members.filter(m => visibleIds.has(m.id))
+    const relationships = treeData.relationships.filter(r =>
+      visibleIds.has(r.member1Id) && visibleIds.has(r.member2Id)
     )
-
     return { filteredMembers: members, filteredRelationships: relationships }
   }, [treeData, viewFocus])
 
@@ -1000,9 +997,7 @@ export default function AppleTreeDashboard() {
           )}
 
           {activeTab === 'Photo Albums' && (
-            <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
-              <PhotoAlbums treeId={currentTreeId} />
-            </div>
+            <PhotoAlbums treeId={currentTreeId} onClose={() => setActiveTab('My Tree')} />
           )}
         </div>
 

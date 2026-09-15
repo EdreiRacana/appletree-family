@@ -138,14 +138,18 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
           </p>
         </div>
 
-        {/* Content Area */}
+        {/* Content Area — overflow-x hidden para que no aparezca scroll
+            horizontal cuando algún hijo (biografía larga, foto ancha)
+            excede el ancho del drawer. */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
+          overflowX: 'hidden',
           padding: '22px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '22px'
+          gap: '22px',
+          minWidth: 0,
         }}>
           
           {/* Quick Info Bar */}
@@ -164,12 +168,15 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
               <BookOpen size={20} color="var(--drawer-accent)" />
               <h3 style={sectionTitleStyle}>Biografía de Vida</h3>
             </div>
-            <p style={{ 
-              fontSize: '16px', 
-              lineHeight: '1.7', 
+            <p style={{
+              fontSize: '15px',
+              lineHeight: '1.6',
               color: 'var(--drawer-fg)',
               fontStyle: 'italic',
-              fontFamily: 'serif'
+              fontFamily: 'serif',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              margin: 0,
             }}>
               {member.biography || `${member.firstName} es una parte fundamental de nuestra raíz familiar. Su historia se entrelaza con las tradiciones y el amor que hoy nos une. (Biografía en desarrollo para documentar sus mayores logros y memorias).`}
             </p>
