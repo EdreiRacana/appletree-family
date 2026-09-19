@@ -1229,7 +1229,7 @@ export default function AppleTreeDashboard() {
         onTabChange={(tab) => {
           setMobileActiveTab(tab)
           // Mirror to desktop tab system where applicable
-          if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums') {
+          if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums' || tab === 'Chats') {
             setActiveTab(tab)
           } else {
             setActiveTab(null)
