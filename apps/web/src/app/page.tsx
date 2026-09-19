@@ -1108,6 +1108,11 @@ export default function AppleTreeDashboard() {
         currentUser={loginInputUser}
         onLogout={handleLogout}
         onOpenAccountSettings={session ? () => setIsAccountSettingsOpen(true) : undefined}
+        searchMembers={treeData.members}
+        onSelectMember={(m) => {
+          setSelectedMember(m)
+          setActiveTab('My Tree')
+        }}
         showStartTreeBtn={currentTreeId === DEMO_TREE_ID}
       />
 
