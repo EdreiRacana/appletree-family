@@ -9,6 +9,7 @@ import { listWallMessages, postWallMessage, subscribeToWall, type WallMessage } 
 import { listMyMutes, toMuteKeySet, isMuted } from '@/lib/muteApi'
 import { supabase } from '@/lib/supabase'
 import MuteToggle from '@/components/MuteToggle'
+import RichTextWithVideo from '@/components/media/RichTextWithVideo'
 
 interface FamilyWallPanelProps {
   treeId: string
@@ -164,7 +165,7 @@ export default function FamilyWallPanel({ treeId, authorName, authorAvatarUrl, o
                     borderRadius: mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                     fontSize: '14px', lineHeight: 1.4, wordBreak: 'break-word',
                   }}>
-                    {m.content}
+                    <RichTextWithVideo text={m.content} size="small" />
                   </div>
                 </div>
               </div>
@@ -184,7 +185,7 @@ export default function FamilyWallPanel({ treeId, authorName, authorAvatarUrl, o
               void handleSend()
             }
           }}
-          placeholder="Comparte con toda la familia…"
+          placeholder="Comparte con la familia… pega un link de YouTube o Vimeo para adjuntar un video"
           rows={1}
           style={{
             flex: 1, resize: 'none',

@@ -16,6 +16,7 @@ import {
 import { listMyMutes, toMuteKeySet, isMuted } from '@/lib/muteApi'
 import { supabase } from '@/lib/supabase'
 import MuteToggle from '@/components/MuteToggle'
+import RichTextWithVideo from '@/components/media/RichTextWithVideo'
 
 interface EventCommentsPanelProps {
   activityId: string
@@ -189,7 +190,7 @@ export default function EventCommentsPanel({
                     borderRadius: mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                     fontSize: '14px', lineHeight: 1.4, wordBreak: 'break-word',
                   }}>
-                    {c.content}
+                    <RichTextWithVideo text={c.content} size="small" />
                   </div>
                 </div>
               </div>
