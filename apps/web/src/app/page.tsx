@@ -12,6 +12,8 @@ import InviteMemberModal from '@/components/tree/InviteMemberModal'
 import ChatPanel from '@/components/chat/ChatPanel'
 import ChatsListPanel from '@/components/chat/ChatsListPanel'
 import AccountSettingsModal from '@/components/AccountSettingsModal'
+import FamilyWallPanel from '@/components/wall/FamilyWallPanel'
+import EventCommentsPanel from '@/components/events/EventCommentsPanel'
 import PhotoAlbums from '@/components/PhotoAlbums'
 import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
@@ -34,6 +36,7 @@ export default function AppleTreeDashboard() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   const [chattingWithMember, setChattingWithMember] = useState<Member | null>(null)
   const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false)
+  const [threadEvent, setThreadEvent] = useState<{ id: string; title: string; dateLabel: string } | null>(null)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [invitingMember, setInvitingMember] = useState<Member | null>(null)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
@@ -383,13 +386,22 @@ export default function AppleTreeDashboard() {
   const { notifications, unreadCount, markAllRead } = useNotifications(currentTreeId, treeData.members)
 
   // Handle bell click navigation
-  const handleNotificationClick = (action: 'open_events' | 'open_stories' | 'open_chat', notif?: { senderMemberId?: string }) => {
+  const handleNotificationClick = (
+    action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall',
+    notif?: { senderMemberId?: string; activityId?: string }
+  ) => {
     if (action === 'open_events') setActiveTab('Events')
     else if (action === 'open_stories') {
       setActiveTab(null)
     } else if (action === 'open_chat' && notif?.senderMemberId) {
       const sender = treeData.members.find(m => m.id === notif.senderMemberId)
       if (sender) setChattingWithMember(sender)
+    } else if (action === 'open_event_thread' && notif?.activityId) {
+      // Buscamos el título del evento en las notifs; si no, usamos "Evento"
+      setThreadEvent({ id: notif.activityId, title: 'Evento', dateLabel: '' })
+      setActiveTab('Events')
+    } else if (action === 'open_wall') {
+      setActiveTab('Buzón')
     }
     markAllRead()
   }
@@ -1140,6 +1152,15 @@ export default function AppleTreeDashboard() {
               onClose={() => setActiveTab('My Tree')}
             />
           )}
+
+          {activeTab === 'Buzón' && (
+            <FamilyWallPanel
+              treeId={currentTreeId}
+              authorName={loginInputUser || 'Familiar'}
+              authorAvatarUrl={userProfileAvatar}
+              onClose={() => setActiveTab('My Tree')}
+            />
+          )}
         </div>
 
         <MemberProfilePanel
@@ -1174,6 +1195,17 @@ export default function AppleTreeDashboard() {
           />
         )}
 
+        {threadEvent && (
+          <EventCommentsPanel
+            activityId={threadEvent.id}
+            title={threadEvent.title}
+            dateLabel={threadEvent.dateLabel}
+            authorName={loginInputUser || 'Familiar'}
+            authorAvatarUrl={userProfileAvatar}
+            onClose={() => setThreadEvent(null)}
+          />
+        )}
+
         {editingMember && <EditMemberModal member={editingMember} onClose={() => setEditingMember(null)} onSave={fetchFamilyData} />}
         
         {invitingMember && (
@@ -1196,14 +1228,15 @@ export default function AppleTreeDashboard() {
         )}
 
         <div className="hide-on-mobile">
-          <Sidebar 
-            bgOpacity={bgOpacity} 
-            onOpacityChange={setBgOpacity} 
+          <Sidebar
+            bgOpacity={bgOpacity}
+            onOpacityChange={setBgOpacity}
             members={treeData.members}
             treeId={currentTreeId}
             activeTab={activeTab}
             onTabChange={setActiveTab}
             onInviteMember={(m) => { setInvitingMember(m); setActiveTab(null); }}
+            onOpenEventThread={(ev) => setThreadEvent(ev)}
           />
         </div>
 
@@ -1240,8 +1273,7 @@ export default function AppleTreeDashboard() {
         activeTab={mobileActiveTab}
         onTabChange={(tab) => {
           setMobileActiveTab(tab)
-          // Mirror to desktop tab system where applicable
-          if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums' || tab === 'Chats') {
+          if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums' || tab === 'Chats' || tab === 'Buzón' || tab === 'Events') {
             setActiveTab(tab)
           } else {
             setActiveTab(null)

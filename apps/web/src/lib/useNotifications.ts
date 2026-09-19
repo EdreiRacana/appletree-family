@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Member } from '@/lib/types'
 
-export type NotifType = 'birthday' | 'event' | 'comment' | 'message'
+export type NotifType = 'birthday' | 'event' | 'comment' | 'message' | 'event_comment' | 'wall'
 
 export interface AppNotification {
   id: string
@@ -10,11 +10,13 @@ export interface AppNotification {
   text: string
   time: string
   /** Where to navigate on click */
-  action: 'open_events' | 'open_stories' | 'open_chat'
+  action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall'
   /** ISO date string for sorting */
   sortKey: string
   /** Solo para action='open_chat' — id del member remitente */
   senderMemberId?: string
+  /** Solo para action='open_event_thread' — id del evento (activity) */
+  activityId?: string
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -140,6 +142,14 @@ export function useNotifications(treeId: string, members: Member[]) {
       })
     } catch { /* ignore */ }
 
+    // Cargar preferencias de mute UNA vez y usarlas para filtrar todo lo que
+    // esté silenciado (chats/eventos/buzón).
+    const mutedSet = new Set<string>()
+    try {
+      const { data: muteRows } = await supabase.from('user_mute_prefs').select('subject_type, subject_id')
+      ;(muteRows || []).forEach((r: any) => mutedSet.add(`${r.subject_type}:${r.subject_id}`))
+    } catch { /* si la tabla aún no existe, no bloqueamos */ }
+
     // 4. Mensajes de chat sin leer (agrupados por remitente para no spam)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -165,6 +175,8 @@ export function useNotifications(treeId: string, members: Member[]) {
             senderIds.forEach(senderId => {
               const senderRows = rows.filter(r => r.sender_id === senderId)
               const latest = senderRows[0]
+              // Si el chat está silenciado, no generamos notif
+              if (mutedSet.has(`chat:${latest.chat_id}`)) return
               const senderMember = members.find(m => m.userId === senderId)
               const senderName = senderMember
                 ? `${senderMember.firstName}${senderMember.lastName ? ' ' + senderMember.lastName : ''}`
@@ -188,7 +200,88 @@ export function useNotifications(treeId: string, members: Member[]) {
       }
     } catch { /* ignore */ }
 
-    // Sort: days-ahead items first, then by sortKey
+    // 5. Comentarios nuevos en eventos (agrupados por evento). Respeta mute.
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const since = new Date(Date.now() - COMMENT_WINDOW_MS).toISOString()
+      const { data: eventComments } = await supabase
+        .from('event_comments')
+        .select('id, activity_id, author_name, author_user_id, content, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+      const commentRows = (eventComments || []) as Array<{
+        id: string; activity_id: string; author_name: string;
+        author_user_id: string | null; content: string; created_at: string
+      }>
+      if (commentRows.length > 0) {
+        // Traer títulos de esos eventos
+        const activityIds = Array.from(new Set(commentRows.map(r => r.activity_id)))
+        const { data: acts } = await supabase
+          .from('activities')
+          .select('id, title')
+          .in('id', activityIds)
+        const titleById = new Map<string, string>()
+        ;(acts || []).forEach((a: any) => titleById.set(a.id, a.title))
+
+        // Agrupar por activity_id, filtrar propios y muteados
+        activityIds.forEach(actId => {
+          if (mutedSet.has(`event:${actId}`)) return
+          const rows = commentRows.filter(r => r.activity_id === actId && r.author_user_id !== user?.id)
+          if (rows.length === 0) return
+          const latest = rows[0]
+          const eventTitle = titleById.get(actId) || 'Evento'
+          const preview = latest.content.substring(0, 40)
+          const text = rows.length === 1
+            ? `📅 ${latest.author_name} comentó en "${eventTitle}": "${preview}${preview.length >= 40 ? '…' : ''}"`
+            : `📅 ${rows.length} nuevos comentarios en "${eventTitle}"`
+          notifs.push({
+            id: `evcmt-${actId}`,
+            type: 'event_comment',
+            text,
+            time: relativeTime(latest.created_at),
+            action: 'open_event_thread',
+            activityId: actId,
+            sortKey: `evcmt-${latest.created_at}`,
+          })
+        })
+      }
+    } catch { /* ignore */ }
+
+    // 6. Mensajes nuevos en el Buzón Familiar. Respeta mute del wall.
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!mutedSet.has(`wall:${treeId}`)) {
+        const since = new Date(Date.now() - COMMENT_WINDOW_MS).toISOString()
+        const { data: wallRows } = await supabase
+          .from('family_wall_messages')
+          .select('id, author_name, author_user_id, content, created_at')
+          .eq('tree_id', treeId)
+          .eq('is_deleted', false)
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .limit(20)
+        const rows = ((wallRows || []) as Array<{
+          id: string; author_name: string; author_user_id: string | null; content: string; created_at: string
+        }>).filter(r => r.author_user_id !== user?.id)
+        if (rows.length > 0) {
+          const latest = rows[0]
+          const preview = latest.content.substring(0, 40)
+          const text = rows.length === 1
+            ? `👨‍👩‍👧 ${latest.author_name}: "${preview}${preview.length >= 40 ? '…' : ''}"`
+            : `👨‍👩‍👧 ${rows.length} mensajes nuevos en el Buzón`
+          notifs.push({
+            id: `wall-${treeId}`,
+            type: 'wall',
+            text,
+            time: relativeTime(latest.created_at),
+            action: 'open_wall',
+            sortKey: `wall-${latest.created_at}`,
+          })
+        }
+      }
+    } catch { /* ignore */ }
+
+    // Sort: días adelantados primero, luego por sortKey descendente
     notifs.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
     const readIds = getReadIds()
@@ -200,18 +293,16 @@ export function useNotifications(treeId: string, members: Member[]) {
 
   useEffect(() => { build() }, [build])
 
-  // Suscripción Realtime: cada vez que llega un mensaje nuevo (o se marca
-  // como leído) refrescamos las notificaciones. RLS filtra automáticamente
-  // solo mensajes de chats donde soy participante.
+  // Suscripción Realtime: mensajes de chat, comentarios de eventos y
+  // buzón familiar. Un mismo canal escucha las 3 tablas y refresca
+  // build() al llegar cualquier cosa. RLS filtra por participación.
   useEffect(() => {
     const channel = supabase
-      .channel('user-notifs-messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
-        build()
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, () => {
-        build()
-      })
+      .channel('user-notifs-all')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => build())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, () => build())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'event_comments' }, () => build())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'family_wall_messages' }, () => build())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [build])

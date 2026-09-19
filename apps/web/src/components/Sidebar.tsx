@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import type { Member } from '@/lib/types'
-import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X, MessageCircle } from 'lucide-react'
+import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X, MessageCircle, Megaphone } from 'lucide-react'
 import NetworkPanel from '@/components/NetworkPanel'
 import EventsPanel from '@/components/EventsPanel'
 
@@ -14,13 +14,15 @@ interface SidebarProps {
   activeTab: string | null
   onTabChange: (tab: string | null) => void
   onInviteMember: (member: Member) => void
+  onOpenEventThread?: (event: { id: string; title: string; dateLabel: string }) => void
 }
 
-export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, activeTab, onTabChange, onInviteMember }: SidebarProps) {
+export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, activeTab, onTabChange, onInviteMember, onOpenEventThread }: SidebarProps) {
 
   const menuItems = [
     { icon: <Home size={20} />, label: 'Home' },
     { icon: <TreePine size={20} />, label: 'My Tree' },
+    { icon: <Megaphone size={20} />, label: 'Buzón' },
     { icon: <MessageCircle size={20} />, label: 'Chats' },
     { icon: <Users size={20} />, label: 'Network' },
     { icon: <ImageIcon size={20} />, label: 'Photo Albums' },
@@ -276,7 +278,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
             </button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-            <EventsPanel members={members} treeId={treeId} />
+            <EventsPanel members={members} treeId={treeId} onOpenThread={onOpenEventThread} />
           </div>
         </div>
       )}
