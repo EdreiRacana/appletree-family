@@ -1,8 +1,9 @@
 'use client'
 
 import React from 'react'
-import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut, Sun, Moon, KeyRound } from 'lucide-react'
+import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut, Sun, Moon, KeyRound, X } from 'lucide-react'
 import type { AppNotification } from '@/lib/useNotifications'
+import type { Member } from '@/lib/types'
 
 // Theme toggle — stamps data-theme on <html> and persists in localStorage.
 // Reads its initial state from the DOM (set by the pre-hydration script in
@@ -58,6 +59,10 @@ interface TopbarProps {
   onLogout?: () => void
   onOpenAccountSettings?: () => void
   showStartTreeBtn?: boolean
+  // Buscador familiar: cuando el usuario selecciona un match, page.tsx abre
+  // el drawer del familiar.
+  searchMembers?: Member[]
+  onSelectMember?: (member: Member) => void
 }
 
 export default function Topbar({
@@ -75,10 +80,28 @@ export default function Topbar({
   currentUser,
   onLogout,
   onOpenAccountSettings,
-  showStartTreeBtn = false
+  showStartTreeBtn = false,
+  searchMembers = [],
+  onSelectMember,
 }: TopbarProps) {
   const [showNotifications, setShowNotifications] = React.useState(false)
   const [showUserMenu, setShowUserMenu] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [showSearchResults, setShowSearchResults] = React.useState(false)
+
+  // Filtro fuzzy simple sobre firstName+lastName+nickname. Case-insensitive.
+  const searchResults = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (q.length < 1) return []
+    return searchMembers
+      .map(m => {
+        const full = `${m.firstName || ''} ${m.lastName || ''} ${m.nickname || ''}`.toLowerCase()
+        return { m, match: full.includes(q) }
+      })
+      .filter(x => x.match)
+      .map(x => x.m)
+      .slice(0, 8)
+  }, [searchQuery, searchMembers])
   return (
     <header 
       className="topbar-container"
@@ -197,14 +220,94 @@ export default function Topbar({
           }}
         >
           <Search size={18} color="var(--topbar-fg)" style={{ opacity: 0.6 }} />
-          <input 
-            type="text" 
-            placeholder="Search family..." 
+          <input
+            type="text"
+            placeholder="Buscar familiar…"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setShowSearchResults(true) }}
+            onFocus={() => setShowSearchResults(true)}
             style={{
               background: 'none', border: 'none', outline: 'none', color: 'var(--topbar-fg)',
               fontSize: '13px', marginLeft: '12px', width: '100%', fontWeight: '600'
             }}
           />
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(''); setShowSearchResults(false) }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--topbar-fg)', opacity: 0.55, padding: 0, marginLeft: '6px',
+              }}
+              title="Limpiar"
+            >
+              <X size={14} />
+            </button>
+          )}
+
+          {/* Dropdown de resultados */}
+          {showSearchResults && searchQuery && (
+            <>
+              {/* Overlay click-outside para cerrar */}
+              <div
+                onClick={() => setShowSearchResults(false)}
+                style={{ position: 'fixed', inset: 0, zIndex: 2800 }}
+              />
+              <div style={{
+                position: 'absolute',
+                top: '52px', left: 0, right: 0,
+                backgroundColor: '#FAEFBC',
+                borderRadius: '14px',
+                border: '1px solid rgba(212,175,55,0.4)',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
+                zIndex: 2900, overflow: 'hidden',
+                maxHeight: '320px', overflowY: 'auto',
+              }}>
+                {searchResults.length === 0 ? (
+                  <div style={{ padding: '18px', textAlign: 'center', color: '#7A6558', fontSize: '13px', fontWeight: 700 }}>
+                    Sin coincidencias
+                  </div>
+                ) : (
+                  searchResults.map(m => {
+                    const full = `${m.firstName}${m.lastName ? ' ' + m.lastName : ''}`
+                    const avatar = m.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.firstName)}`
+                    const years = [m.dateOfBirth?.slice(0, 4), m.dateOfDeath?.slice(0, 4)].filter(Boolean).join(' — ')
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => {
+                          onSelectMember?.(m)
+                          setShowSearchResults(false)
+                          setSearchQuery('')
+                        }}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: '11px',
+                          padding: '10px 14px', background: 'none', border: 'none',
+                          borderBottom: '1px solid rgba(44,24,16,0.06)',
+                          cursor: 'pointer', textAlign: 'left', color: '#2C1810',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(212,175,55,0.15)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <img
+                          src={avatar}
+                          alt={full}
+                          style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1.5px solid rgba(212,175,55,0.6)' }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {full}
+                          </div>
+                          {years && (
+                            <div style={{ fontSize: '10px', opacity: 0.6, fontWeight: 700 }}>{years}</div>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
