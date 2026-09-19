@@ -195,13 +195,21 @@ export default function AppleTreeDashboard() {
       window.localStorage.setItem('apple_session_user', displayName)
       window.localStorage.setItem('currentUser', displayName)
     }
-    // 0.a Auto-aceptar invites por CORREO: si esta cuenta de Supabase Auth
-    //     tiene un correo que coincide con algún invite pendiente, marcarlo
-    //     como aceptado. Cubre el caso donde el token en localStorage se
-    //     perdió (verificó correo en otro navegador/dispositivo, cerró la
-    //     pestaña antes del confirm, etc). No requiere que el usuario haya
-    //     entrado al link ?invite=... — solo necesita el mismo correo.
-    try {
+    // Regla dura de una cuenta ↔ una manzana. Si el user ya tiene UN member
+    // linkeado a su auth.uid, NO tocamos nada más (ni auto-accept por correo
+    // ni rescate). Esto evita que múltiples invites al mismo correo
+    // terminen linkeando 2+ manzanas a la misma cuenta.
+    const { data: existingLink } = await supabase
+      .from('members')
+      .select('id')
+      .eq('user_id', s.user.id)
+      .limit(1)
+    const alreadyLinked = !!(existingLink && existingLink.length > 0)
+
+    // 0.a Auto-aceptar invites por CORREO: solo si el usuario NO tiene ya
+    //     una manzana linkeada. Cubre el caso del signup fresco donde el
+    //     token en localStorage se perdió.
+    if (!alreadyLinked) try {
       const email = s.user.email
       if (email) {
         const { data: pendingByEmail } = await supabase
@@ -209,9 +217,11 @@ export default function AppleTreeDashboard() {
           .select('id, member_id, tree_id, expires_at')
           .eq('email', email)
           .is('accepted_at', null)
+          .order('created_at', { ascending: true })
+          .limit(1)  // Solo el PRIMER invite; el resto se acepta manualmente si aplica
         if (pendingByEmail && pendingByEmail.length > 0) {
-          for (const inv of pendingByEmail) {
-            if (new Date(inv.expires_at) < new Date()) continue
+          const inv = pendingByEmail[0]
+          if (new Date(inv.expires_at) >= new Date()) {
             await supabase
               .from('invites')
               .update({ accepted_at: new Date().toISOString(), accepted_by: s.user.id })
@@ -221,7 +231,7 @@ export default function AppleTreeDashboard() {
                 .from('members')
                 .update({ user_id: s.user.id })
                 .eq('id', inv.member_id)
-                .is('user_id', null)
+                .is('user_id', null)  // No pisar links existentes de otra cuenta
             }
           }
         }
@@ -230,18 +240,20 @@ export default function AppleTreeDashboard() {
       console.warn('Auto-accept invites by email failed:', err)
     }
 
-    // 0.b Rescate: si hay invites que este usuario aceptó pero cuyo
-    //     member.user_id sigue en null (bug pre-005 con RLS), reintentar el
-    //     link. Silencioso — si falla no rompe el login.
-    try {
+    // 0.b Rescate: si el usuario aceptó un invite pero el member.user_id
+    //     quedó en null (bug pre-005 con RLS), reintentar el link. Solo
+    //     si aún no está linkeado a nada.
+    if (!alreadyLinked) try {
       const { data: orphanInvites } = await supabase
         .from('invites')
         .select('member_id')
         .eq('accepted_by', s.user.id)
         .not('member_id', 'is', null)
+        .order('accepted_at', { ascending: true })
+        .limit(1)  // Solo el primero — regla dura de un member por cuenta
       if (orphanInvites && orphanInvites.length > 0) {
-        for (const inv of orphanInvites) {
-          if (!inv.member_id) continue
+        const inv = orphanInvites[0]
+        if (inv.member_id) {
           await supabase
             .from('members')
             .update({ user_id: s.user.id })
