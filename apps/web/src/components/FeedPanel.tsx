@@ -5,6 +5,7 @@ import { Calendar, Heart, Trash2, Plus, MessageCircle, Edit3, BookOpen, ChevronR
 import { supabase } from '@/lib/supabase'
 import type { FeedActivity } from '@/lib/types'
 import AddStoryModal from './AddStoryModal'
+import RichTextWithVideo from '@/components/media/RichTextWithVideo'
 
 export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?: number, treeId: string }) {
   const [stories, setStories] = useState<FeedActivity[]>([])
@@ -272,7 +273,10 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
                 </div>
                 
                 <div style={{ marginBottom: '15px' }}>
-                  <p style={{...cardDescStyle, fontSize: '12.5px', margin: 0}}>{story.description || 'Compartiendo un momento especial...'}</p>
+                  {story.description
+                    ? <RichTextWithVideo text={story.description} size="medium" textStyle={{...cardDescStyle, fontSize: '12.5px', margin: 0}} />
+                    : <p style={{...cardDescStyle, fontSize: '12.5px', margin: 0}}>Compartiendo un momento especial...</p>
+                  }
                 </div>
                 
                 <div style={{...cardFooterStyle, borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '12px'}}>

@@ -19,6 +19,7 @@ import {
   type ChatMessage,
 } from '@/lib/chatApi'
 import { supabase } from '@/lib/supabase'
+import RichTextWithVideo from '@/components/media/RichTextWithVideo'
 
 interface ChatPanelProps {
   member: Member
@@ -241,7 +242,7 @@ export default function ChatPanel({ member, onClose, onInvite }: ChatPanelProps)
                 lineHeight: 1.4,
                 wordBreak: 'break-word',
               }}>
-                {m.content}
+                <RichTextWithVideo text={m.content || ''} size="small" textStyle={{ display: 'block' }} />
                 <div style={{ fontSize: '10px', opacity: 0.55, marginTop: '4px', textAlign: 'right' }}>
                   {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
