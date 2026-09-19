@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Member } from '@/lib/types'
 
-export type NotifType = 'birthday' | 'event' | 'comment'
+export type NotifType = 'birthday' | 'event' | 'comment' | 'message'
 
 export interface AppNotification {
   id: string
@@ -10,9 +10,11 @@ export interface AppNotification {
   text: string
   time: string
   /** Where to navigate on click */
-  action: 'open_events' | 'open_stories'
+  action: 'open_events' | 'open_stories' | 'open_chat'
   /** ISO date string for sorting */
   sortKey: string
+  /** Solo para action='open_chat' — id del member remitente */
+  senderMemberId?: string
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -138,6 +140,54 @@ export function useNotifications(treeId: string, members: Member[]) {
       })
     } catch { /* ignore */ }
 
+    // 4. Mensajes de chat sin leer (agrupados por remitente para no spam)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: myChats } = await supabase
+          .from('chats')
+          .select('id')
+          .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+        const chatIds = (myChats || []).map(c => c.id as string)
+        if (chatIds.length > 0) {
+          const { data: unreadMsgs } = await supabase
+            .from('messages')
+            .select('id, chat_id, sender_id, content, created_at')
+            .in('chat_id', chatIds)
+            .neq('sender_id', user.id)
+            .is('read_at', null)
+            .order('created_at', { ascending: false })
+          const rows = (unreadMsgs || []) as Array<{
+            id: string; chat_id: string; sender_id: string; content: string | null; created_at: string
+          }>
+          if (rows.length > 0) {
+            const senderIds = Array.from(new Set(rows.map(r => r.sender_id)))
+            senderIds.forEach(senderId => {
+              const senderRows = rows.filter(r => r.sender_id === senderId)
+              const latest = senderRows[0]
+              const senderMember = members.find(m => m.userId === senderId)
+              const senderName = senderMember
+                ? `${senderMember.firstName}${senderMember.lastName ? ' ' + senderMember.lastName : ''}`
+                : 'Un familiar'
+              const preview = latest.content ? latest.content.substring(0, 40) : ''
+              const text = senderRows.length === 1
+                ? `💬 ${senderName}: "${preview}${preview.length >= 40 ? '…' : ''}"`
+                : `💬 ${senderName} te envió ${senderRows.length} mensajes nuevos`
+              notifs.push({
+                id: `msg-${senderId}`,
+                type: 'message',
+                text,
+                time: relativeTime(latest.created_at),
+                action: 'open_chat',
+                senderMemberId: senderMember?.id,
+                sortKey: `msg-${latest.created_at}`,
+              })
+            })
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
     // Sort: days-ahead items first, then by sortKey
     notifs.sort((a, b) => a.sortKey.localeCompare(b.sortKey))
 
@@ -149,6 +199,22 @@ export function useNotifications(treeId: string, members: Member[]) {
   }, [treeId, members, getReadIds])
 
   useEffect(() => { build() }, [build])
+
+  // Suscripción Realtime: cada vez que llega un mensaje nuevo (o se marca
+  // como leído) refrescamos las notificaciones. RLS filtra automáticamente
+  // solo mensajes de chats donde soy participante.
+  useEffect(() => {
+    const channel = supabase
+      .channel('user-notifs-messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+        build()
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, () => {
+        build()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [build])
 
   return { notifications, unreadCount, markAllRead, refresh: build }
 }
