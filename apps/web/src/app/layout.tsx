@@ -2,7 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'AppleFamily Tree — Cultivating Roots, Celebrating Legacies',
+  title: 'AppleFamily Tree',
   description: 'La red social familiar y árbol genealógico interactivo. Conecta generaciones, comparte logros y preserva memorias.',
   keywords: 'árbol genealógico, familia, red social familiar, genealogía interactiva',
   authors: [{ name: 'AppleFamily Tree' }],
@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     title: 'AppleFamily Tree',
     description: 'Conecta tu familia a través de generaciones',
     type: 'website',
+    images: [{ url: '/assets/logo.png' }],
   },
 }
 
