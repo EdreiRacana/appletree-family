@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Home, TreePine, MessageCircle, Image as ImageIcon, BookOpen, User } from 'lucide-react'
+import { Home, TreePine, MessageCircle, Megaphone, Image as ImageIcon, BookOpen, User } from 'lucide-react'
 
 interface MobileBottomNavProps {
   activeTab: string | null
@@ -9,12 +9,13 @@ interface MobileBottomNavProps {
 }
 
 const NAV_ITEMS = [
-  { id: 'Home',         icon: Home,          label: 'Inicio'    },
-  { id: 'My Tree',      icon: TreePine,      label: 'Árbol'     },
-  { id: 'Chats',        icon: MessageCircle, label: 'Chats'     },
-  { id: 'Photo Albums', icon: ImageIcon,     label: 'Fotos'     },
-  { id: 'Stories',      icon: BookOpen,      label: 'Historias' },
-  { id: 'Profile',      icon: User,          label: 'Perfil'    },
+  { id: 'Home',         icon: Home,          label: 'Inicio' },
+  { id: 'My Tree',      icon: TreePine,      label: 'Árbol' },
+  { id: 'Buzón',        icon: Megaphone,     label: 'Buzón' },
+  { id: 'Chats',        icon: MessageCircle, label: 'Chats' },
+  { id: 'Photo Albums', icon: ImageIcon,     label: 'Fotos' },
+  { id: 'Events',       icon: BookOpen,      label: 'Eventos' },
+  { id: 'Profile',      icon: User,          label: 'Perfil' },
 ]
 
 export default function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps) {

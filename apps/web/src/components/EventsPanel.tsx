@@ -8,6 +8,8 @@ import { Calendar, Plus, X, Gift, Heart, Star, Users, Sparkles, ChevronRight, Pe
 interface EventsPanelProps {
   members: Member[]
   treeId: string
+  /** Abrir el panel de comentarios de un evento */
+  onOpenThread?: (event: { id: string; title: string; dateLabel: string }) => void
 }
 
 const EVENT_COLORS: Record<FamilyEventType, { bg: string; accent: string; icon: React.ReactNode; label: string }> = {
@@ -86,16 +88,24 @@ interface EventCardProps {
   event: FamilyEvent
   onDelete?: (id: string) => void
   onEdit?: (event: FamilyEvent) => void
+  onOpenThread?: (event: { id: string; title: string; dateLabel: string }) => void
 }
 
-function EventCard({ event, onDelete, onEdit }: EventCardProps) {
+function EventCard({ event, onDelete, onEdit, onOpenThread }: EventCardProps) {
   const cfg = EVENT_COLORS[event.eventType]
   const days = daysUntil(nextOccurrence(event.eventDate))
   const isToday = days === 0
   const isCustom = !event.id.startsWith('auto-')
+  // Solo eventos reales (persistidos en DB) tienen hilo de comentarios
+  const hasThread = isCustom && !!onOpenThread
 
   return (
     <div
+      onClick={() => {
+        if (hasThread && onOpenThread) {
+          onOpenThread({ id: event.id, title: event.title, dateLabel: formatShortDate(event.eventDate) })
+        }
+      }}
       style={{
         backgroundColor: cfg.bg,
         borderRadius: '16px',
@@ -107,6 +117,7 @@ function EventCard({ event, onDelete, onEdit }: EventCardProps) {
         position: 'relative',
         boxShadow: isToday ? `0 0 0 2px ${cfg.accent}60` : 'none',
         transition: 'transform 0.2s',
+        cursor: hasThread ? 'pointer' : 'default',
       }}
       onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
       onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
@@ -157,7 +168,7 @@ function EventCard({ event, onDelete, onEdit }: EventCardProps) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
           {onEdit && (
             <button
-              onClick={() => onEdit(event)}
+              onClick={(ev) => { ev.stopPropagation(); onEdit(event) }}
               title="Editar"
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px', opacity: 0.45, color: '#2C1810' }}
               onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
@@ -168,7 +179,7 @@ function EventCard({ event, onDelete, onEdit }: EventCardProps) {
           )}
           {onDelete && (
             <button
-              onClick={() => onDelete(event.id)}
+              onClick={(ev) => { ev.stopPropagation(); onDelete(event.id) }}
               title="Eliminar"
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px', opacity: 0.45, color: '#c62828' }}
               onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
@@ -378,7 +389,7 @@ function EventModal({ treeId, members, editingEvent, onClose, onSave }: EventMod
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
-export default function EventsPanel({ members, treeId }: EventsPanelProps) {
+export default function EventsPanel({ members, treeId, onOpenThread }: EventsPanelProps) {
   const [events, setEvents]         = useState<FamilyEvent[]>([])
   const [loading, setLoading]       = useState(true)
   const [showModal, setShowModal]   = useState(false)
@@ -513,6 +524,7 @@ export default function EventsPanel({ members, treeId }: EventsPanelProps) {
                   <EventCard key={e.id} event={e}
                     onDelete={handleDelete}
                     onEdit={ev => { setEditingEvent(ev); setShowModal(true) }}
+                    onOpenThread={onOpenThread}
                   />
                 ))}
               </div>
@@ -526,6 +538,7 @@ export default function EventsPanel({ members, treeId }: EventsPanelProps) {
                   <EventCard key={e.id} event={e}
                     onDelete={handleDelete}
                     onEdit={ev => { setEditingEvent(ev); setShowModal(true) }}
+                    onOpenThread={onOpenThread}
                   />
                 ))}
               </div>
