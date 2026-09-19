@@ -10,6 +10,7 @@ import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import EditMemberModal from '@/components/tree/EditMemberModal'
 import InviteMemberModal from '@/components/tree/InviteMemberModal'
 import ChatPanel from '@/components/chat/ChatPanel'
+import ChatsListPanel from '@/components/chat/ChatsListPanel'
 import AccountSettingsModal from '@/components/AccountSettingsModal'
 import PhotoAlbums from '@/components/PhotoAlbums'
 import HomeDashboard from '@/components/HomeDashboard'
@@ -1118,6 +1119,14 @@ export default function AppleTreeDashboard() {
 
           {activeTab === 'Photo Albums' && (
             <PhotoAlbums treeId={currentTreeId} onClose={() => setActiveTab('My Tree')} />
+          )}
+
+          {activeTab === 'Chats' && (
+            <ChatsListPanel
+              members={treeData.members}
+              onOpenChat={(m) => { setChattingWithMember(m); setActiveTab('My Tree'); }}
+              onClose={() => setActiveTab('My Tree')}
+            />
           )}
         </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import type { Member } from '@/lib/types'
-import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X } from 'lucide-react'
+import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X, MessageCircle } from 'lucide-react'
 import NetworkPanel from '@/components/NetworkPanel'
 import EventsPanel from '@/components/EventsPanel'
 
@@ -21,6 +21,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
   const menuItems = [
     { icon: <Home size={20} />, label: 'Home' },
     { icon: <TreePine size={20} />, label: 'My Tree' },
+    { icon: <MessageCircle size={20} />, label: 'Chats' },
     { icon: <Users size={20} />, label: 'Network' },
     { icon: <ImageIcon size={20} />, label: 'Photo Albums' },
     { icon: <Calendar size={20} />, label: 'Events' },
