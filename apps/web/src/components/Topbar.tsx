@@ -52,7 +52,7 @@ interface TopbarProps {
   onShowTutorial?: () => void
   onShowTerms?: () => void
   onClearNotifications?: () => void
-  onNotificationClick?: (action: AppNotification['action']) => void
+  onNotificationClick?: (action: AppNotification['action'], notif?: AppNotification) => void
   userAvatarUrl?: string | null
   currentUser?: string
   onLogout?: () => void
@@ -363,7 +363,7 @@ export default function Topbar({
                     <button
                       key={n.id}
                       onClick={() => {
-                        onNotificationClick?.(n.action)
+                        onNotificationClick?.(n.action, n)
                         setShowNotifications(false)
                       }}
                       style={{
@@ -377,7 +377,13 @@ export default function Topbar({
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <p style={{ margin: 0, fontSize: '13px', color: '#2C1810', lineHeight: '1.45', fontWeight: '700' }}>{n.text}</p>
-                      <span style={{ fontSize: '10px', color: '#8B4513', opacity: 0.65, fontWeight: '700' }}>{n.time} · {n.action === 'open_events' ? 'Ver Eventos →' : 'Ver Historias →'}</span>
+                      <span style={{ fontSize: '10px', color: '#8B4513', opacity: 0.65, fontWeight: '700' }}>
+                        {n.time} · {
+                          n.action === 'open_events' ? 'Ver Eventos →'
+                          : n.action === 'open_chat' ? 'Abrir chat →'
+                          : 'Ver Historias →'
+                        }
+                      </span>
                     </button>
                   ))
                 )}

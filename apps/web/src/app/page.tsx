@@ -370,12 +370,13 @@ export default function AppleTreeDashboard() {
   const { notifications, unreadCount, markAllRead } = useNotifications(currentTreeId, treeData.members)
 
   // Handle bell click navigation
-  const handleNotificationClick = (action: 'open_events' | 'open_stories') => {
+  const handleNotificationClick = (action: 'open_events' | 'open_stories' | 'open_chat', notif?: { senderMemberId?: string }) => {
     if (action === 'open_events') setActiveTab('Events')
     else if (action === 'open_stories') {
-      // FeedPanel is always visible; just scroll it into view (it's fixed on the right)
-      // We mark all as read and let the user see Family Stories
       setActiveTab(null)
+    } else if (action === 'open_chat' && notif?.senderMemberId) {
+      const sender = treeData.members.find(m => m.id === notif.senderMemberId)
+      if (sender) setChattingWithMember(sender)
     }
     markAllRead()
   }
