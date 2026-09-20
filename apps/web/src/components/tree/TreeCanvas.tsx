@@ -831,123 +831,13 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               viewportScale={scale}
             />
 
-            {/* HOVER STAGE 1: pill compacto — nombre + contacto + expandir.
-                Se renderiza con position:fixed en HoverPeek, escapa del
-                pan/zoom transform y del stacking context — z:10000 lo pone
-                sobre el topbar (z:2000). Auto-flip abajo si la manzana
-                está en el top del viewport. */}
-            {(() => {
-              if (hoveredMemberId !== member.id || expandedMenuId === member.id) return null
-              // HoverPeek usa position:fixed → necesitamos VIEWPORT coords.
-              // Cadena: viewport → container (bounding rect) → pan/zoom
-              // transform → apple wrapper. lensedX ya es el centro X de la
-              // manzana en tree-space (el wrapper hace `left: lensedX - NODE_SIZE/2`);
-              // lensedY es su top. Le sumamos NODE_SIZE/2 para el centro Y.
-              // La escala compuesta (fisheye + kin) va alrededor del centro.
-              const containerBox = containerRef.current?.getBoundingClientRect()
-              const cLeft = containerBox?.left ?? 0
-              const cTop = containerBox?.top ?? 0
-              const appleCenterScreenX = cLeft + (member.lensedX ?? 0) * scale + offset.x
-              const appleCenterScreenY = cTop + ((member.lensedY ?? 0) + NODE_SIZE / 2) * scale + offset.y
-              const scaledHalfH = (NODE_SIZE * scale * composedScale) / 2
-              const appleTopScreenY = appleCenterScreenY - scaledHalfH
-              const appleBottomScreenY = appleCenterScreenY + scaledHalfH
-              const TOPBAR_H = 76
-              const FLIP_MARGIN = 60
-              const flipBelow = appleTopScreenY < TOPBAR_H + FLIP_MARGIN
-              // Con translateY en HoverPeek (arriba: -100%, abajo: 0) el ancla
-              // queda pegada al borde de la manzana con un aire de 8px.
-              const peekY = flipBelow
-                ? appleBottomScreenY + 8
-                : appleTopScreenY - 8
-              const peekX = appleCenterScreenX
-              return (
-                <HoverPeek
-                  member={member}
-                  screenX={peekX}
-                  screenY={peekY}
-                  flipBelow={flipBelow}
-                  onMouseEnter={() => {
-                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-                    setHoveredMemberId(member.id)
-                  }}
-                  onMouseLeave={() => {
-                    hoverTimeoutRef.current = setTimeout(() => {
-                      setHoveredMemberId(null)
-                    }, 1200)
-                  }}
-                onQuickContact={() => {
-                  // Callback directo (evita stale closures del CustomEvent bus).
-                  // Si no hay handler cae de vuelta al drawer.
-                  if (onOpenChat) onOpenChat(member)
-                  else onViewProfile(member)
-                  setHoveredMemberId(null)
-                }}
-                onExpand={() => {
-                  // Cambio de flujo: en vez de abrir el HoverMenu intermedio
-                  // (que en algunos navegadores se cierra antes de ser útil),
-                  // abrimos directamente el panel de perfil, que ya tiene
-                  // Añadir, Editar, Conectar, Chatear, etc.
-                  onViewProfile(member)
-                  setHoveredMemberId(null)
-                }}
-              />
-              )
-            })()}
+            {/* HoverPeek eliminado — el click directo en la manzana abre el
+                ProfilePanel con todas las acciones (Añadir, Conectar, Chatear,
+                Editar). El pill con "..." solo confundía porque parecía otro
+                menú aparte cuando en realidad el flujo unificado es 1 tap. */}
 
-            {/* HOVER STAGE 2: menú completo — se posiciona con fixedStyle
-                (position:fixed en screen coords) para escapar del pan/zoom
-                container y del stacking context. Auto-flip abajo cuando la
-                manzana está en la parte alta del viewport. */}
-            {expandedMenuId === member.id && (() => {
-              // Mismo cálculo que HoverPeek — sumar container bounding rect
-              // para convertir de container-space a viewport-space.
-              const containerBox = containerRef.current?.getBoundingClientRect()
-              const cLeft = containerBox?.left ?? 0
-              const cTop = containerBox?.top ?? 0
-              const appleCenterScreenX = cLeft + (member.lensedX ?? 0) * scale + offset.x
-              const appleCenterScreenY = cTop + ((member.lensedY ?? 0) + NODE_SIZE / 2) * scale + offset.y
-              const scaledHalfH = (NODE_SIZE * scale * composedScale) / 2
-              const appleTopScreenY = appleCenterScreenY - scaledHalfH
-              const appleBottomScreenY = appleCenterScreenY + scaledHalfH
-              const MENU_H_ESTIMATE = 300
-              const TOPBAR_H = 76
-              const flipBelow = appleTopScreenY - MENU_H_ESTIMATE < TOPBAR_H + 12
-              const fixedStyle: React.CSSProperties = flipBelow
-                ? {
-                    position: 'fixed',
-                    top: `${appleBottomScreenY + 12}px`,
-                    left: `${appleCenterScreenX}px`,
-                    transform: 'translateX(-50%)',
-                    zIndex: 10001,
-                  }
-                : {
-                    position: 'fixed',
-                    top: `${appleTopScreenY - 12}px`,
-                    left: `${appleCenterScreenX}px`,
-                    transform: 'translate(-50%, -100%)',
-                    zIndex: 10001,
-                  }
-              return (
-                <HoverMenu
-                  member={member}
-                  fixedStyle={fixedStyle}
-                  onClose={() => { setExpandedMenuId(null); setHoveredMemberId(null) }}
-                  onMouseEnter={() => {
-                    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-                  }}
-                  onEdit={(m) => { onEditMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                  onAdd={(m) => { setAddingToMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                  onConnect={onConnectMember ? (m) => { onConnectMember(m); setExpandedMenuId(null); setHoveredMemberId(null) } : undefined}
-                  onDelete={(m) => handleDeleteMember(m)}
-                  onViewProfile={(m) => { onViewProfile(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                  onAddStory={(m) => { onAddStory(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                  hasDescendants={memberHasDescendants}
-                  isCollapsed={isCollapsed}
-                  onToggleCollapse={(m) => { toggleCollapsed(m.id); setExpandedMenuId(null); setHoveredMemberId(null) }}
-                />
-              )
-            })()}
+            {/* HoverMenu también eliminado — mismo motivo. Todas las acciones
+                viven ahora en el ProfilePanel. */}
 
             {/* COLLAPSED BRANCH BADGE · click to expand */}
             {isCollapsed && collapsedCount > 0 && (
