@@ -117,7 +117,7 @@ function renderEmail(body: InviteBody, treeUrl: string, baseUrl: string): string
           </td></tr>
         </table>
         <p style="margin:18px 0 0;font-size:10px;color:#8A7A6D;letter-spacing:0.15em;text-transform:uppercase">
-          AppleFamily Tree · sthenova.com
+          AppleFamily Tree · applefamilytree.com
         </p>
       </td></tr>
     </table>
@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const defaultUrl = Deno.env.get('APP_URL') || 'https://appletree-family.vercel.app'
+    const defaultUrl = Deno.env.get('APP_URL') || 'https://applefamilytree.com'
     const body = (await req.json()) as InviteBody
     const isLinkOnly = body?.mode === 'link-only'
 
@@ -166,7 +166,7 @@ Deno.serve(async (req: Request) => {
         status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       })
     }
-    const from = Deno.env.get('INVITE_FROM') || 'AppleFamily Tree <no-reply@sthenova.com>'
+    const from = Deno.env.get('INVITE_FROM') || 'AppleFamily Tree <no-reply@applefamilytree.com>'
 
     // Crear el token de invitación en Supabase (si tenemos tree/member).
     // Sin tree_id no podemos crear el registro — el correo se envía igual

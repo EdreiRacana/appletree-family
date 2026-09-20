@@ -97,8 +97,8 @@ export async function POST(req: Request) {
     if (!apiKey) {
       return NextResponse.json({ error: 'Email service not configured (missing RESEND_API_KEY)' }, { status: 500 })
     }
-    const fromAddress = process.env.INVITE_FROM || 'AppleFamily Tree <no-reply@sthenova.com>'
-    const treeUrlDefault = process.env.APP_URL || 'https://appletree-family.vercel.app'
+    const fromAddress = process.env.INVITE_FROM || 'AppleFamily Tree <no-reply@applefamilytree.com>'
+    const treeUrlDefault = process.env.APP_URL || 'https://applefamilytree.com'
 
     const body = (await req.json()) as InviteBody
     if (!body?.toEmail || !isValidEmail(body.toEmail)) {
