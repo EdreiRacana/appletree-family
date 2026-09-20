@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { MessageCircle, Heart, UserPlus, Edit2, Trophy, User, Trash2 } from 'lucide-react'
+import { MessageCircle, Heart, UserPlus, Edit2, Trophy, User, Trash2, Link2 } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface MobileBottomSheetProps {
@@ -13,6 +13,8 @@ interface MobileBottomSheetProps {
   onDelete: (member: Member) => void
   onViewProfile: (member: Member) => void
   onAddStory: (member: Member) => void
+  onConnect?: (member: Member) => void
+  onChat?: (member: Member) => void
 }
 
 // ── Relation label relative to the focus member ──────────────────
@@ -57,7 +59,7 @@ function isMinor(member: Member): boolean {
 }
 
 export default function MobileBottomSheet({
-  member, focusMember, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory
+  member, focusMember, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onConnect, onChat
 }: MobileBottomSheetProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [imgError, setImgError] = useState(false)
@@ -134,15 +136,11 @@ export default function MobileBottomSheet({
         <div className="mobile-sheet-actions">
 
           {/* Contact actions — hidden for minors */}
-          {!protected_ && (
+          {!protected_ && onChat && (
             <>
-              <button className="mobile-sheet-action-btn" onClick={() => { onClose(); }}>
+              <button className="mobile-sheet-action-btn" onClick={() => { onChat(member); onClose(); }}>
                 <MessageCircle size={20} strokeWidth={1.8} />
                 Chatear con {member.firstName}
-              </button>
-              <button className="mobile-sheet-action-btn" onClick={() => { onClose(); }}>
-                <Heart size={20} strokeWidth={1.8} />
-                Enviar Saludo
               </button>
               <div className="mobile-sheet-divider" />
             </>
@@ -152,6 +150,13 @@ export default function MobileBottomSheet({
             <UserPlus size={20} strokeWidth={1.8} />
             Añadir Familiar
           </button>
+
+          {onConnect && (
+            <button className="mobile-sheet-action-btn" onClick={() => { onConnect(member); onClose(); }}>
+              <Link2 size={20} strokeWidth={1.8} />
+              Conectar con otro familiar
+            </button>
+          )}
 
           <button className="mobile-sheet-action-btn" onClick={() => { onEdit(member); onClose(); }}>
             <Edit2 size={20} strokeWidth={1.8} />

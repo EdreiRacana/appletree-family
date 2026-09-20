@@ -1314,6 +1314,8 @@ export default function AppleTreeDashboard() {
         }}
         onViewProfile={(m) => { setSelectedMember(m); setMobileSheetMember(null); }}
         onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); setMobileSheetMember(null); }}
+        onConnect={(m) => { setConnectingMember(m); setMobileSheetMember(null); }}
+        onChat={(m) => { setChattingWithMember(m); setMobileSheetMember(null); }}
       />
 
       {/* ── MOBILE BOTTOM NAV ─────────────────────────────────────────── */}
