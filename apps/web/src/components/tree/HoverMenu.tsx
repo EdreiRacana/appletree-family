@@ -85,9 +85,9 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onConnect, o
 
   return (
     <>
-      {/* Overlay tapeable: en móvil no hay mouseLeave, así que el usuario
-          cierra el menú tocando fuera. En desktop no molesta: es transparente
-          y ni siquiera bloquea el hover porque tiene pointer-events por click. */}
+      {/* Overlay tapeable: cierra el menú al tocar fuera (móvil y desktop).
+          Debe estar debajo del menú en z-index para que los clicks internos
+          hagan su acción antes de cerrar. */}
       <div
         onClick={onClose}
         style={{
@@ -97,8 +97,8 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onConnect, o
       />
     <div
       className="hover-menu"
-      onMouseLeave={onClose}
       onMouseEnter={onMouseEnter}
+      onClick={(e) => e.stopPropagation()}
       id={`hover-menu-${member.id}`}
       style={fixedStyle}
     >
