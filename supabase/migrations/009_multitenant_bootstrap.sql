@@ -84,7 +84,7 @@ RETURNS TABLE (
   tree_id      UUID,
   tree_name    TEXT,
   role         TEXT,
-  member_count INT,
+  member_count BIGINT,
   is_demo      BOOLEAN
 )
 LANGUAGE sql
@@ -92,18 +92,24 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   WITH mine AS (
-    SELECT t.id, t.name, 'owner'::TEXT AS role, t.member_count,
+    SELECT t.id, t.name, 'owner'::TEXT AS role,
            (t.id = '00000000-0000-0000-0000-000000000001'::UUID) AS is_demo
     FROM public.trees t
     WHERE t.owner_id = auth.uid()
     UNION
-    SELECT t.id, t.name, 'member'::TEXT AS role, t.member_count,
+    SELECT t.id, t.name, 'member'::TEXT AS role,
            (t.id = '00000000-0000-0000-0000-000000000001'::UUID) AS is_demo
     FROM public.trees t
     JOIN public.members m ON m.tree_id = t.id
     WHERE m.user_id = auth.uid() AND t.owner_id <> auth.uid()
   )
-  SELECT id, name, role, COALESCE(member_count, 0), is_demo FROM mine;
+  SELECT
+    mine.id,
+    mine.name,
+    mine.role,
+    (SELECT COUNT(*) FROM public.members WHERE members.tree_id = mine.id) AS member_count,
+    mine.is_demo
+  FROM mine;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_user_trees() TO authenticated;
