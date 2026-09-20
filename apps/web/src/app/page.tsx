@@ -76,6 +76,15 @@ export default function AppleTreeDashboard() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Registro silencioso del Service Worker para push notifications.
+  // No pide permisos aquí — solo lo prepara. El permiso se pide desde
+  // AccountSettingsModal cuando el usuario activa el toggle.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!('serviceWorker' in navigator)) return
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => { /* ignore */ })
+  }, [])
+
 
   // ── Detección de token de invitación en la URL ──────────────────
   // Si el usuario llegó desde un correo de invitación, la URL trae

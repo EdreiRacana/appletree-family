@@ -9,16 +9,22 @@
 // Ambas usan supabase.auth.updateUser(). Supabase requiere una sesión activa
 // para llamar updateUser, y ya la tenemos porque el usuario está logueado.
 
-import React, { useState } from 'react'
-import { X, Lock, Mail, Check, Eye, EyeOff } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, Lock, Mail, Check, Eye, EyeOff, Bell, BellOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import {
+  isPushSupported,
+  getPermissionStatus,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from '@/lib/pushClient'
 
 interface AccountSettingsModalProps {
   currentEmail: string
   onClose: () => void
 }
 
-type Tab = 'password' | 'email'
+type Tab = 'password' | 'email' | 'notifications'
 
 export default function AccountSettingsModal({ currentEmail, onClose }: AccountSettingsModalProps) {
   const [tab, setTab] = useState<Tab>('password')
@@ -37,6 +43,38 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
   const [emailSuccess, setEmailSuccess] = useState(false)
+
+  // Push notifications state
+  const [pushStatus, setPushStatus] = useState<'granted' | 'denied' | 'default' | 'unsupported'>('unsupported')
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setPushStatus(getPermissionStatus())
+  }, [tab])
+
+  const handleTogglePush = async () => {
+    setPushBusy(true)
+    setPushError(null)
+    try {
+      if (pushStatus === 'granted') {
+        await unsubscribeFromPush()
+      } else {
+        const res = await subscribeToPush()
+        if (!res.ok) {
+          setPushError(
+            res.reason === 'denied' ? 'Permiso denegado. Actívalo en la configuración del navegador.'
+            : res.reason === 'vapid-missing' ? 'Falta configurar VAPID_PUBLIC_KEY en el servidor.'
+            : res.reason === 'unsupported' ? 'Tu navegador no soporta notificaciones push.'
+            : 'No se pudo activar. Intenta de nuevo.'
+          )
+        }
+      }
+      setPushStatus(getPermissionStatus())
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const handleChangePassword = async () => {
     setPwError(null)
@@ -141,6 +179,12 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
           >
             <Mail size={14} /> Correo
           </button>
+          <button
+            onClick={() => setTab('notifications')}
+            style={{ ...tabButtonStyle, ...(tab === 'notifications' ? tabActiveStyle : {}) }}
+          >
+            <Bell size={14} /> Notificaciones
+          </button>
         </div>
 
         {/* Body */}
@@ -231,6 +275,62 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
               >
                 {emailLoading ? 'Enviando…' : 'Cambiar correo'}
               </button>
+            </>
+          )}
+
+          {tab === 'notifications' && (
+            <>
+              <div style={infoBoxStyle}>
+                Activa las notificaciones push para recibir avisos en tu celular
+                cuando recibas mensajes, comentarios o mensajes del Buzón — incluso
+                con AppleFamily cerrada.
+              </div>
+              <div style={{
+                padding: '16px 18px', borderRadius: '14px',
+                backgroundColor: pushStatus === 'granted' ? 'rgba(34,139,34,0.08)' : 'rgba(139,69,19,0.05)',
+                border: pushStatus === 'granted' ? '1px solid rgba(34,139,34,0.35)' : '1px solid rgba(139,69,19,0.15)',
+                display: 'flex', alignItems: 'center', gap: '14px',
+              }}>
+                <div style={{
+                  width: '42px', height: '42px', borderRadius: '50%',
+                  backgroundColor: pushStatus === 'granted' ? '#228B22' : '#8B4513',
+                  color: 'white',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {pushStatus === 'granted' ? <Bell size={20} /> : <BellOff size={20} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#2C1810' }}>
+                    {pushStatus === 'granted' ? 'Notificaciones activas'
+                     : pushStatus === 'denied' ? 'Notificaciones bloqueadas'
+                     : pushStatus === 'unsupported' ? 'Tu navegador no soporta push'
+                     : 'Notificaciones desactivadas'}
+                  </div>
+                  <div style={{ fontSize: '12px', opacity: 0.7, color: '#5D4037' }}>
+                    {pushStatus === 'granted' ? 'Recibes avisos al celular'
+                     : pushStatus === 'denied' ? 'Habilítalas desde configuración del navegador'
+                     : pushStatus === 'unsupported' ? 'Prueba en Chrome, Firefox o Safari 16+'
+                     : 'Actívalas para recibir mensajes en tiempo real'}
+                  </div>
+                </div>
+              </div>
+              {pushError && <div style={errorStyle}>{pushError}</div>}
+              {pushStatus !== 'unsupported' && pushStatus !== 'denied' && (
+                <button
+                  onClick={handleTogglePush}
+                  disabled={pushBusy}
+                  style={{
+                    ...primaryButtonStyle,
+                    backgroundColor: pushStatus === 'granted' ? '#8B4513' : '#228B22',
+                    opacity: pushBusy ? 0.6 : 1,
+                    cursor: pushBusy ? 'wait' : 'pointer',
+                  }}
+                >
+                  {pushBusy ? 'Procesando…'
+                   : pushStatus === 'granted' ? 'Desactivar notificaciones'
+                   : 'Activar notificaciones al celular'}
+                </button>
+              )}
             </>
           )}
         </div>
