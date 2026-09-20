@@ -19,6 +19,7 @@ import HomeDashboard from '@/components/HomeDashboard'
 import TermsModal from '@/components/TermsModal'
 import MobileBottomSheet from '@/components/MobileBottomSheet'
 import MobileBottomNav from '@/components/MobileBottomNav'
+import OnboardingModal from '@/components/OnboardingModal'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { Member, Relationship } from '@/lib/types'
@@ -103,9 +104,12 @@ export default function AppleTreeDashboard() {
       })
   }, [])
 
-  // THE MASTER TREE ID (DEMO)
+  // THE MASTER TREE ID (DEMO) — se muestra solo si el usuario aún no está logueado.
   const DEMO_TREE_ID = '00000000-0000-0000-0000-000000000001'
   const [currentTreeId, setCurrentTreeId] = useState<string>(DEMO_TREE_ID)
+  // Onboarding: usuario autenticado que aún NO tiene árbol propio ni pertenece
+  // a ninguno. Al mostrarlo bloqueamos la vista principal hasta que elija nombre.
+  const [needsOnboarding, setNeedsOnboarding] = useState(false)
 
   // ── Restaurar sesión: prioridad a Supabase Auth, luego al legacy ──
   useEffect(() => {
@@ -326,13 +330,21 @@ export default function AppleTreeDashboard() {
       console.warn('Could not auto-load invited tree:', err)
     }
 
-    // 4. Último recurso: lo que estuviera en localStorage.
+    // 4. Nada encontrado: usuario nuevo sin árbol y sin invitación pendiente.
+    //    Verificamos localStorage por si tenía uno de sesión previa; si no,
+    //    forzamos el onboarding para que cree su propio árbol.
     const saved = typeof window !== 'undefined'
       ? window.localStorage.getItem('apple_user_tree_id')
       : null
-    if (saved) setCurrentTreeId(saved)
-    setIsLoggedIn(true)
-    setTutorialStep(0)
+    if (saved && saved !== DEMO_TREE_ID) {
+      setCurrentTreeId(saved)
+      setIsLoggedIn(true)
+      setTutorialStep(0)
+      return
+    }
+    // Sin árbol propio → onboarding.
+    setNeedsOnboarding(true)
+    setIsLoggedIn(false)
   }, [processPendingInvite])
 
   const fetchFamilyData = React.useCallback(async () => {
@@ -697,15 +709,34 @@ export default function AppleTreeDashboard() {
     }
   }
 
+  // Onboarding: usuario autenticado pero sin árbol propio ni invitación.
+  // Muestra modal a pantalla completa hasta que cree su árbol.
+  if (needsOnboarding && session) {
+    return (
+      <OnboardingModal
+        defaultFirstName={(session.user.user_metadata?.full_name as string | undefined) || undefined}
+        onCreated={(treeId) => {
+          setCurrentTreeId(treeId)
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem('apple_user_tree_id', treeId)
+          }
+          setNeedsOnboarding(false)
+          setIsLoggedIn(true)
+          setTutorialStep(0)
+        }}
+      />
+    )
+  }
+
   if (!isLoggedIn) {
     return (
-      <div style={{ 
-        width: '100vw', 
-        height: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        background: 'radial-gradient(circle at center, #2D5016 0%, #1B2E1B 100%)', 
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'radial-gradient(circle at center, #2D5016 0%, #1B2E1B 100%)',
         position: 'relative',
         overflow: 'hidden'
       }}>
