@@ -112,8 +112,14 @@ export default function HoverPeek({
 
       <button
         onClick={(e) => {
+          console.log('[DEBUG] Botón ... clickeado para:', member.firstName, member.id)
           e.stopPropagation()
           onExpand()
+        }}
+        onPointerDown={(e) => {
+          // Fallback para móvil: algunos navegadores no disparan onClick si
+          // el elemento se desmonta demasiado rápido después del touch.
+          e.stopPropagation()
         }}
         title="Más opciones"
         style={{
