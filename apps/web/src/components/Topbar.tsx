@@ -479,11 +479,20 @@ export default function Topbar({
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(212,175,55,0.15)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <p style={{ margin: 0, fontSize: '13px', color: '#2C1810', lineHeight: '1.45', fontWeight: '700' }}>{n.text}</p>
+                      <p style={{ margin: 0, fontSize: '13px', color: '#2C1810', lineHeight: '1.45', fontWeight: n.isRead ? '500' : '700' }}>
+                        {n.title}
+                      </p>
+                      {n.body && (
+                        <p style={{ margin: 0, fontSize: '12px', color: '#5D4037', opacity: 0.85, lineHeight: '1.35' }}>
+                          {n.body}
+                        </p>
+                      )}
                       <span style={{ fontSize: '10px', color: '#8B4513', opacity: 0.65, fontWeight: '700' }}>
                         {n.time} · {
                           n.action === 'open_events' ? 'Ver Eventos →'
                           : n.action === 'open_chat' ? 'Abrir chat →'
+                          : n.action === 'open_event_thread' ? 'Ver comentarios →'
+                          : n.action === 'open_wall' ? 'Abrir Buzón →'
                           : 'Ver Historias →'
                         }
                       </span>

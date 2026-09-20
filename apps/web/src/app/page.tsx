@@ -396,8 +396,9 @@ export default function AppleTreeDashboard() {
     }
   }, [currentTreeId])
 
-  // Real notification system
-  const { notifications, unreadCount, markAllRead } = useNotifications(currentTreeId, treeData.members)
+  // Real notification system (persistente + realtime)
+  const { notifications, unreadCount, markAllRead, dismiss, dismissAll, markRead } =
+    useNotifications(currentTreeId, treeData.members)
 
   // Handle bell click navigation
   const handleNotificationClick = (
