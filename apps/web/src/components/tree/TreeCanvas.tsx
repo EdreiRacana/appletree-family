@@ -31,6 +31,7 @@ interface TreeCanvasProps {
   onEditMember: (member: Member) => void
   onAddStory: (member: Member) => void
   onOpenChat?: (member: Member) => void
+  onConnectMember?: (member: Member) => void
   bgOpacity: number
   // When the profile drawer (~450px on the right) is mounted, the minimap
   // and fit-to-view math treat that band as reserved so the tree stays
@@ -43,7 +44,7 @@ interface TreeCanvasProps {
 const SIDEBAR_INSET = 116
 const DRAWER_WIDTH = 340
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
   const isMobile = useIsMobile()
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   // Two-stage hover: hover shows the compact HoverPeek pill; clicking its
@@ -605,6 +606,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
           <AddMemberModal
             targetMember={addingToMember}
             relationships={relationships}
+            allMembers={members}
             onClose={() => { setAddingToMember(null) }}
             onSave={onRefresh}
           />
@@ -929,6 +931,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   }}
                   onEdit={(m) => { onEditMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
                   onAdd={(m) => { setAddingToMember(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
+                  onConnect={onConnectMember ? (m) => { onConnectMember(m); setExpandedMenuId(null); setHoveredMemberId(null) } : undefined}
                   onDelete={(m) => handleDeleteMember(m)}
                   onViewProfile={(m) => { onViewProfile(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
                   onAddStory={(m) => { onAddStory(m); setExpandedMenuId(null); setHoveredMemberId(null) }}
@@ -1152,6 +1155,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         <AddMemberModal
           targetMember={addingToMember}
           relationships={relationships}
+          allMembers={members}
           onClose={() => {
             setAddingToMember(null)
             setHoveredMemberId(null)

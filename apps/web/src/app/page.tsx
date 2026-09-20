@@ -9,6 +9,7 @@ import TreeCanvas from '@/components/tree/TreeCanvas'
 import MemberProfilePanel from '@/components/tree/MemberProfilePanel'
 import EditMemberModal from '@/components/tree/EditMemberModal'
 import InviteMemberModal from '@/components/tree/InviteMemberModal'
+import ConnectMemberModal from '@/components/tree/ConnectMemberModal'
 import ChatPanel from '@/components/chat/ChatPanel'
 import ChatsListPanel from '@/components/chat/ChatsListPanel'
 import AccountSettingsModal from '@/components/AccountSettingsModal'
@@ -40,6 +41,7 @@ export default function AppleTreeDashboard() {
   const [threadEvent, setThreadEvent] = useState<{ id: string; title: string; dateLabel: string } | null>(null)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
   const [invitingMember, setInvitingMember] = useState<Member | null>(null)
+  const [connectingMember, setConnectingMember] = useState<Member | null>(null)
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false)
   const [storyActor, setStoryActor] = useState<Member | null>(null)
   const [activeTab, setActiveTab] = useState<string | null>('My Tree')
@@ -1166,6 +1168,7 @@ export default function AppleTreeDashboard() {
               onEditMember={setEditingMember}
               onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); }}
               onOpenChat={(m) => setChattingWithMember(m)}
+              onConnectMember={(m) => setConnectingMember(m)}
               bgOpacity={bgOpacity}
               profilePanelOpen={!!selectedMember}
             />
@@ -1250,6 +1253,15 @@ export default function AppleTreeDashboard() {
             onClose={() => setInvitingMember(null)}
             onSend={handleSendInvite}
             onCreateLink={createInviteLink}
+          />
+        )}
+
+        {connectingMember && (
+          <ConnectMemberModal
+            sourceMember={connectingMember}
+            allMembers={treeData.members}
+            onClose={() => setConnectingMember(null)}
+            onSaved={fetchFamilyData}
           />
         )}
 

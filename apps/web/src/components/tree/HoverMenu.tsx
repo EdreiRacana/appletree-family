@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageCircle, Heart, Trophy, User, Shield, Share2, Edit2, UserPlus, Trash2, Minimize2, Maximize2 } from 'lucide-react'
+import { MessageCircle, Heart, Trophy, User, Edit2, UserPlus, Trash2, Minimize2, Maximize2, Link2 } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface HoverMenuProps {
@@ -8,6 +8,7 @@ interface HoverMenuProps {
   onClose: () => void
   onEdit: (member: Member) => void
   onAdd: (member: Member) => void
+  onConnect?: (member: Member) => void
   onDelete: (member: Member) => void
   onViewProfile: (member: Member) => void
   onAddStory: (member: Member) => void
@@ -26,13 +27,14 @@ const menuItems = [
   { id: 'chat',        icon: MessageCircle, label: (name: string) => `Chatear con ${name}`, isContact: true },
   { id: 'greeting',    icon: Heart,         label: () => 'Enviar Saludo', isContact: true },
   { id: 'add',         icon: UserPlus,      label: () => 'Añadir Familiar', isContact: false },
+  { id: 'connect',     icon: Link2,         label: () => 'Conectar con otro familiar', isContact: false },
   { id: 'edit',        icon: Edit2,         label: () => 'Editar Detalles', isContact: false },
   { id: 'delete',      icon: Trash2,        label: () => 'Eliminar Integrante', isContact: false, isCritical: true },
   { id: 'achievement', icon: Trophy,        label: () => 'Publicar Logro', isContact: false },
   { id: 'profile',     icon: User,          label: () => 'Ver Perfil', isContact: false },
 ]
 
-export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onMouseEnter, hasDescendants, isCollapsed, onToggleCollapse, fixedStyle }: HoverMenuProps) {
+export default function HoverMenu({ member, onClose, onEdit, onAdd, onConnect, onDelete, onViewProfile, onAddStory, onMouseEnter, hasDescendants, isCollapsed, onToggleCollapse, fixedStyle }: HoverMenuProps) {
   
   // LOGIC: Check if member is a minor (< 18 years old or is marked as baby)
   const isMinor = () => {
@@ -57,6 +59,8 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
       onEdit(member)
     } else if (actionId === 'add') {
       onAdd(member)
+    } else if (actionId === 'connect' && onConnect) {
+      onConnect(member)
     } else if (actionId === 'delete') {
       onDelete(member)
     } else if (actionId === 'profile') {
@@ -80,6 +84,17 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
   })
 
   return (
+    <>
+      {/* Overlay tapeable: en móvil no hay mouseLeave, así que el usuario
+          cierra el menú tocando fuera. En desktop no molesta: es transparente
+          y ni siquiera bloquea el hover porque tiene pointer-events por click. */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: 'transparent',
+        }}
+      />
     <div
       className="hover-menu"
       onMouseLeave={onClose}
@@ -118,5 +133,6 @@ export default function HoverMenu({ member, onClose, onEdit, onAdd, onDelete, on
         )
       })}
     </div>
+    </>
   )
 }

@@ -9,15 +9,18 @@ import { Member, Relationship } from '@/lib/types'
 interface AddMemberModalProps {
   targetMember: Member
   relationships: Relationship[]
+  allMembers?: Member[]     // Necesario para el paso 'link-children' al agregar cónyuge
   onClose: () => void
   onSave: () => void
 }
 
 type RelType = 'child' | 'parent' | 'spouse'
 
-export default function AddMemberModal({ targetMember, relationships, onClose, onSave }: AddMemberModalProps) {
-  const [step, setStep] = useState<'choose' | 'form'>('choose')
+export default function AddMemberModal({ targetMember, relationships, allMembers, onClose, onSave }: AddMemberModalProps) {
+  const [step, setStep] = useState<'choose' | 'form' | 'link-children'>('choose')
   const [relType, setRelType] = useState<RelType>('child')
+  const [createdMemberId, setCreatedMemberId] = useState<string | null>(null)
+  const [linkedChildIds, setLinkedChildIds] = useState<string[]>([])
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -128,6 +131,20 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
             member2_id: newMember.id,
             relationship: 'spouse'
           })
+      }
+
+      // Si es cónyuge y el target tiene hijos existentes, dar oportunidad de
+      // marcarlos como hijos del cónyuge nuevo antes de cerrar.
+      if (relType === 'spouse' && allMembers) {
+        const existingChildren = allMembers.filter(m =>
+          (m.parents || []).includes(targetMember.id) && m.id !== newMember.id
+        )
+        if (existingChildren.length > 0) {
+          setCreatedMemberId(newMember.id)
+          setStep('link-children')
+          setIsSaving(false)
+          return
+        }
       }
 
       // 5. Activity Logging
@@ -336,6 +353,104 @@ export default function AddMemberModal({ targetMember, relationships, onClose, o
             </div>
           </div>
         )}
+
+        {step === 'link-children' && createdMemberId && allMembers && (() => {
+          const existingChildren = allMembers.filter(m =>
+            (m.parents || []).includes(targetMember.id) && m.id !== createdMemberId
+          )
+          return (
+            <div style={formWrapperStyle}>
+              <div style={{
+                padding: '18px 20px', borderRadius: '14px',
+                backgroundColor: 'rgba(212,175,55,0.1)',
+                border: '1px solid rgba(212,175,55,0.3)',
+                marginBottom: '14px',
+              }}>
+                <p style={{ margin: 0, fontSize: '15px', lineHeight: 1.5, color: '#5D4037' }}>
+                  <strong>{formData.firstName}</strong> es la pareja de{' '}
+                  <strong>{targetMember.firstName}</strong>. ¿También es padre/madre de estos hijos?
+                </p>
+                <p style={{ margin: '6px 0 0', fontSize: '12px', opacity: 0.75, color: '#5D4037' }}>
+                  Marca los que apliquen. Los no marcados quedan solo como hijos de {targetMember.firstName}.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                {existingChildren.map(child => {
+                  const isLinked = linkedChildIds.includes(child.id)
+                  return (
+                    <button
+                      key={child.id}
+                      type="button"
+                      onClick={() => {
+                        setLinkedChildIds(prev =>
+                          isLinked ? prev.filter(id => id !== child.id) : [...prev, child.id]
+                        )
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '11px 14px', borderRadius: '12px',
+                        background: isLinked ? 'rgba(212,175,55,0.18)' : 'rgba(139,69,19,0.05)',
+                        border: isLinked ? '2px solid #D4AF37' : '2px solid transparent',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <img
+                        src={child.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(child.firstName)}`}
+                        alt={child.firstName}
+                        style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid #D4AF37', objectFit: 'cover' }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 700, color: '#5D4037' }}>
+                          {child.firstName} {child.lastName || ''}
+                        </div>
+                        {child.dateOfBirth && (
+                          <div style={{ fontSize: '11px', opacity: 0.6, color: '#5D4037' }}>
+                            {new Date(child.dateOfBirth).getFullYear()}
+                          </div>
+                        )}
+                      </div>
+                      {isLinked && <span style={{ color: '#D4AF37', fontSize: '18px', fontWeight: 700 }}>✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div style={footerStyle}>
+                <button
+                  onClick={() => { onSave(); onClose() }}
+                  style={secondaryButtonStyle}
+                >
+                  Saltar
+                </button>
+                <button
+                  onClick={async () => {
+                    setIsSaving(true)
+                    try {
+                      for (const childId of linkedChildIds) {
+                        const child = existingChildren.find(c => c.id === childId)
+                        if (!child) continue
+                        const newParents = Array.from(new Set([...(child.parents || []), createdMemberId]))
+                        await supabase.from('members').update({ parents: newParents }).eq('id', childId)
+                      }
+                      onSave()
+                      onClose()
+                    } catch (err) {
+                      console.error('Error linking children:', err)
+                      alert('No se pudieron vincular todos los hijos.')
+                      setIsSaving(false)
+                    }
+                  }}
+                  disabled={isSaving}
+                  style={primaryButtonStyle}
+                >
+                  {isSaving ? 'Guardando...' : (linkedChildIds.length === 0 ? 'Terminar' : `Vincular ${linkedChildIds.length} hijo${linkedChildIds.length === 1 ? '' : 's'}`)}
+                </button>
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       <style jsx>{`
