@@ -23,7 +23,6 @@ export async function listUserTrees(includeDemo = false): Promise<UserTree[]> {
     tree_id: string
     tree_name: string
     role: 'owner' | 'member'
-    member_count: number
     is_demo: boolean
   }>) || []
   return rows
@@ -32,7 +31,7 @@ export async function listUserTrees(includeDemo = false): Promise<UserTree[]> {
       treeId: r.tree_id,
       treeName: r.tree_name,
       role: r.role,
-      memberCount: r.member_count,
+      memberCount: 0,
       isDemo: r.is_demo,
     }))
 }
