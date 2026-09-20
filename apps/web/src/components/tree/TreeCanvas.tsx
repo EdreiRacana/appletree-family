@@ -883,7 +883,14 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                   else onViewProfile(member)
                   setHoveredMemberId(null)
                 }}
-                onExpand={() => setExpandedMenuId(member.id)}
+                onExpand={() => {
+                  // Cambio de flujo: en vez de abrir el HoverMenu intermedio
+                  // (que en algunos navegadores se cierra antes de ser útil),
+                  // abrimos directamente el panel de perfil, que ya tiene
+                  // Añadir, Editar, Conectar, Chatear, etc.
+                  onViewProfile(member)
+                  setHoveredMemberId(null)
+                }}
               />
               )
             })()}

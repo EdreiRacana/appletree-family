@@ -1217,6 +1217,7 @@ export default function AppleTreeDashboard() {
             setSelectedMember(null)
           }}
           onChat={(m) => { setChattingWithMember(m); setSelectedMember(null); }}
+          onConnect={(m) => { setConnectingMember(m); setSelectedMember(null); }}
         />
 
         {chattingWithMember && (
