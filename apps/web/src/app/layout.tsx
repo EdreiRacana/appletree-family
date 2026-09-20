@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://applefamilytree.com'),
   title: 'AppleFamily Tree',
   description: 'La red social familiar y árbol genealógico interactivo. Conecta generaciones, comparte logros y preserva memorias.',
   keywords: 'árbol genealógico, familia, red social familiar, genealogía interactiva',
@@ -11,7 +12,15 @@ export const metadata: Metadata = {
     title: 'AppleFamily Tree',
     description: 'Conecta tu familia a través de generaciones',
     type: 'website',
+    url: 'https://applefamilytree.com',
+    siteName: 'AppleFamily Tree',
     images: [{ url: '/assets/logo.png' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AppleFamily Tree',
+    description: 'Conecta tu familia a través de generaciones',
+    images: ['/assets/logo.png'],
   },
   appleWebApp: {
     capable: true,
