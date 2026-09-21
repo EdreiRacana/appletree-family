@@ -1,0 +1,15 @@
+# Headers de Netlify para archivos estaticos servidos desde /public.
+# El CDN puede saltarse los headers() de next.config.ts para estos archivos,
+# asi que fijamos aqui el Cache-Control del Service Worker.
+#
+# Netlify-CDN-Cache-Control controla el edge de Netlify (aparte del navegador).
+# Sin este header el edge cachea el sw.js con TTL ~1 ano por defecto.
+
+/sw.js
+  Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0
+  Netlify-CDN-Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Service-Worker-Allowed: /
+
+/manifest.json
+  Cache-Control: public, max-age=0, must-revalidate
+  Netlify-CDN-Cache-Control: public, max-age=0, must-revalidate

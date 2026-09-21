@@ -2,17 +2,26 @@
 -- Migration 011 — Trigger de push: al insertar notification, llama la Edge
 -- Function notify-push vía pg_net para enviar el push al celular del usuario.
 -- =============================================================================
--- Requisitos:
+-- ⚠️  APPROACH RECOMENDADO ACTUALMENTE:
+--     En vez de este trigger, usar Supabase Database Webhooks:
+--       Dashboard → Database → Webhooks → Create → Table 'notifications',
+--       Event Insert, Type Supabase Edge Functions, seleccionar 'notify-push'.
+--     Ventaja: no necesita ALTER DATABASE ni Vault; Supabase gestiona el auth.
+--
+--     Esta migration se conserva por compatibilidad, pero requiere ser
+--     superusuario para setear app.settings.* — cosa que Supabase no permite
+--     en proyectos gestionados.
+-- =============================================================================
+-- Requisitos (si usas este trigger en vez del webhook):
 --   1. Extension pg_net habilitada (Supabase la trae por defecto).
 --   2. Función Edge deployada como 'notify-push'.
 --   3. Secrets en la función:
 --       - VAPID_PUBLIC_KEY
 --       - VAPID_PRIVATE_KEY
 --       - VAPID_SUBJECT (opcional; default no-reply@applefamilytree.com)
---   4. Config en Postgres (una vez, desde SQL Editor):
---       SELECT set_config('app.settings.supabase_url', '<TU_SUPABASE_URL>', false);
---       SELECT set_config('app.settings.service_role_key', '<TU_SERVICE_ROLE_KEY>', false);
---     — o mejor: setear vía SUPABASE Dashboard → Database → Custom parameters.
+--   4. Config en Postgres (requiere superuser — NO funciona en Supabase Cloud):
+--       ALTER DATABASE postgres SET app.settings.supabase_url = '...';
+--       ALTER DATABASE postgres SET app.settings.service_role_key = '...';
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS pg_net;
@@ -48,13 +57,14 @@ BEGIN
     ),
     body := jsonb_build_object(
       'notification', jsonb_build_object(
-        'id',         NEW.id,
-        'user_id',    NEW.user_id,
-        'type',       NEW.type,
-        'title',      NEW.title,
-        'body',       NEW.body,
-        'action',     NEW.action,
-        'related_id', NEW.related_id
+        'id',           NEW.id,
+        'user_id',      NEW.user_id,
+        'type',         NEW.type,
+        'title',        NEW.title,
+        'body',         NEW.body,
+        'action',       NEW.action,
+        'related_id',   NEW.related_id,
+        'is_important', NEW.is_important
       )
     )
   );

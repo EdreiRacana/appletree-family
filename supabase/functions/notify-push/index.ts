@@ -32,7 +32,19 @@ interface NotificationRow {
   body: string | null
   action: string | null
   related_id: string | null
+  is_important?: boolean | null
 }
+
+// Todos los tipos donde queremos que la notif se quede visible hasta que el
+// usuario la descarte (requireInteraction en el SW).
+const IMPORTANT_TYPES = new Set([
+  'chat',
+  'event_comment',
+  'story_comment',
+  'wall',
+  'birthday',
+  'event',
+])
 
 function actionToUrl(action: string | null, relatedId: string | null): string {
   switch (action) {
@@ -53,9 +65,16 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'VAPID keys missing' }), { status: 500 })
   }
 
-  let body: { notification?: NotificationRow } = {}
-  try { body = await req.json() } catch { /* ignore */ }
-  const n = body.notification
+  // Acepta 2 formatos de invocacion:
+  //   1) Trigger custom (migration 011):  { notification: {...} }
+  //   2) Supabase Database Webhook:       { type: 'INSERT', table: 'notifications', record: {...} }
+  let raw: any = {}
+  try { raw = await req.json() } catch { /* ignore */ }
+
+  const n: NotificationRow | undefined =
+    raw?.notification
+    ?? (raw?.type === 'INSERT' && raw?.table === 'notifications' ? raw.record : undefined)
+
   if (!n?.id || !n.user_id) {
     return new Response(JSON.stringify({ error: 'invalid body' }), { status: 400 })
   }
@@ -82,13 +101,23 @@ serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, sent: 0 }), { status: 200 })
   }
 
+  const important = n.is_important === true || IMPORTANT_TYPES.has(n.type)
+
   const payload = JSON.stringify({
     title: n.title || 'AppleFamily Tree',
     body: n.body || '',
     url: actionToUrl(n.action, n.related_id),
     notificationId: n.id,
-    tag: `${n.type}-${n.related_id || n.id}`,
+    // Tag ÚNICO por notif → nunca reemplaza en silencio a otra pendiente.
+    // El SW ya usa renotify:true por si el server o el cliente reutilizan un tag.
+    tag: n.id,
+    important,
+    timestamp: Date.now(),
   })
+
+  // TTL alto → si el celular está offline, el push server (FCM/APNs/Mozilla)
+  // guarda la notif hasta 4 semanas y la entrega cuando el device vuelve.
+  const sendOpts = { TTL: 60 * 60 * 24 * 28, urgency: important ? 'high' : 'normal' }
 
   const results = await Promise.allSettled(
     subs.map(async (s: any) => {
@@ -96,6 +125,7 @@ serve(async (req) => {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
           payload,
+          sendOpts,
         )
         await admin.from('push_subscriptions').update({ last_used_at: new Date().toISOString() }).eq('id', s.id)
         return { id: s.id, ok: true }

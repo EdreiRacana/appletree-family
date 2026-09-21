@@ -12,3 +12,23 @@
 [build.environment]
   NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
+
+# El Service Worker DEBE servirse sin cache. Si el CDN de Netlify cachea el
+# sw.js viejo, las mejoras de push (requireInteraction, tag unico, renotify)
+# no llegan a los usuarios porque siguen con el SW anterior.
+#
+# Netlify-CDN-Cache-Control controla el edge de Netlify (independiente del
+# Cache-Control que va al navegador). Sin este header, el edge aplica su TTL
+# por defecto (~1 ano) y el sw.js viejo se queda pegado.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    Netlify-CDN-Cache-Control = "no-store, no-cache, must-revalidate, max-age=0"
+    Service-Worker-Allowed = "/"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Netlify-CDN-Cache-Control = "public, max-age=0, must-revalidate"

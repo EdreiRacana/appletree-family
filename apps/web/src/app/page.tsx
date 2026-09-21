@@ -79,10 +79,24 @@ export default function AppleTreeDashboard() {
   // Registro silencioso del Service Worker para push notifications.
   // No pide permisos aquí — solo lo prepara. El permiso se pide desde
   // AccountSettingsModal cuando el usuario activa el toggle.
+  // updateViaCache:'none' + reg.update() garantizan que se recoja una versión
+  // nueva del SW inmediatamente (si no, cambios como requireInteraction o el
+  // manejo de tags pueden quedar dormidos días).
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!('serviceWorker' in navigator)) return
-    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => { /* ignore */ })
+    ;(async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/',
+          updateViaCache: 'none',
+        })
+        try { await reg.update() } catch { /* ignore */ }
+        if (reg.waiting) {
+          try { reg.waiting.postMessage({ type: 'SKIP_WAITING' }) } catch { /* ignore */ }
+        }
+      } catch { /* ignore */ }
+    })()
   }, [])
 
 

@@ -32,7 +32,19 @@ export function getPermissionStatus(): 'granted' | 'denied' | 'default' | 'unsup
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!isPushSupported()) return null
   try {
-    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    // updateViaCache: 'none' evita que el navegador reuse la copia HTTP
+    // cacheada del sw.js. Combinado con los headers no-store de Next, cualquier
+    // cambio en el SW se recoge en el siguiente registro.
+    const reg = await navigator.serviceWorker.register('/sw.js', {
+      scope: '/',
+      updateViaCache: 'none',
+    })
+    // Fuerza la comprobación de una versión nueva. Si la hay, install → waiting.
+    try { await reg.update() } catch { /* ignore */ }
+    // Si hay un SW nuevo en espera, le pedimos que tome el control YA.
+    if (reg.waiting) {
+      try { reg.waiting.postMessage({ type: 'SKIP_WAITING' }) } catch { /* ignore */ }
+    }
     await navigator.serviceWorker.ready
     return reg
   } catch (err) {
