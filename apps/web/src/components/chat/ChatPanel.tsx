@@ -8,7 +8,7 @@
 // montado: cualquier mensaje nuevo del otro lado aparece sin refresh.
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { X, Send, Mail } from 'lucide-react'
+import { X, Send, Mail, ImagePlus } from 'lucide-react'
 import type { Member } from '@/lib/types'
 import {
   getOrCreateChat,
@@ -19,6 +19,7 @@ import {
   type ChatMessage,
 } from '@/lib/chatApi'
 import { supabase } from '@/lib/supabase'
+import { uploadImageToBucket } from '@/lib/imageUtils'
 import RichTextWithVideo from '@/components/media/RichTextWithVideo'
 
 interface ChatPanelProps {
@@ -37,7 +38,9 @@ export default function ChatPanel({ member, onClose, onInvite }: ChatPanelProps)
   const [error, setError] = useState<string | null>(null)
   const [myUserId, setMyUserId] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const hasAccount = !!member.userId
 
@@ -125,6 +128,42 @@ export default function ChatPanel({ member, onClose, onInvite }: ChatPanelProps)
       setSending(false)
     }
   }, [chatId, draft, sending, myUserId])
+
+  // Adjuntar imagen al chat: comprime + sube al bucket + envía mensaje con
+  // attachment. La imagen puede ir sola o acompañada del texto en draft.
+  const handleAttachImage = useCallback(async (file: File) => {
+    if (!chatId || uploadingImage) return
+    if (!file.type.startsWith('image/')) { alert('Selecciona un archivo de imagen.'); return }
+    setUploadingImage(true)
+    try {
+      const { url } = await uploadImageToBucket('chat-attachments', file, {
+        maxSize: 1200,
+        folder: chatId,
+      })
+      const optimistic: ChatMessage = {
+        id: `tmp-${Date.now()}`,
+        chatId,
+        senderId: myUserId || '',
+        content: draft.trim() || null as any,
+        attachmentUrl: url,
+        attachmentType: 'image',
+        status: 'sent',
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+      }
+      setMessages(prev => [...prev, optimistic])
+      const captionText = draft.trim()
+      setDraft('')
+      const saved = await sendMessage(chatId, captionText, { url, type: 'image' })
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? saved : m))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo enviar la imagen.')
+      setMessages(prev => prev.filter(m => !m.id.startsWith('tmp-')))
+    } finally {
+      setUploadingImage(false)
+    }
+  }, [chatId, draft, myUserId, uploadingImage])
 
   const fullName = `${member.firstName}${member.lastName ? ' ' + member.lastName : ''}`
 
@@ -242,7 +281,25 @@ export default function ChatPanel({ member, onClose, onInvite }: ChatPanelProps)
                 lineHeight: 1.4,
                 wordBreak: 'break-word',
               }}>
-                <RichTextWithVideo text={m.content || ''} size="small" textStyle={{ display: 'block' }} />
+                {m.attachmentUrl && m.attachmentType === 'image' && (
+                  <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginBottom: m.content ? '6px' : 0 }}>
+                    <img
+                      src={m.attachmentUrl}
+                      alt="Imagen adjunta"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '260px',
+                        borderRadius: '10px',
+                        display: 'block',
+                        cursor: 'zoom-in',
+                      }}
+                      loading="lazy"
+                    />
+                  </a>
+                )}
+                {m.content && (
+                  <RichTextWithVideo text={m.content || ''} size="small" textStyle={{ display: 'block' }} />
+                )}
                 <div style={{ fontSize: '10px', opacity: 0.55, marginTop: '4px', textAlign: 'right' }}>
                   {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
@@ -261,6 +318,35 @@ export default function ChatPanel({ member, onClose, onInvite }: ChatPanelProps)
           gap: '8px',
           alignItems: 'flex-end',
         }}>
+          {/* Botón adjuntar imagen */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) void handleAttachImage(file)
+              e.target.value = ''
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImage || sending}
+            title="Adjuntar imagen"
+            style={{
+              width: '38px', height: '38px', borderRadius: '50%',
+              backgroundColor: 'transparent',
+              color: 'var(--drawer-accent)',
+              border: '1px solid var(--drawer-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: uploadingImage ? 'wait' : 'pointer',
+              opacity: uploadingImage ? 0.5 : 1,
+              flexShrink: 0,
+            }}
+          >
+            <ImagePlus size={16} />
+          </button>
           <textarea
             value={draft}
             onChange={e => setDraft(e.target.value)}

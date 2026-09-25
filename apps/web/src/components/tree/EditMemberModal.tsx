@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { X, Save, User as UserIcon, Calendar, ImageIcon, MapPin, Briefcase, BookOpen, Star, Upload } from 'lucide-react'
-import { fileToDownscaledDataUrl } from '@/lib/imageUtils'
+import { uploadImageToBucket } from '@/lib/imageUtils'
 import { supabase } from '@/lib/supabase'
 import type { Member } from '@/lib/types'
 
@@ -42,11 +42,16 @@ export default function EditMemberModal({ member, onClose, onSave, mode = 'admin
     if (!file.type.startsWith('image/')) { alert('Selecciona un archivo de imagen.'); return }
     setUploadingPhoto(true)
     try {
-      const dataUrl = await fileToDownscaledDataUrl(file, 320, 0.72)
-      setFormData(prev => ({ ...prev, avatarUrl: dataUrl }))
+      // Sube al bucket 'avatars' (comprime automáticamente + calidad adaptativa).
+      // maxSize=400 es suficiente para el medallón de la manzana.
+      const { url } = await uploadImageToBucket('avatars', file, {
+        maxSize: 400,
+        folder: member.treeId,
+      })
+      setFormData(prev => ({ ...prev, avatarUrl: url }))
     } catch (err) {
       console.error('Error procesando imagen:', err)
-      alert('No se pudo procesar la imagen.')
+      alert(err instanceof Error ? err.message : 'No se pudo procesar la imagen.')
     } finally {
       setUploadingPhoto(false)
       e.target.value = ''

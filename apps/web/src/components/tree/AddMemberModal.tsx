@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { X, User as UserIcon, Calendar, ImageIcon, Baby, UserPlus, Heart, Upload } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { fileToDownscaledDataUrl } from '@/lib/imageUtils'
+import { uploadImageToBucket } from '@/lib/imageUtils'
 import { Member, Relationship } from '@/lib/types'
 
 interface AddMemberModalProps {
@@ -43,11 +43,14 @@ export default function AddMemberModal({ targetMember, relationships, allMembers
     if (!file.type.startsWith('image/')) { alert('Selecciona un archivo de imagen.'); return }
     setUploadingPhoto(true)
     try {
-      const dataUrl = await fileToDownscaledDataUrl(file, 320, 0.72)
-      setFormData(prev => ({ ...prev, avatarUrl: dataUrl }))
+      const { url } = await uploadImageToBucket('avatars', file, {
+        maxSize: 400,
+        folder: targetMember.treeId,
+      })
+      setFormData(prev => ({ ...prev, avatarUrl: url }))
     } catch (err) {
       console.error('Error procesando imagen:', err)
-      alert('No se pudo procesar la imagen.')
+      alert(err instanceof Error ? err.message : 'No se pudo procesar la imagen.')
     } finally {
       setUploadingPhoto(false)
       e.target.value = ''

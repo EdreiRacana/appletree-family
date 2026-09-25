@@ -93,9 +93,14 @@ export async function listMessages(chatId: string, limit = 100): Promise<ChatMes
   return (data || []).map(mapMessage)
 }
 
-export async function sendMessage(chatId: string, content: string): Promise<ChatMessage> {
+export async function sendMessage(
+  chatId: string,
+  content: string,
+  attachment?: { url: string; type: 'image' | 'video' | 'audio' | 'file' } | null,
+): Promise<ChatMessage> {
   const trimmed = content.trim()
-  if (!trimmed) throw new Error('Mensaje vacío.')
+  // Se permite mensaje sin texto SI hay attachment (foto sola, por ejemplo)
+  if (!trimmed && !attachment) throw new Error('Mensaje vacío.')
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No hay sesión activa.')
@@ -105,7 +110,9 @@ export async function sendMessage(chatId: string, content: string): Promise<Chat
     .insert({
       chat_id: chatId,
       sender_id: user.id,
-      content: trimmed,
+      content: trimmed || null,
+      attachment_url: attachment?.url ?? null,
+      attachment_type: attachment?.type ?? null,
     })
     .select('*')
     .single()
