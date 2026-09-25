@@ -188,8 +188,8 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
         </div>
 
         {/* Body */}
-        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {tab === 'password' ? (
+        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
+          {tab === 'password' && (
             <>
               <div>
                 <label style={labelStyle}>Contraseña actual</label>
@@ -241,7 +241,9 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
                 {pwLoading ? 'Actualizando…' : 'Cambiar contraseña'}
               </button>
             </>
-          ) : (
+          )}
+
+          {tab === 'email' && (
             <>
               <div style={infoBoxStyle}>
                 Tu correo actual: <strong>{currentEmail}</strong>
