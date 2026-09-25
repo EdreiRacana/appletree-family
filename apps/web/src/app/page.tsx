@@ -459,33 +459,35 @@ export default function AppleTreeDashboard() {
       }
     }
   }, [isLoggedIn, loginInputUser])
-  // Avatar del usuario logueado — cascada de fallbacks:
-  //   1. Manzana enlazada al auth.uid del usuario (m.user_id === session.user.id)
-  //   2. Manzana cuyo firstName contiene loginInputUser (heurística legacy)
-  //   3. avatar_url del user_metadata de Supabase Auth
-  //   4. DiceBear iniciales generadas del display name / email
+  // Avatar del usuario logueado — cascada estricta:
+  //   1. Manzana enlazada al auth.uid del usuario (m.user_id === session.user.id):
+  //      - Si tiene avatarUrl → usarla.
+  //      - Si NO tiene avatarUrl → generar iniciales de SU nombre, sin caer a
+  //        otro miembro (evita mostrar la cara de otra persona por bugs de
+  //        matching por substring).
+  //   2. Si no hay manzana enlazada → metadata de Supabase Auth.
+  //   3. Iniciales generadas del display name / email.
+  //
+  //  IMPORTANTE: no hay fallback por firstName.includes(name) — es peligroso
+  //  porque puede matchear la manzana equivocada y mostrar la foto de otra
+  //  persona en el topbar.
   const userProfileAvatar = React.useMemo(() => {
     if (!isLoggedIn) return null
-    // 1. Match por auth.uid — el vínculo REAL entre cuenta y manzana.
+    // 1. Match ESTRICTO por auth.uid.
     if (treeData.members.length > 0 && session?.user?.id) {
-      const uidMatch = treeData.members.find(
-        m => m.userId === session.user.id && m.avatarUrl
-      )
-      if (uidMatch?.avatarUrl) return uidMatch.avatarUrl
+      const uidMatch = treeData.members.find(m => m.userId === session.user.id)
+      if (uidMatch) {
+        if (uidMatch.avatarUrl) return uidMatch.avatarUrl
+        // Manzana enlazada pero sin foto → iniciales de SU nombre real
+        const seed = `${uidMatch.firstName || ''} ${uidMatch.lastName || ''}`.trim() || 'user'
+        return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=1E2A22&textColor=D4AF37`
+      }
     }
-    // 2. Fallback por nombre — para árboles legacy sin user_id enlazado.
-    if (treeData.members.length > 0 && loginInputUser) {
-      const name = loginInputUser.toLowerCase()
-      const match = treeData.members.find(
-        m => m.avatarUrl && m.firstName.toLowerCase().includes(name)
-      )
-      if (match?.avatarUrl) return match.avatarUrl
-    }
-    // 3. Metadata de Supabase Auth
+    // 2. Metadata de Supabase Auth (solo si no hay manzana enlazada)
     const metaAvatar = (session?.user?.user_metadata as { avatar_url?: string; picture?: string } | undefined)
     if (metaAvatar?.avatar_url) return metaAvatar.avatar_url
     if (metaAvatar?.picture) return metaAvatar.picture
-    // 4. Iniciales generadas
+    // 3. Iniciales generadas del displayName / email
     const seed = loginInputUser || session?.user?.email?.split('@')[0] || 'user'
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=1E2A22&textColor=D4AF37`
   }, [isLoggedIn, loginInputUser, treeData.members, session])
