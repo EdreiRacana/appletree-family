@@ -52,14 +52,14 @@ CREATE POLICY "memberships_read_own_tree" ON public.tree_memberships FOR SELECT 
 -- 3. BACKFILL: crear una fila 'owner' por cada tree existente ----------------
 
 INSERT INTO public.tree_memberships (tree_id, user_id, role, granted_by, granted_at)
-SELECT t.id, t.owner_id, 'owner', t.owner_id, t.created_at
+SELECT t.id, t.owner_id, 'owner'::public.tree_role, t.owner_id, t.created_at
 FROM public.trees t
 WHERE t.owner_id IS NOT NULL
 ON CONFLICT (tree_id, user_id) DO NOTHING;
 
 -- Backfill 'member' para todos los que ya tienen manzana enlazada
 INSERT INTO public.tree_memberships (tree_id, user_id, role, granted_by, granted_at)
-SELECT DISTINCT m.tree_id, m.user_id, 'member', NULL, NOW()
+SELECT DISTINCT m.tree_id, m.user_id, 'member'::public.tree_role, NULL, NOW()
 FROM public.members m
 WHERE m.user_id IS NOT NULL
 ON CONFLICT (tree_id, user_id) DO NOTHING;
@@ -173,9 +173,9 @@ BEGIN
   END IF;
 
   INSERT INTO public.tree_memberships (tree_id, user_id, role, granted_by, granted_at)
-  VALUES (p_tree_id, p_user_id, 'admin', auth.uid(), NOW())
+  VALUES (p_tree_id, p_user_id, 'admin'::public.tree_role, auth.uid(), NOW())
   ON CONFLICT (tree_id, user_id) DO UPDATE SET
-    role = 'admin', granted_by = EXCLUDED.granted_by, granted_at = NOW();
+    role = 'admin'::public.tree_role, granted_by = EXCLUDED.granted_by, granted_at = NOW();
 END;
 $$;
 
@@ -205,7 +205,7 @@ BEGIN
   END IF;
 
   UPDATE public.tree_memberships
-  SET role = 'member', granted_by = auth.uid(), granted_at = NOW()
+  SET role = 'member'::public.tree_role, granted_by = auth.uid(), granted_at = NOW()
   WHERE tree_id = p_tree_id AND user_id = p_user_id AND role = 'admin';
 END;
 $$;
@@ -254,8 +254,8 @@ BEGIN
   END IF;
 
   -- 3. Transferir ownership
-  UPDATE public.tree_memberships SET role = 'admin' WHERE tree_id = p_tree_id AND user_id = v_current_owner;
-  UPDATE public.tree_memberships SET role = 'owner' WHERE tree_id = p_tree_id AND user_id = auth.uid();
+  UPDATE public.tree_memberships SET role = 'admin'::public.tree_role WHERE tree_id = p_tree_id AND user_id = v_current_owner;
+  UPDATE public.tree_memberships SET role = 'owner'::public.tree_role WHERE tree_id = p_tree_id AND user_id = auth.uid();
   UPDATE public.trees SET owner_id = auth.uid() WHERE id = p_tree_id;
 END;
 $$;
