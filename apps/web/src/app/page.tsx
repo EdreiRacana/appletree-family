@@ -25,6 +25,7 @@ import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { Member, Relationship } from '@/lib/types'
 import { useNotifications } from '@/lib/useNotifications'
+import { useTreeRole, touchTreeActivity } from '@/lib/useTreeRole'
 
 // Build trigger: v4.1-professional-invites
 
@@ -422,6 +423,17 @@ export default function AppleTreeDashboard() {
   // Real notification system (persistente + realtime)
   const { notifications, unreadCount, markAllRead, dismiss, dismissAll, markRead } =
     useNotifications(currentTreeId, treeData.members)
+
+  // Rol del usuario en el árbol actual (owner | admin | member | null).
+  // Fuente de verdad para condicionar UI de edición y panel de admins.
+  const { isAdmin, isOwner } = useTreeRole(currentTreeId)
+
+  // Cada sesión activa marca last_active_at en tree_memberships. Alimenta el
+  // mecanismo de sucesión: si el owner no aparece en 30 días, un admin puede
+  // reclamar ownership vía claim_ownership().
+  useEffect(() => {
+    if (session?.user) { void touchTreeActivity() }
+  }, [session?.user?.id])
 
   // Handle bell click navigation
   const handleNotificationClick = (
