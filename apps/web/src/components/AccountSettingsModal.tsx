@@ -10,7 +10,7 @@
 // para llamar updateUser, y ya la tenemos porque el usuario está logueado.
 
 import React, { useState, useEffect } from 'react'
-import { X, Lock, Mail, Check, Eye, EyeOff, Bell, BellOff } from 'lucide-react'
+import { X, Lock, Mail, Check, Eye, EyeOff, Bell, BellOff, Shield } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import {
   isPushSupported,
@@ -18,15 +18,23 @@ import {
   subscribeToPush,
   unsubscribeFromPush,
 } from '@/lib/pushClient'
+import AdminsPanel from '@/components/AdminsPanel'
+import type { Member } from '@/lib/types'
 
 interface AccountSettingsModalProps {
   currentEmail: string
   onClose: () => void
+  // Contexto opcional para mostrar la pestaña "Administradores". Si no se
+  // pasan estos props, esa pestaña no se muestra.
+  treeId?: string | null
+  isAdmin?: boolean
+  isOwner?: boolean
+  members?: Member[]
 }
 
-type Tab = 'password' | 'email' | 'notifications'
+type Tab = 'password' | 'email' | 'notifications' | 'admins'
 
-export default function AccountSettingsModal({ currentEmail, onClose }: AccountSettingsModalProps) {
+export default function AccountSettingsModal({ currentEmail, onClose, treeId, isAdmin, isOwner, members }: AccountSettingsModalProps) {
   const [tab, setTab] = useState<Tab>('password')
 
   // Password state
@@ -185,6 +193,14 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
           >
             <Bell size={14} /> Notificaciones
           </button>
+          {isAdmin && treeId && (
+            <button
+              onClick={() => setTab('admins')}
+              style={{ ...tabButtonStyle, ...(tab === 'admins' ? tabActiveStyle : {}) }}
+            >
+              <Shield size={14} /> Admins
+            </button>
+          )}
         </div>
 
         {/* Body */}
@@ -334,6 +350,14 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
                 </button>
               )}
             </>
+          )}
+
+          {tab === 'admins' && treeId && (
+            <AdminsPanel
+              treeId={treeId}
+              isOwner={!!isOwner}
+              members={members ?? []}
+            />
           )}
         </div>
       </div>

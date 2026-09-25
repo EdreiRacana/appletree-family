@@ -10,9 +10,14 @@ interface EditMemberModalProps {
   member: Member
   onClose: () => void
   onSave: () => void
+  // 'admin' → owner/admin del árbol: edita cualquier miembro y cualquier campo.
+  // 'self'  → miembro no-admin editando SU propia manzana: solo campos
+  //          personales, guarda vía RPC update_my_member_profile.
+  mode?: 'admin' | 'self'
 }
 
-export default function EditMemberModal({ member, onClose, onSave }: EditMemberModalProps) {
+export default function EditMemberModal({ member, onClose, onSave, mode = 'admin' }: EditMemberModalProps) {
+  const isSelf = mode === 'self'
   const [formData, setFormData] = useState({
     firstName: member.firstName,
     lastName: member.lastName,
@@ -84,37 +89,53 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
     setIsSaving(true)
     console.log('Tentando guardar cambios para:', member.id);
     try {
-      // Re-activamos todos los campos personales ahora que las columnas existen en la DB
-      const updateData = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        date_of_birth: formData.dateOfBirth || null,
-        date_of_death: formData.dateOfDeath || null,
-        avatar_url: formData.avatarUrl || null,
-        gender: formData.gender,
-        apple_type: formData.appleType,
-        biography: formData.biography || null,
-        occupation: formData.occupation || null,
-        birth_place: formData.birthPlace || null,
-        nickname: formData.nickname || null,
-        maiden_name: formData.maidenName || null,
-        parents: formData.parents
-      }
+      if (isSelf) {
+        // Auto-edición: solo campos personales, vía RPC.
+        // El RPC valida que soy dueño de la manzana y no estoy fallecido.
+        const { error: rpcError } = await supabase.rpc('update_my_member_profile', {
+          p_nickname: formData.nickname || null,
+          p_biography: formData.biography || null,
+          p_occupation: formData.occupation || null,
+          p_birth_place: formData.birthPlace || null,
+          p_avatar_url: formData.avatarUrl || null,
+        })
+        if (rpcError) {
+          console.error('Error autoedit:', rpcError)
+          throw new Error(rpcError.message || 'No se pudo actualizar tu perfil.')
+        }
+      } else {
+        // Edición admin: todos los campos.
+        const updateData = {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          date_of_birth: formData.dateOfBirth || null,
+          date_of_death: formData.dateOfDeath || null,
+          avatar_url: formData.avatarUrl || null,
+          gender: formData.gender,
+          apple_type: formData.appleType,
+          biography: formData.biography || null,
+          occupation: formData.occupation || null,
+          birth_place: formData.birthPlace || null,
+          nickname: formData.nickname || null,
+          maiden_name: formData.maidenName || null,
+          parents: formData.parents
+        }
 
-      // .select() detecta bloqueos silenciosos de RLS (0 filas actualizadas).
-      const { data: updated, error } = await supabase
-        .from('members')
-        .update(updateData)
-        .eq('id', member.id)
-        .select('id')
+        // .select() detecta bloqueos silenciosos de RLS (0 filas actualizadas).
+        const { data: updated, error } = await supabase
+          .from('members')
+          .update(updateData)
+          .eq('id', member.id)
+          .select('id')
 
-      if (error) {
-        console.error('Error detallado de Supabase:', error.message, error.details, error.hint);
-        throw new Error(error.message);
-      }
+        if (error) {
+          console.error('Error detallado de Supabase:', error.message, error.details, error.hint);
+          throw new Error(error.message);
+        }
 
-      if (!updated || updated.length === 0) {
-        throw new Error('El servidor no actualizó ningún registro. Puede ser un bloqueo de RLS o la sesión expiró — cierra sesión y vuelve a entrar.')
+        if (!updated || updated.length === 0) {
+          throw new Error('El servidor no actualizó ningún registro. Puede ser un bloqueo de RLS o la sesión expiró — cierra sesión y vuelve a entrar.')
+        }
       }
 
       try {
@@ -166,14 +187,21 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
         animation: 'modalFadeIn 0.3s ease-out'
       }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isSelf ? '8px' : '24px' }}>
           <h2 style={{ margin: 0, fontFamily: 'serif', fontSize: '24px', color: '#8B4513' }}>
-            Editar Familiar
+            {isSelf ? 'Editar mi perfil' : 'Editar Familiar'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B4513' }}>
             <X size={24} />
           </button>
         </div>
+        {isSelf && (
+          <p style={{ margin: '0 0 20px', fontSize: '12px', color: '#8B4513', opacity: 0.75 }}>
+            Puedes actualizar tu foto, apodo, biografía, ocupación y lugar de
+            nacimiento. Para cambiar tu nombre, fechas o relaciones, contacta al
+            fundador del árbol.
+          </p>
+        )}
 
         {/* Form Body */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -236,47 +264,51 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={labelStyle}><UserIcon size={14} /> NOMBRE</label>
-              <input 
-                type="text" 
-                value={formData.firstName}
-                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                style={inputStyle} 
-              />
+          {!isSelf && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={labelStyle}><UserIcon size={14} /> NOMBRE</label>
+                <input
+                  type="text"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>APELLIDOS</label>
+                <input
+                  type="text"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                  style={inputStyle}
+                />
+              </div>
             </div>
-            <div>
-              <label style={labelStyle}>APELLIDOS</label>
-              <input 
-                type="text" 
-                value={formData.lastName}
-                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                style={inputStyle} 
-              />
-            </div>
-          </div>
+          )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={labelStyle}><Calendar size={14} /> FECHA DE NACIMIENTO</label>
-              <input 
-                type="date" 
-                value={formData.dateOfBirth}
-                onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-                style={inputStyle} 
-              />
+          {!isSelf && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <label style={labelStyle}><Calendar size={14} /> FECHA DE NACIMIENTO</label>
+                <input
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}><Calendar size={14} /> FECHA DE FALLECIMIENTO</label>
+                <input
+                  type="date"
+                  value={formData.dateOfDeath}
+                  onChange={(e) => setFormData({...formData, dateOfDeath: e.target.value})}
+                  style={inputStyle}
+                />
+              </div>
             </div>
-            <div>
-              <label style={labelStyle}><Calendar size={14} /> FECHA DE FALLECIMIENTO</label>
-              <input 
-                type="date" 
-                value={formData.dateOfDeath}
-                onChange={(e) => setFormData({...formData, dateOfDeath: e.target.value})}
-                style={inputStyle} 
-              />
-            </div>
-          </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
@@ -324,37 +356,40 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(242,210,65,0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #F2D241' }}>
-            <div>
-              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#8B4513', display: 'block' }}>MODO BEBÉ (PRIVACIDAD)</span>
-              <span style={{ fontSize: '11px', opacity: 0.6 }}>Oculta la foto real y usa un icono.</span>
+          {!isSelf && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(242,210,65,0.1)', padding: '12px 16px', borderRadius: '12px', border: '1px dashed #F2D241' }}>
+              <div>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#8B4513', display: 'block' }}>MODO BEBÉ (PRIVACIDAD)</span>
+                <span style={{ fontSize: '11px', opacity: 0.6 }}>Oculta la foto real y usa un icono.</span>
+              </div>
+              <button
+                onClick={() => setFormData({...formData, isBaby: !formData.isBaby})}
+                style={{
+                  width: '44px',
+                  height: '24px',
+                  borderRadius: '12px',
+                  backgroundColor: formData.isBaby ? '#8B4513' : '#D1D5DB',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  border: 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  backgroundColor: '#FFF',
+                  position: 'absolute',
+                  top: '3px',
+                  left: formData.isBaby ? '23px' : '3px',
+                  transition: 'all 0.2s ease'
+                }} />
+              </button>
             </div>
-            <button
-              onClick={() => setFormData({...formData, isBaby: !formData.isBaby})}
-              style={{
-                width: '44px',
-                height: '24px',
-                borderRadius: '12px',
-                backgroundColor: formData.isBaby ? '#8B4513' : '#D1D5DB',
-                position: 'relative',
-                cursor: 'pointer',
-                border: 'none',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <div style={{
-                width: '18px',
-                height: '18px',
-                borderRadius: '50%',
-                backgroundColor: '#FFF',
-                position: 'absolute',
-                top: '3px',
-                left: formData.isBaby ? '23px' : '3px',
-                transition: 'all 0.2s ease'
-              }} />
-            </button>
-          </div>
+          )}
 
+          {!isSelf && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}>GÉNERO</label>
@@ -393,8 +428,10 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
               </div>
             </div>
           </div>
+          )}
 
-          {/* PARENT MANAGEMENT */}
+          {/* PARENT MANAGEMENT — solo admin */}
+          {!isSelf && (
           <div style={{ backgroundColor: 'rgba(139,69,19,0.05)', padding: '16px', borderRadius: '16px', border: '1px dashed rgba(139,69,19,0.2)' }}>
             <label style={{ ...labelStyle, color: '#B22222' }}>PADRES REGISTRADOS</label>
             <p style={{ fontSize: '11px', opacity: 0.6, marginTop: '-4px', marginBottom: '12px' }}>
@@ -439,6 +476,7 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
               </div>
             )}
           </div>
+          )}
 
         </div>
 
@@ -483,7 +521,8 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
           </button>
         </div>
 
-        {/* DELETE ACTION */}
+        {/* DELETE ACTION — solo admins pueden eliminar */}
+        {!isSelf && (
         <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px dashed rgba(139,69,19,0.1)', textAlign: 'center' }}>
           <button
             onClick={async () => {
@@ -517,6 +556,7 @@ export default function EditMemberModal({ member, onClose, onSave }: EditMemberM
             ELIMINAR MIEMBRO DE LA FAMILIA
           </button>
         </div>
+        )}
       </div>
 
       <style jsx>{`

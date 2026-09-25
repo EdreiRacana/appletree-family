@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import Topbar from '@/components/Topbar'
 import Sidebar from '@/components/Sidebar'
 import FeedPanel from '@/components/FeedPanel'
@@ -434,6 +434,27 @@ export default function AppleTreeDashboard() {
   useEffect(() => {
     if (session?.user) { void touchTreeActivity() }
   }, [session?.user?.id])
+
+  // Helper: ¿puede este usuario editar esta manzana?
+  //   - Owner/Admin: sí, siempre.
+  //   - Miembro vivo con manzana enlazada: sí, solo su propia manzana.
+  //   - Cualquier otro caso: no.
+  const canEditMember = useCallback((m: Member): boolean => {
+    if (isAdmin) return true
+    if (!session?.user?.id) return false
+    return m.userId === session.user.id && !m.dateOfDeath
+  }, [isAdmin, session?.user?.id])
+
+  // Interceptor de setEditingMember: si no tiene permiso, muestra aviso y no
+  // abre el modal. Los componentes hijos siguen llamando setEditingMember pero
+  // el gatekeeping vive aquí (fuente única de verdad).
+  const handleEditMember = useCallback((m: Member) => {
+    if (!canEditMember(m)) {
+      alert('Solo el fundador o los administradores pueden editar los datos de otros miembros. Puedes editar tu propia manzana desde tu perfil.')
+      return
+    }
+    setEditingMember(m)
+  }, [canEditMember])
 
   // Handle bell click navigation
   const handleNotificationClick = (
@@ -1203,7 +1224,7 @@ export default function AppleTreeDashboard() {
                   setSelectedMember(m)
                 }
               }}
-              onEditMember={setEditingMember}
+              onEditMember={handleEditMember}
               onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); }}
               onOpenChat={(m) => setChattingWithMember(m)}
               onConnectMember={(m) => setConnectingMember(m)}
@@ -1243,7 +1264,7 @@ export default function AppleTreeDashboard() {
         <MemberProfilePanel
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
-          onEdit={(m) => { setEditingMember(m); setSelectedMember(null); }}
+          onEdit={(m) => { handleEditMember(m); setSelectedMember(null); }}
           onInvite={(m) => { setInvitingMember(m); setSelectedMember(null); }}
           onAddRelative={(m) => {
             window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m }))
@@ -1270,6 +1291,10 @@ export default function AppleTreeDashboard() {
           <AccountSettingsModal
             currentEmail={session.user.email}
             onClose={() => setIsAccountSettingsOpen(false)}
+            treeId={currentTreeId}
+            isAdmin={isAdmin}
+            isOwner={isOwner}
+            members={treeData.members}
           />
         )}
 
@@ -1284,7 +1309,22 @@ export default function AppleTreeDashboard() {
           />
         )}
 
-        {editingMember && <EditMemberModal member={editingMember} onClose={() => setEditingMember(null)} onSave={fetchFamilyData} />}
+        {editingMember && (
+          <EditMemberModal
+            member={editingMember}
+            onClose={() => setEditingMember(null)}
+            onSave={fetchFamilyData}
+            // 'admin' → owner/admin edita todo. 'self' → miembro no-admin edita
+            // solo su propia manzana con campos personales (via RPC).
+            mode={
+              isAdmin
+                ? 'admin'
+                : (editingMember.userId === session?.user?.id && !editingMember.dateOfDeath)
+                  ? 'self'
+                  : 'admin'
+            }
+          />
+        )}
         
         {invitingMember && (
           <InviteMemberModal
@@ -1337,7 +1377,7 @@ export default function AppleTreeDashboard() {
         member={mobileSheetMember}
         focusMember={mobileSheetMember}
         onClose={() => setMobileSheetMember(null)}
-        onEdit={(m) => { setEditingMember(m); setMobileSheetMember(null); }}
+        onEdit={(m) => { handleEditMember(m); setMobileSheetMember(null); }}
         onAdd={(m) => { window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m })); setMobileSheetMember(null); }}
         onDelete={async (m) => {
           if (!window.confirm(`¿Eliminar a ${m.firstName} ${m.lastName}? Esta acción no se puede deshacer.`)) return
