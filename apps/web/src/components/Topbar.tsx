@@ -356,16 +356,16 @@ export default function Topbar({
         </button>
         <ThemeToggle />
         <div style={{ position: 'relative' }}>
-          <button 
-            className="topbar-btn" 
+          <button
+            className="topbar-btn topbar-btn-mobile"
             title="Perfil de Usuario"
             onClick={() => setShowUserMenu(v => !v)}
-            style={{ 
-              width: '38px', height: '38px', 
-              backgroundColor: showUserMenu ? 'rgba(212,175,55,0.22)' : 'rgba(232,218,183,0.08)', 
-              borderRadius: '10px', 
+            style={{
+              width: '38px', height: '38px',
+              backgroundColor: showUserMenu ? 'rgba(212,175,55,0.22)' : 'rgba(232,218,183,0.08)',
+              borderRadius: '10px',
               border: '1px solid rgba(212,175,55,0.18)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
               overflow: 'hidden',
             }}
@@ -414,8 +414,8 @@ export default function Topbar({
           )}
         </div>
         <div style={{ position: 'relative' }}>
-          <button 
-            className="topbar-btn"
+          <button
+            className="topbar-btn topbar-btn-mobile"
             onClick={() => {
               setShowNotifications(!showNotifications)
               if (notificationCount > 0) onClearNotifications?.()

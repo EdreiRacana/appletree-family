@@ -622,9 +622,12 @@ html, body {
     padding: 0 14px !important;
   }
 
-  /* Hide non-essential topbar elements on mobile */
+  /* Hide non-essential topbar elements on mobile.
+     `topbar-btn-mobile` exceptua los botones que SI deben verse en el celular
+     (avatar y campana de notificaciones) para que el usuario pueda entrar a
+     Configuracion de cuenta y ver notifs recibidas. */
   .topbar-container .mobile-hide,
-  .topbar-container .topbar-btn {
+  .topbar-container .topbar-btn:not(.topbar-btn-mobile) {
     display: none !important;
   }
 
@@ -641,6 +644,23 @@ html, body {
   .topbar-container button[style] {
     padding: 5px 10px !important;
     font-size: 9px !important;
+  }
+
+  /* Los botones esenciales (avatar/campana) mantienen tamano usable con el dedo */
+  .topbar-container .topbar-btn-mobile {
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    font-size: inherit !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Asegura que el contenedor derecho no colapse los botones */
+  .topbar-container > div:last-child {
+    gap: 10px !important;
   }
 }
 
