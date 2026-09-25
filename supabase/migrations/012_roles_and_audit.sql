@@ -59,7 +59,7 @@ ON CONFLICT (tree_id, user_id) DO NOTHING;
 
 -- Backfill 'member' para todos los que ya tienen manzana enlazada
 INSERT INTO public.tree_memberships (tree_id, user_id, role, granted_by, granted_at)
-SELECT DISTINCT m.tree_id, m.user_id, 'member'::public.tree_role, NULL, NOW()
+SELECT DISTINCT m.tree_id, m.user_id, 'member'::public.tree_role, NULL::UUID, NOW()
 FROM public.members m
 WHERE m.user_id IS NOT NULL
 ON CONFLICT (tree_id, user_id) DO NOTHING;
