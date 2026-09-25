@@ -1347,6 +1347,14 @@ export default function AppleTreeDashboard() {
       <MobileBottomNav
         activeTab={mobileActiveTab}
         onTabChange={(tab) => {
+          // 'Profile' abre el modal de Configuracion de Cuenta (contrasena,
+          // correo, notificaciones). Es la ruta principal en movil para
+          // llegar a esas opciones ya que el avatar del topbar tiene poco
+          // espacio ahi.
+          if (tab === 'Profile') {
+            if (session?.user?.email) setIsAccountSettingsOpen(true)
+            return
+          }
           setMobileActiveTab(tab)
           if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums' || tab === 'Chats' || tab === 'Buzón' || tab === 'Events') {
             setActiveTab(tab)

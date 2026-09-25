@@ -623,11 +623,23 @@ html, body {
   }
 
   /* Hide non-essential topbar elements on mobile.
-     `topbar-btn-mobile` exceptua los botones que SI deben verse en el celular
-     (avatar y campana de notificaciones) para que el usuario pueda entrar a
-     Configuracion de cuenta y ver notifs recibidas. */
+     El bottom nav movil ya cubre navegacion y perfil, asi que el topbar
+     solo necesita: logo/titulo (izquierda) + campana de notifs (derecha).
+     El resto (buscador, +, tutorial, terminos, theme, toggle rama, boton
+     "Empezar Mi Arbol") se esconden porque roban espacio o duplican
+     funciones del bottom nav / configuracion. */
   .topbar-container .mobile-hide,
   .topbar-container .topbar-btn:not(.topbar-btn-mobile) {
+    display: none !important;
+  }
+
+  /* Oculta el div central de navegacion (toggle rama + buscador) y el boton
+     "Empezar Mi Arbol" — no caben en el topbar movil y ya se acceden desde
+     otras partes de la UI. */
+  .topbar-container > div:nth-child(2) {
+    display: none !important;
+  }
+  .topbar-container > div:last-child > button:first-child:not(.topbar-btn) {
     display: none !important;
   }
 
@@ -637,13 +649,7 @@ html, body {
   }
 
   .topbar-container .brand-title {
-    font-size: 12px !important;
-  }
-
-  /* Make filter toggle smaller */
-  .topbar-container button[style] {
-    padding: 5px 10px !important;
-    font-size: 9px !important;
+    font-size: 14px !important;
   }
 
   /* Los botones esenciales (avatar/campana) mantienen tamano usable con el dedo */
@@ -658,7 +664,6 @@ html, body {
     flex-shrink: 0 !important;
   }
 
-  /* Asegura que el contenedor derecho no colapse los botones */
   .topbar-container > div:last-child {
     gap: 10px !important;
   }
