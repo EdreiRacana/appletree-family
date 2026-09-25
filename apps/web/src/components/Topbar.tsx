@@ -398,7 +398,7 @@ export default function Topbar({
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(44,24,16,0.06)')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <KeyRound size={16} /> Cambiar contraseña o correo
+                    <KeyRound size={16} /> Configuración de cuenta
                   </button>
                 )}
                 <button

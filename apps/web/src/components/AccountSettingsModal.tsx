@@ -158,7 +158,7 @@ export default function AccountSettingsModal({ currentEmail, onClose }: AccountS
         <div style={headerStyle}>
           <div>
             <h2 style={titleStyle}>Configuración de Cuenta</h2>
-            <p style={subtitleStyle}>Cambia tus credenciales de acceso.</p>
+            <p style={subtitleStyle}>Cambia contraseña, correo o notificaciones.</p>
           </div>
           <button onClick={onClose} style={closeButtonStyle} title="Cerrar">
             <X size={22} />
