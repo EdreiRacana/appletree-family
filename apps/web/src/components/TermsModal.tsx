@@ -1,155 +1,409 @@
 'use client'
 
-import React from 'react'
-import { X, Shield, Check } from 'lucide-react'
+// AppleFamily Tree — Modal legal con 3 pestañas: Términos, Privacidad, Cookies.
+//
+// Contenido ajustado a:
+//   - LFPDPPP (México) → derechos ARCO con canal de contacto efectivo
+//   - GDPR (UE)        → bases legales, derechos del titular, DPO opcional
+//   - COPPA / LFPDPPP → tratamiento especial de menores
+//
+// Correo legal: legal@applefamilytree.com (crear forwarding gratis en GoDaddy
+// hacia tu correo real). No usar no-reply porque invalida el canal ARCO.
+
+import React, { useState } from 'react'
+import { X, Shield, FileText, Cookie, Mail } from 'lucide-react'
 
 interface TermsModalProps {
   onClose: () => void
+  initialTab?: 'terms' | 'privacy' | 'cookies'
 }
 
-// ⚠️ NOTA LEGAL:
-// El correo de contacto es "no-reply@sthenova.com" a solicitud del titular.
-// Se recomienda cambiarlo por un correo que sí reciba (ej. privacidad@sthenova.com
-// o hola@sthenova.com) porque la LFPDPPP exige un canal efectivo para ejercer
-// derechos ARCO. Con "no-reply" el INAI puede considerar que no hay canal válido.
-const LEGAL_EMAIL = 'no-reply@sthenova.com'
-const LAST_UPDATED = '25 de septiembre de 2026'
+const CONTACT_EMAIL = 'legal@applefamilytree.com'
+const COMPANY_NAME = 'AppleFamily Tree'
+const LAST_UPDATED = '21 de octubre de 2026'
 
-export default function TermsModal({ onClose }: TermsModalProps) {
+type Tab = 'terms' | 'privacy' | 'cookies'
+
+export default function TermsModal({ onClose, initialTab = 'terms' }: TermsModalProps) {
+  const [tab, setTab] = useState<Tab>(initialTab)
+
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        {/* Header */}
+    <div style={overlayStyle} onClick={onClose}>
+      <div style={modalStyle} onClick={e => e.stopPropagation()}>
         <div style={headerStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Shield size={28} color="#D4AF37" />
-            <h2 style={titleStyle}>Términos y Condiciones</h2>
+            <Shield size={24} color="#D4AF37" />
+            <h2 style={titleStyle}>{COMPANY_NAME} — Legal</h2>
           </div>
-          <button onClick={onClose} style={closeButtonStyle}><X size={24} /></button>
-        </div>
-
-        {/* Content */}
-        <div style={contentStyle}>
-          <div style={legalBoxStyle}>
-            <p style={{ ...paragraphStyle, fontStyle: 'italic', marginBottom: '20px' }}>
-              Última actualización: {LAST_UPDATED}
-            </p>
-
-            <h3 style={sectionTitleStyle}>1. NATURALEZA DEL SERVICIO</h3>
-            <p style={paragraphStyle}>
-              AppleTree Family proporciona una herramienta digital avanzada para la visualización, organización y preservación del patrimonio histórico familiar. El servicio incluye la creación de árboles genealógicos dinámicos, almacenamiento de medios digitales y herramientas de colaboración familiar en tiempo real.
-            </p>
-
-            <h3 style={sectionTitleStyle}>2. PRIVACIDAD Y SEGURIDAD DE LOS DATOS</h3>
-            <p style={paragraphStyle}>
-              La privacidad es el pilar fundamental de nuestra plataforma.
-              Usted conserva todos los derechos de propiedad intelectual sobre el contenido que sube.
-              El acceso a su árbol familiar es privado y se limita exclusivamente a los usuarios autorizados por el administrador del árbol.
-            </p>
-
-            <h3 style={sectionTitleStyle}>3. RESPONSABILIDAD DEL USUARIO</h3>
-            <p style={paragraphStyle}>
-              Como usuario, se compromete a proporcionar información veraz y mantener la confidencialidad de sus credenciales. No debe utilizar la plataforma para cargar contenido ilegal o que infrinja derechos de terceros.
-            </p>
-
-            <h3 style={sectionTitleStyle}>4. LIMITACIÓN DE RESPONSABILIDAD</h3>
-            <p style={paragraphStyle}>
-              El servicio se proporciona &quot;tal cual&quot;. AppleTree Family no garantiza que el servicio sea ininterrumpido. No somos responsables de la exactitud histórica de los datos ingresados por los usuarios, ni de la pérdida, alteración o divulgación de información derivada del uso indebido de las credenciales por parte del usuario.
-            </p>
-
-            <h3 style={sectionTitleStyle}>5. PROPIEDAD INTELECTUAL</h3>
-            <p style={paragraphStyle}>
-              Todos los algoritmos, interfaces visuales y activos de diseño son propiedad exclusiva de AppleTree Family. Se prohíbe la ingeniería inversa o copia no autorizada.
-            </p>
-
-            <h3 style={sectionTitleStyle}>6. DATOS PERSONALES DE TERCEROS</h3>
-            <p style={paragraphStyle}>
-              Al añadir familiares al árbol, usted declara contar con el consentimiento de las personas mayores de edad cuyos datos ingresa (nombre, fechas, fotografías, biografías, historias). Tratándose de personas fallecidas, se compromete a respetar su memoria y a no cargar contenido difamatorio o sensible sin autorización de los deudos. AppleTree Family actúa como <em>encargado del tratamiento</em> respecto a esa información; usted es el <em>responsable</em> frente a esas personas.
-            </p>
-
-            <h3 style={sectionTitleStyle}>7. MENORES DE EDAD</h3>
-            <p style={paragraphStyle}>
-              El servicio no está dirigido a menores de 13 años y no aceptamos registros directos de personas menores de esa edad. Un adulto responsable puede incluir fotografías, nombres y fechas de menores dentro del árbol siempre que cuente con el consentimiento expreso de quien ejerce la patria potestad o tutela. El adulto responsable es responsable de retirar cualquier dato del menor si así se le solicita.
-            </p>
-
-            <h3 style={sectionTitleStyle}>8. NOTIFICACIONES Y COMUNICACIONES</h3>
-            <p style={paragraphStyle}>
-              Al activar las notificaciones push, autoriza a que su navegador reciba avisos sobre nuevos mensajes, comentarios y eventos del árbol familiar, incluso cuando la aplicación esté cerrada. Puede desactivarlas en cualquier momento desde <em>Configuración de Cuenta → Notificaciones</em> o desde la configuración de su navegador. AppleTree Family no envía publicidad, comunicaciones comerciales ni mensajes de terceros a través de este canal.
-            </p>
-
-            <h3 style={sectionTitleStyle}>9. COOKIES Y ALMACENAMIENTO LOCAL</h3>
-            <p style={paragraphStyle}>
-              Utilizamos almacenamiento local del navegador (LocalStorage, IndexedDB, Cache API y un Service Worker) exclusivamente para el correcto funcionamiento del servicio: mantener su sesión iniciada, guardar preferencias, servir la aplicación cuando no hay conexión y gestionar notificaciones push. No usamos cookies publicitarias ni de rastreo de terceros con fines de perfilado comercial.
-            </p>
-
-            <h3 style={sectionTitleStyle}>10. SERVICIOS DE TERCEROS</h3>
-            <p style={paragraphStyle}>
-              Para operar, AppleTree Family se apoya en proveedores de infraestructura, en particular <strong>Supabase</strong> (autenticación, base de datos y almacenamiento), <strong>Netlify</strong> (alojamiento web) y proveedores de correo transaccional para envío de invitaciones. Las notificaciones push se entregan a través de los servicios propios de cada navegador (Google FCM, Apple APNs, Mozilla autopush). Estos terceros procesan datos únicamente en la medida necesaria para prestar el servicio y bajo sus propias políticas de privacidad.
-            </p>
-
-            <h3 style={sectionTitleStyle}>11. RETENCIÓN Y ELIMINACIÓN DE DATOS</h3>
-            <p style={paragraphStyle}>
-              Sus datos se conservan mientras su cuenta permanezca activa. Puede solicitar la eliminación total de su cuenta y del contenido asociado escribiendo al correo indicado en la sección 14. Procesaremos su solicitud dentro de un plazo razonable, salvo obligaciones legales que exijan conservar cierta información. Los datos técnicos anónimos (registros de acceso, métricas de uso) pueden retenerse por periodos adicionales por motivos de seguridad y diagnóstico.
-            </p>
-
-            <h3 style={sectionTitleStyle}>12. DERECHOS ARCO (ACCESO, RECTIFICACIÓN, CANCELACIÓN Y OPOSICIÓN)</h3>
-            <p style={paragraphStyle}>
-              De acuerdo con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP), usted puede en cualquier momento (i) acceder a sus datos, (ii) rectificarlos si son inexactos, (iii) cancelarlos cuando considere que no se requieren para las finalidades del servicio y (iv) oponerse a su tratamiento para fines específicos. Para ejercer estos derechos, envíe su solicitud al correo indicado en la sección 14 acreditando su identidad. Le responderemos en los plazos legales aplicables.
-            </p>
-
-            <h3 style={sectionTitleStyle}>13. MODIFICACIONES A ESTOS TÉRMINOS</h3>
-            <p style={paragraphStyle}>
-              Podemos actualizar estos términos para reflejar cambios en el servicio o en la normativa aplicable. La versión vigente estará siempre disponible dentro de la aplicación con su fecha de última actualización. Si los cambios son sustanciales, se lo comunicaremos por medios razonables (aviso dentro de la app o notificación push). El uso continuado del servicio después de una modificación implica su aceptación.
-            </p>
-
-            <h3 style={sectionTitleStyle}>14. LEY APLICABLE, JURISDICCIÓN Y CONTACTO</h3>
-            <p style={paragraphStyle}>
-              Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Cualquier controversia derivada de su interpretación o cumplimiento se someterá a los tribunales competentes de México, renunciando las partes a cualquier otro fuero que pudiera corresponderles. Para cualquier duda, aviso legal o ejercicio de derechos, contáctenos en: <a href={`mailto:${LEGAL_EMAIL}`} style={{ color: '#8B4513', fontWeight: 700 }}>{LEGAL_EMAIL}</a>
-            </p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={footerStyle}>
-          <p style={{ fontSize: '12px', color: '#8B4513', opacity: 0.7, margin: 0 }}>
-            Al continuar, aceptas cumplir con estos términos legales.
-          </p>
-          <button onClick={onClose} style={primaryButtonStyle}>
-            <Check size={18} /> Entendido y Acepto
+          <button onClick={onClose} style={closeButtonStyle} aria-label="Cerrar">
+            <X size={22} />
           </button>
         </div>
-      </div>
 
-      <style jsx>{`
-        @keyframes modalFadeIn {
-          from { opacity: 0; transform: scale(0.95) translateY(20px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
+        <div style={tabsStyle}>
+          <TabBtn active={tab === 'terms'}   onClick={() => setTab('terms')}   icon={<FileText size={14} />} label="Términos" />
+          <TabBtn active={tab === 'privacy'} onClick={() => setTab('privacy')} icon={<Shield size={14} />}    label="Privacidad" />
+          <TabBtn active={tab === 'cookies'} onClick={() => setTab('cookies')} icon={<Cookie size={14} />}    label="Cookies" />
+        </div>
+
+        <div style={contentStyle}>
+          <p style={updatedStyle}>Última actualización: {LAST_UPDATED}</p>
+          {tab === 'terms' && <Terms />}
+          {tab === 'privacy' && <Privacy />}
+          {tab === 'cookies' && <Cookies />}
+
+          <div style={contactBoxStyle}>
+            <Mail size={16} color="#D4AF37" />
+            <span style={{ fontSize: '13px' }}>
+              Dudas, consentimiento o derechos ARCO/GDPR:{' '}
+              <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: '#D4AF37', fontWeight: 700 }}>
+                {CONTACT_EMAIL}
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
+function TabBtn({ active, onClick, icon, label }: {
+  active: boolean; onClick: () => void; icon: React.ReactNode; label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        ...tabBtnStyle,
+        ...(active ? tabActiveStyle : {}),
+      }}
+    >
+      {icon} {label}
+    </button>
+  )
+}
+
+function Terms() {
+  return (
+    <div>
+      <H3>1. Aceptación</H3>
+      <P>
+        Al crear una cuenta o usar <strong>{COMPANY_NAME}</strong> (en adelante, el “Servicio”),
+        aceptas estos Términos. Si no estás de acuerdo, no uses el Servicio.
+      </P>
+
+      <H3>2. Qué es el Servicio</H3>
+      <P>
+        {COMPANY_NAME} es una plataforma privada para que las familias documenten
+        su genealogía: crear un árbol familiar, invitar familiares, compartir
+        historias, fotos, videos (vía enlace externo), mensajes y eventos. El
+        Servicio NO es una red social pública ni comercializa tus datos.
+      </P>
+
+      <H3>3. Elegibilidad y menores</H3>
+      <P>
+        Debes tener al menos <strong>14 años</strong> para crear una cuenta.
+        Niñas, niños y adolescentes menores de 14 años pueden ser documentados
+        en el árbol <em>por su tutor legal</em>, pero no pueden iniciar sesión
+        hasta cumplir la edad mínima. El tutor es responsable del contenido que
+        suba referente al menor.
+      </P>
+
+      <H3>4. Contenido del usuario</H3>
+      <P>
+        Conservas la titularidad de todo lo que subes (fotos, textos, datos).
+        Al subirlo, nos otorgas una licencia limitada, no exclusiva y revocable
+        <strong> únicamente para almacenarlo y mostrarlo a las personas con acceso
+        a tu árbol</strong>. No lo usamos para entrenar IA, no lo vendemos, no lo
+        indexamos públicamente.
+      </P>
+      <P>
+        Te comprometes a no subir contenido ilegal, difamatorio, pornográfico,
+        de odio, con datos personales de terceros sin consentimiento, o que
+        viole derechos de autor.
+      </P>
+
+      <H3>5. Roles dentro del árbol</H3>
+      <ul style={listStyle}>
+        <li><strong>Owner</strong>: fundador, control total del árbol.</li>
+        <li><strong>Admin</strong>: nombrado por el owner, edita contenido.</li>
+        <li><strong>Member</strong>: edita solo su propia manzana (datos personales).</li>
+      </ul>
+
+      <H3>6. Suspensión y cierre</H3>
+      <P>
+        Podemos suspender o cerrar una cuenta que viole estos Términos.
+        También puedes borrar tu cuenta en cualquier momento desde Configuración.
+        El borrado elimina tu cuenta y <strong>desvincula</strong> tu manzana del árbol;
+        el contenido comunitario (mensajes, comentarios) puede quedar anonimizado.
+      </P>
+
+      <H3>7. Limitación de responsabilidad</H3>
+      <P>
+        El Servicio se ofrece <em>“tal cual”</em>. Hacemos nuestro mejor esfuerzo
+        por disponibilidad y seguridad, pero no garantizamos funcionamiento
+        ininterrumpido. Haz respaldos de contenido crítico.
+      </P>
+
+      <H3>8. Modificaciones</H3>
+      <P>
+        Podemos actualizar estos Términos. Te avisaremos por correo o dentro
+        del app con al menos 15 días de antelación cuando cambios sean sustantivos.
+      </P>
+
+      <H3>9. Ley aplicable</H3>
+      <P>
+        Estos Términos se rigen por las leyes de los Estados Unidos Mexicanos.
+        Cualquier controversia se someterá a los tribunales competentes de México.
+      </P>
+    </div>
+  )
+}
+
+function Privacy() {
+  return (
+    <div>
+      <H3>1. Responsable</H3>
+      <P>
+        El responsable del tratamiento de tus datos es <strong>{COMPANY_NAME}</strong>,
+        con domicilio en México. Puedes contactarnos en <strong>{CONTACT_EMAIL}</strong>.
+      </P>
+
+      <H3>2. Datos que recopilamos</H3>
+      <ul style={listStyle}>
+        <li><strong>Cuenta</strong>: correo, contraseña (cifrada), nombre.</li>
+        <li><strong>Perfil familiar</strong>: nombre completo, fecha de nacimiento, fotos, relaciones familiares, biografía, ocupación, lugar de nacimiento.</li>
+        <li><strong>Contenido</strong>: mensajes de chat, historias, comentarios, mensajes del Buzón.</li>
+        <li><strong>Técnicos</strong>: IP, user-agent, timestamps de inicio de sesión.</li>
+        <li><strong>Push subscription</strong>: endpoint y claves criptográficas (solo si activas notificaciones push).</li>
+      </ul>
+
+      <H3>3. Finalidades</H3>
+      <ul style={listStyle}>
+        <li>Prestar el servicio (visualizar árbol, mensajes, invitaciones).</li>
+        <li>Enviarte notificaciones y correos del propio servicio.</li>
+        <li>Seguridad (prevenir fraude, abuso, pérdida de datos).</li>
+        <li>Cumplir obligaciones legales.</li>
+      </ul>
+      <P>
+        <strong>NO</strong> usamos tus datos para publicidad, perfilado comercial
+        o entrenamiento de IA.
+      </P>
+
+      <H3>4. Base legal (GDPR)</H3>
+      <ul style={listStyle}>
+        <li><strong>Ejecución del contrato</strong>: operar el servicio que contrataste.</li>
+        <li><strong>Consentimiento</strong>: push notifications, correos opcionales.</li>
+        <li><strong>Interés legítimo</strong>: seguridad y prevención de fraude.</li>
+      </ul>
+
+      <H3>5. Compartir datos</H3>
+      <P>Compartimos datos únicamente con proveedores necesarios para operar:</P>
+      <ul style={listStyle}>
+        <li><strong>Supabase</strong> (hosting de base de datos y auth) — EEUU.</li>
+        <li><strong>Netlify</strong> (hosting del sitio) — EEUU.</li>
+        <li><strong>Resend</strong> (envío de correos de invitación) — EEUU.</li>
+      </ul>
+      <P>
+        Todos cuentan con Cláusulas Contractuales Estándar (SCC) para transferencias
+        internacionales. No vendemos ni cedemos tus datos a terceros con fines comerciales.
+      </P>
+
+      <H3>6. Retención</H3>
+      <P>
+        Tus datos se conservan mientras tu cuenta esté activa. Si borras tu cuenta,
+        se elimina en 30 días (ventana de recuperación por error de borrado).
+        Las notificaciones de la campana se purgan automáticamente a los 90 días.
+      </P>
+
+      <H3>7. Tus derechos ARCO / GDPR</H3>
+      <P>Tienes derecho a:</P>
+      <ul style={listStyle}>
+        <li><strong>Acceso</strong>: obtener copia de tus datos.</li>
+        <li><strong>Rectificación</strong>: corregir datos inexactos.</li>
+        <li><strong>Cancelación / Supresión</strong>: borrar tus datos.</li>
+        <li><strong>Oposición</strong>: oponerte a ciertos usos.</li>
+        <li><strong>Portabilidad</strong>: exportar tus datos en formato estructurado.</li>
+        <li><strong>Limitación</strong>: restringir ciertos tratamientos.</li>
+      </ul>
+      <P>
+        Ejerce estos derechos escribiendo a <strong>{CONTACT_EMAIL}</strong>. Respondemos
+        en un máximo de 20 días hábiles. Puedes acudir al INAI (México) o a tu
+        autoridad de protección de datos si consideras que no respetamos tus derechos.
+      </P>
+
+      <H3>8. Seguridad</H3>
+      <P>
+        Usamos cifrado TLS en tránsito, cifrado en reposo (Supabase/Postgres),
+        contraseñas con bcrypt y Row-Level Security en todas las tablas. Las
+        suscripciones push usan VAPID (ECDH P-256).
+      </P>
+
+      <H3>9. Menores</H3>
+      <P>
+        No recopilamos conscientemente datos de menores de 14 años salvo cuando
+        un tutor legal los documenta en su árbol familiar. Si eres tutor y detectas
+        que un menor de 14 creó cuenta sin autorización, escríbenos para eliminarla.
+      </P>
+
+      <H3>10. Cambios</H3>
+      <P>
+        Si cambiamos este Aviso de forma sustantiva te lo notificaremos por correo
+        y en el app con 15 días de antelación.
+      </P>
+    </div>
+  )
+}
+
+function Cookies() {
+  return (
+    <div>
+      <H3>1. ¿Usamos cookies?</H3>
+      <P>
+        Usamos solo las cookies <strong>estrictamente necesarias</strong> para que
+        el servicio funcione. No usamos cookies de publicidad, tracking ni analítica
+        de terceros.
+      </P>
+
+      <H3>2. Cookies técnicas</H3>
+      <ul style={listStyle}>
+        <li>
+          <strong>sb-auth-token</strong> — mantiene tu sesión iniciada.
+          Expira cuando cierras sesión o pasa el tiempo de vida (7 días).
+        </li>
+        <li>
+          <strong>__cf_bm</strong> — Cloudflare bot management de Supabase.
+          Se renueva automáticamente, dura máximo 30 minutos.
+        </li>
+      </ul>
+
+      <H3>3. Local Storage</H3>
+      <P>
+        Guardamos localmente en tu navegador: preferencia de tema (claro/oscuro),
+        último árbol visitado, y el token de invitación mientras completas el signup.
+        Nada de esto sale de tu dispositivo.
+      </P>
+
+      <H3>4. Service Worker</H3>
+      <P>
+        Si activas notificaciones push, instalamos un Service Worker (<code>/sw.js</code>)
+        que escucha mensajes del servidor y muestra notificaciones. No rastrea tu
+        navegación.
+      </P>
+
+      <H3>5. Cómo las bloqueas</H3>
+      <P>
+        Puedes bloquear o eliminar cookies desde la configuración de tu navegador.
+        Si bloqueas las técnicas, el servicio no funcionará correctamente (no podrás
+        mantener sesión).
+      </P>
+    </div>
+  )
+}
+
+const H3 = ({ children }: { children: React.ReactNode }) => (
+  <h3 style={h3Style}>{children}</h3>
+)
+const P = ({ children }: { children: React.ReactNode }) => (
+  <p style={pStyle}>{children}</p>
+)
+
 const overlayStyle: React.CSSProperties = {
-  position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)',
-  backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 6000
+  position: 'fixed', inset: 0, zIndex: 10000,
+  backgroundColor: 'rgba(10,20,15,0.85)',
+  backdropFilter: 'blur(12px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  padding: '16px',
 }
 
 const modalStyle: React.CSSProperties = {
-  backgroundColor: '#FAEFBC', width: '90%', maxWidth: '600px', borderRadius: '32px',
-  padding: '40px', position: 'relative', border: '2px solid #F2D241', color: '#2C1810',
-  boxShadow: '0 30px 60px -12px rgba(0,0,0,0.6)', animation: 'modalFadeIn 0.3s ease-out',
-  maxHeight: '85vh', display: 'flex', flexDirection: 'column'
+  width: 'min(620px, 100%)', maxHeight: '90vh',
+  backgroundColor: '#1E2A22', color: '#F5E6C8',
+  borderRadius: '20px',
+  boxShadow: '0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.3)',
+  display: 'flex', flexDirection: 'column',
+  overflow: 'hidden',
+  fontFamily: 'system-ui, -apple-system, sans-serif',
 }
 
-const headerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexShrink: 0 }
-const titleStyle: React.CSSProperties = { margin: 0, fontFamily: 'serif', fontSize: '26px', color: '#8B4513' }
-const closeButtonStyle: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#8B4513' }
+const headerStyle: React.CSSProperties = {
+  padding: '18px 24px',
+  borderBottom: '1px solid rgba(212,175,55,0.2)',
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+}
 
-const contentStyle: React.CSSProperties = { overflowY: 'auto', paddingRight: '10px', marginBottom: '24px', flex: 1 }
-const legalBoxStyle: React.CSSProperties = { textAlign: 'left' }
-const sectionTitleStyle: React.CSSProperties = { fontSize: '14px', fontWeight: 'bold', color: '#8B4513', marginBottom: '8px', marginTop: '20px', textTransform: 'uppercase' }
-const paragraphStyle: React.CSSProperties = { fontSize: '14px', lineHeight: '1.6', color: '#2C1810', opacity: 0.9, margin: 0 }
+const titleStyle: React.CSSProperties = {
+  margin: 0, fontFamily: 'Georgia, serif',
+  fontSize: '19px', fontWeight: 700, color: '#D4AF37',
+}
 
-const footerStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(139,69,19,0.1)', paddingTop: '20px', flexShrink: 0 }
-const primaryButtonStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '14px', backgroundColor: '#8B4513', color: '#FAEFBC', border: 'none', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(139,69,19,0.3)' }
+const closeButtonStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(212,175,55,0.3)',
+  borderRadius: '50%', width: '34px', height: '34px',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', color: '#D4AF37',
+}
+
+const tabsStyle: React.CSSProperties = {
+  display: 'flex', gap: '6px',
+  padding: '12px 20px 0',
+}
+
+const tabBtnStyle: React.CSSProperties = {
+  flex: 1,
+  padding: '10px 12px',
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(212,175,55,0.2)',
+  borderRadius: '10px 10px 0 0',
+  borderBottom: 'none',
+  color: '#F5E6C8', fontSize: '12.5px', fontWeight: 600,
+  cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+}
+
+const tabActiveStyle: React.CSSProperties = {
+  background: 'rgba(212,175,55,0.15)',
+  borderColor: '#D4AF37',
+  color: '#D4AF37',
+}
+
+const contentStyle: React.CSSProperties = {
+  flex: 1,
+  padding: '18px 24px 24px',
+  overflowY: 'auto',
+  borderTop: '1px solid rgba(212,175,55,0.2)',
+}
+
+const updatedStyle: React.CSSProperties = {
+  fontSize: '11px', opacity: 0.6, letterSpacing: '0.06em',
+  textTransform: 'uppercase', fontWeight: 700,
+  margin: '0 0 14px',
+}
+
+const h3Style: React.CSSProperties = {
+  margin: '18px 0 8px', fontSize: '14px', fontWeight: 700,
+  color: '#D4AF37', letterSpacing: '0.02em',
+  fontFamily: 'Georgia, serif',
+}
+
+const pStyle: React.CSSProperties = {
+  margin: '0 0 10px', fontSize: '13.5px', lineHeight: 1.6,
+  color: '#F5E6C8', opacity: 0.9,
+}
+
+const listStyle: React.CSSProperties = {
+  margin: '0 0 12px', paddingLeft: '20px',
+  fontSize: '13.5px', lineHeight: 1.65,
+  color: '#F5E6C8', opacity: 0.9,
+}
+
+const contactBoxStyle: React.CSSProperties = {
+  marginTop: '20px',
+  padding: '12px 14px',
+  backgroundColor: 'rgba(212,175,55,0.08)',
+  border: '1px solid rgba(212,175,55,0.25)',
+  borderRadius: '10px',
+  display: 'flex', alignItems: 'center', gap: '10px',
+  color: '#F5E6C8',
+}

@@ -21,6 +21,7 @@ import TermsModal from '@/components/TermsModal'
 import MobileBottomSheet from '@/components/MobileBottomSheet'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import OnboardingModal from '@/components/OnboardingModal'
+import PublicLanding from '@/components/PublicLanding'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { Member, Relationship } from '@/lib/types'
@@ -113,6 +114,8 @@ export default function AppleTreeDashboard() {
     const token = params.get('invite')
     if (!token) return
     window.localStorage.setItem('apple_pending_invite', token)
+    // Saltar la landing — venimos directo a aceptar invitación
+    setShowAuthForm(true)
     // Limpiamos la URL para que un refresh no vuelva a leer el token
     const clean = window.location.pathname + window.location.hash
     window.history.replaceState({}, '', clean)
@@ -136,6 +139,8 @@ export default function AppleTreeDashboard() {
   // Onboarding: usuario autenticado que aún NO tiene árbol propio ni pertenece
   // a ninguno. Al mostrarlo bloqueamos la vista principal hasta que elija nombre.
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
+  // Landing pública antes del login. Si viene de invitación, se salta.
+  const [showAuthForm, setShowAuthForm] = useState(false)
 
   // ── Restaurar sesión: prioridad a Supabase Auth, luego al legacy ──
   useEffect(() => {
@@ -786,6 +791,19 @@ export default function AppleTreeDashboard() {
           setTutorialStep(0)
         }}
       />
+    )
+  }
+
+  if (!isLoggedIn && !showAuthForm) {
+    return (
+      <>
+        <PublicLanding
+          onStartSignup={() => { setAuthMode('signup'); setShowAuthForm(true) }}
+          onStartSignin={() => { setAuthMode('signin'); setShowAuthForm(true) }}
+          onShowTerms={() => setIsTermsOpen(true)}
+        />
+        {isTermsOpen && <TermsModal onClose={() => setIsTermsOpen(false)} />}
+      </>
     )
   }
 

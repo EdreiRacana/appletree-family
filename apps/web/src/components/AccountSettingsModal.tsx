@@ -10,7 +10,7 @@
 // para llamar updateUser, y ya la tenemos porque el usuario está logueado.
 
 import React, { useState, useEffect } from 'react'
-import { X, Lock, Mail, Check, Eye, EyeOff, Bell, BellOff, Shield } from 'lucide-react'
+import { X, Lock, Mail, Check, Eye, EyeOff, Bell, BellOff, Shield, AlertTriangle, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import {
   isPushSupported,
@@ -32,7 +32,7 @@ interface AccountSettingsModalProps {
   members?: Member[]
 }
 
-type Tab = 'password' | 'email' | 'notifications' | 'admins'
+type Tab = 'password' | 'email' | 'notifications' | 'admins' | 'danger'
 
 export default function AccountSettingsModal({ currentEmail, onClose, treeId, isAdmin, isOwner, members }: AccountSettingsModalProps) {
   const [tab, setTab] = useState<Tab>('password')
@@ -56,6 +56,12 @@ export default function AccountSettingsModal({ currentEmail, onClose, treeId, is
   const [pushStatus, setPushStatus] = useState<'granted' | 'denied' | 'default' | 'unsupported'>('unsupported')
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState<string | null>(null)
+
+  // Delete account state
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     setPushStatus(getPermissionStatus())
@@ -81,6 +87,39 @@ export default function AccountSettingsModal({ currentEmail, onClose, treeId, is
       setPushStatus(getPermissionStatus())
     } finally {
       setPushBusy(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'BORRAR') {
+      setDeleteError('Debes escribir exactamente BORRAR para confirmar.')
+      return
+    }
+    if (!deletePassword) {
+      setDeleteError('Ingresa tu contraseña actual.')
+      return
+    }
+    setDeleteBusy(true)
+    setDeleteError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Sesión no encontrada')
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accessToken: session.access_token,
+          password: deletePassword,
+        }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(payload.error || 'No se pudo borrar la cuenta')
+      await supabase.auth.signOut()
+      window.localStorage.clear()
+      window.location.href = '/'
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Error al borrar la cuenta')
+      setDeleteBusy(false)
     }
   }
 
@@ -201,6 +240,15 @@ export default function AccountSettingsModal({ currentEmail, onClose, treeId, is
               <Shield size={14} /> Admins
             </button>
           )}
+          <button
+            onClick={() => setTab('danger')}
+            style={{
+              ...tabButtonStyle,
+              ...(tab === 'danger' ? { backgroundColor: 'rgba(178,34,34,0.15)', color: '#FF4444', borderColor: 'rgba(178,34,34,0.4)' } : {}),
+            }}
+          >
+            <AlertTriangle size={14} /> Zona peligro
+          </button>
         </div>
 
         {/* Body */}
@@ -358,6 +406,71 @@ export default function AccountSettingsModal({ currentEmail, onClose, treeId, is
               isOwner={!!isOwner}
               members={members ?? []}
             />
+          )}
+
+          {tab === 'danger' && (
+            <>
+              <div style={{
+                padding: '14px 16px', borderRadius: '12px',
+                backgroundColor: 'rgba(178, 34, 34, 0.08)',
+                border: '1px solid rgba(178, 34, 34, 0.3)',
+                color: '#5D4037',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <AlertTriangle size={18} color="#B22222" />
+                  <strong style={{ color: '#B22222', fontSize: '15px' }}>Borrar mi cuenta</strong>
+                </div>
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, opacity: 0.85 }}>
+                  Esta acción es <strong>permanente</strong>. Se eliminará tu cuenta,
+                  tus preferencias y las notificaciones push. Tu manzana en el árbol
+                  se desvinculará (los datos quedan, pero sin usuario asociado).
+                  Si eres <strong>owner único</strong> de un árbol, se transferirá al
+                  admin más antiguo. Si no hay admin, el árbol queda huérfano.
+                </p>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Escribe <strong>BORRAR</strong> para confirmar</label>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  style={inputStyle}
+                  placeholder="BORRAR"
+                  autoComplete="off"
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Tu contraseña actual</label>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={e => setDeletePassword(e.target.value)}
+                  style={inputStyle}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+              </div>
+
+              {deleteError && <div style={errorStyle}>{deleteError}</div>}
+
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteBusy || deleteConfirmText !== 'BORRAR' || !deletePassword}
+                style={{
+                  ...primaryButtonStyle,
+                  backgroundColor: '#B22222',
+                  color: '#FFF',
+                  opacity: deleteBusy || deleteConfirmText !== 'BORRAR' || !deletePassword ? 0.5 : 1,
+                  cursor: deleteBusy ? 'wait' : 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                }}
+              >
+                <Trash2 size={16} />
+                {deleteBusy ? 'Borrando…' : 'Borrar mi cuenta permanentemente'}
+              </button>
+            </>
           )}
         </div>
       </div>
