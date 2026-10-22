@@ -1,0 +1,34 @@
+name: Supabase Keep-Alive
+
+# Mantiene el proyecto AppleFamily despierto haciendo una query simple cada 5
+# días. Supabase Free pausa proyectos después de 7 días sin actividad; con 5
+# días de intervalo tenemos margen por si la ejecución se retrasa.
+#
+# El request pega a `trees` con limit=1, usando la ANON key (que es pública:
+# está en NEXT_PUBLIC_SUPABASE_ANON_KEY del frontend). No requiere secrets.
+# Si en el futuro cambias esa key, actualiza SUPABASE_ANON_KEY abajo.
+
+on:
+  schedule:
+    # A las 09:00 UTC cada 5 días (00:00/01:00/02:00 según temporada en MX).
+    - cron: '0 9 */5 * *'
+  # Permite dispararlo manualmente desde la pestaña Actions para probarlo.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep AppleFamily Supabase project awake
+        env:
+          SUPABASE_URL: https://efsgxflltatbrbdvicxn.supabase.co
+          # Esta key es pública: ya viaja en el bundle del frontend.
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Pinging $SUPABASE_URL ..."
+          curl --fail --silent --show-error \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/trees?select=id&limit=1"
+          echo ""
+          echo "✅ Project pinged — activity registered."
