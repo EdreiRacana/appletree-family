@@ -296,7 +296,10 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
   if (members.length === 0) {
     return (
       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'rgba(245,240,224,0.6)', fontSize: 13 }}>Todavía no hay familiares en el árbol.</p>
+        <p style={{ color: 'rgba(245,240,224,0.7)', fontSize: 13, textAlign: 'center', maxWidth: 280, lineHeight: 1.5 }}>
+          Todavía no hay familiares en este árbol.<br />
+          Si esperabas ver a tu familia, revisa que entraste con el correo de tu invitación.
+        </p>
       </div>
     )
   }

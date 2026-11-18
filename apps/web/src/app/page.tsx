@@ -244,62 +244,40 @@ export default function AppleTreeDashboard() {
       setTutorialStep(0)
       return
     }
-    // 2. Fallback: auto-load a tree owned by this user, if any
+    // 2. Elegir SU árbol de forma determinista. Una cuenta puede tener varios
+    //    árboles (p.ej. de pruebas, vacíos); antes se pedía "uno cualquiera"
+    //    y en cada dispositivo podía salir uno distinto.
+    //    Prioridad: el último que abrió (si aún pertenece) → el que tenga más
+    //    familiares.
     try {
-      const { data: trees } = await supabase
-        .from('trees')
-        .select('id')
-        .eq('owner_id', s.user.id)
-        .limit(1)
-      if (trees && trees.length > 0) {
-        setCurrentTreeId(trees[0].id)
+      const { data: myTrees } = await supabase.rpc('get_user_trees')
+      const list = ((myTrees as Array<{ tree_id: string; member_count: number }> | null) ?? [])
+        .filter(t => t.tree_id !== DEMO_TREE_ID)
+      if (list.length > 0) {
+        const saved = typeof window !== 'undefined'
+          ? window.localStorage.getItem('apple_user_tree_id')
+          : null
+        const largest = [...list].sort((a, b) => Number(b.member_count) - Number(a.member_count))[0]
+        // El guardado solo gana si no es un árbol vacío (de pruebas); si no,
+        // el teléfono que se "quedó" en un árbol vacío volvería a abrirlo.
+        const savedTree = list.find(t => t.tree_id === saved)
+        const pick = savedTree && Number(savedTree.member_count) > 1 ? savedTree : largest
+        setCurrentTreeId(pick.tree_id)
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem('apple_user_tree_id', trees[0].id)
+          window.localStorage.setItem('apple_user_tree_id', pick.tree_id)
         }
         setIsLoggedIn(true)
         setTutorialStep(0)
         return
       }
     } catch (err) {
-      console.warn('Could not auto-load owned tree:', err)
+      console.warn('Could not load user trees:', err)
     }
 
-    // 3. Fallback crítico para invitados: si esta cuenta ya está enlazada
-    //    como member.user_id en algún árbol (accepted invite previa), cargar
-    //    ese árbol. Cubre el caso donde el token de invite se perdió (verificó
-    //    correo en otro navegador, cerró la pestaña, etc.) pero la aceptación
-    //    ya se procesó una vez.
-    try {
-      const { data: linkedMembers } = await supabase
-        .from('members')
-        .select('tree_id')
-        .eq('user_id', s.user.id)
-        .limit(1)
-      if (linkedMembers && linkedMembers.length > 0) {
-        const tid = linkedMembers[0].tree_id
-        setCurrentTreeId(tid)
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem('apple_user_tree_id', tid)
-        }
-        setIsLoggedIn(true)
-        setTutorialStep(0)
-        return
-      }
-    } catch (err) {
-      console.warn('Could not auto-load invited tree:', err)
-    }
-
-    // 4. Nada encontrado: usuario nuevo sin árbol y sin invitación pendiente.
-    //    Verificamos localStorage por si tenía uno de sesión previa; si no,
-    //    forzamos el onboarding para que cree su propio árbol.
-    const saved = typeof window !== 'undefined'
-      ? window.localStorage.getItem('apple_user_tree_id')
-      : null
-    if (saved && saved !== DEMO_TREE_ID) {
-      setCurrentTreeId(saved)
-      setIsLoggedIn(true)
-      setTutorialStep(0)
-      return
+    // 3. No pertenece a ningún árbol: limpiar el árbol guardado (puede ser de
+    //    otra cuenta en este mismo dispositivo) y mostrar el onboarding.
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('apple_user_tree_id')
     }
     // Sin árbol propio → onboarding.
     setNeedsOnboarding(true)
