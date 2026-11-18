@@ -136,6 +136,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
   const target = useRef<{ x: number; y: number } | null>(null)
   const drag = useRef<{ id: number; sx: number; sy: number; lx: number; ly: number; lt: number; moved: boolean } | null>(null)
   const raf = useRef<number | null>(null)
+  const lastDragEnd = useRef(0)           // cuándo terminó el último arrastre
 
   const clampPan = useCallback((p: { x: number; y: number }) => {
     const lim = Math.max(SPACING, layout.maxR * 0.8)
@@ -270,19 +271,26 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
     const d = drag.current
     if (!d || d.id !== e.pointerId) return
     drag.current = null
-    if (!d.moved) {
-      // Toque: ¿sobre qué burbuja?
-      const hit = (e.target as HTMLElement).closest('[data-mid]') as HTMLElement | null
-      const id = hit?.dataset.mid
-      if (id) {
-        const member = layout.order.find(m => m.id === id)
-        if (member && id === centeredId) onMemberTap(member)
-        else centerOn(id)
-      }
-      return
-    }
+    // Un toque sin arrastre se resuelve en onClick (ver abajo).
+    if (!d.moved) return
+    lastDragEnd.current = performance.now()
     if (performance.now() - d.lt > 80) vel.current = { x: 0, y: 0 }
     kick()
+  }
+  // El toque se maneja en 'click' y no en 'pointerup': en celulares, después
+  // de levantar el dedo el navegador manda un "click" al elemento que quede
+  // debajo. Si abríamos el panel en pointerup, ese click caía sobre el fondo
+  // del panel recién abierto y lo cerraba al instante.
+  const onClick = (e: React.MouseEvent) => {
+    if (performance.now() - lastDragEnd.current < 350) return  // fue un arrastre
+    const hit = (e.target as HTMLElement).closest('[data-mid]') as HTMLElement | null
+    const id = hit?.dataset.mid
+    if (!id) return
+    const member = layout.order.find(m => m.id === id)
+    if (!member) return
+    // Un solo toque: centra la burbuja y abre sus opciones (chat, perfil…).
+    centerOn(id)
+    onMemberTap(member)
   }
 
   if (members.length === 0) {
@@ -302,6 +310,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onClick={onClick}
       style={{
         position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
         touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none',
@@ -384,7 +393,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
           {centered ? `${centered.firstName} ${centered.lastName}` : ''}
         </div>
         <div style={{ fontSize: 10.5, color: 'rgba(245,230,200,0.6)', letterSpacing: '0.04em' }}>
-          {centered ? 'Toca de nuevo para ver su perfil' : 'Desliza para explorar · toca una burbuja'}
+          Desliza para explorar · toca una burbuja para ver opciones
         </div>
       </div>
 
