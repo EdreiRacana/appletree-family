@@ -1,16 +1,17 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { MessageCircle, Heart, UserPlus, Edit2, Trophy, User, Trash2, Link2 } from 'lucide-react'
+import { MessageCircle, UserPlus, Edit2, Trophy, User, Trash2, Link2, Lightbulb } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface MobileBottomSheetProps {
   member: Member | null
   focusMember: Member | null   // used to compute relation label
   onClose: () => void
-  onEdit: (member: Member) => void
-  onAdd: (member: Member) => void
-  onDelete: (member: Member) => void
+  onEdit?: (member: Member) => void      // solo si tiene permiso
+  onAdd?: (member: Member) => void
+  onDelete?: (member: Member) => void
+  onSuggest?: (member: Member) => void   // familiares sin permiso de editar
   onViewProfile: (member: Member) => void
   onAddStory: (member: Member) => void
   onConnect?: (member: Member) => void
@@ -59,7 +60,7 @@ function isMinor(member: Member): boolean {
 }
 
 export default function MobileBottomSheet({
-  member, focusMember, onClose, onEdit, onAdd, onDelete, onViewProfile, onAddStory, onConnect, onChat
+  member, focusMember, onClose, onEdit, onAdd, onDelete, onSuggest, onViewProfile, onAddStory, onConnect, onChat
 }: MobileBottomSheetProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [imgError, setImgError] = useState(false)
@@ -146,10 +147,12 @@ export default function MobileBottomSheet({
             </>
           )}
 
-          <button className="mobile-sheet-action-btn" onClick={() => { onAdd(member); onClose(); }}>
-            <UserPlus size={20} strokeWidth={1.8} />
-            Añadir Familiar
-          </button>
+          {onAdd && (
+            <button className="mobile-sheet-action-btn" onClick={() => { onAdd(member); onClose(); }}>
+              <UserPlus size={20} strokeWidth={1.8} />
+              Añadir hijo o pareja
+            </button>
+          )}
 
           {onConnect && (
             <button className="mobile-sheet-action-btn" onClick={() => { onConnect(member); onClose(); }}>
@@ -158,31 +161,43 @@ export default function MobileBottomSheet({
             </button>
           )}
 
-          <button className="mobile-sheet-action-btn" onClick={() => { onEdit(member); onClose(); }}>
-            <Edit2 size={20} strokeWidth={1.8} />
-            Editar Detalles
-          </button>
+          {onEdit && (
+            <button className="mobile-sheet-action-btn" onClick={() => { onEdit(member); onClose(); }}>
+              <Edit2 size={20} strokeWidth={1.8} />
+              Editar datos
+            </button>
+          )}
+
+          {onSuggest && (
+            <button className="mobile-sheet-action-btn" onClick={() => { onSuggest(member); onClose(); }}>
+              <Lightbulb size={20} strokeWidth={1.8} />
+              Sugerir un cambio
+            </button>
+          )}
 
           <button className="mobile-sheet-action-btn" onClick={() => { onAddStory(member); onClose(); }}>
             <Trophy size={20} strokeWidth={1.8} />
-            Publicar Logro
+            Publicar logro
           </button>
 
           <button className="mobile-sheet-action-btn" onClick={() => { onViewProfile(member); onClose(); }}>
             <User size={20} strokeWidth={1.8} />
-            Ver Perfil
+            Ver perfil
           </button>
 
-          <div className="mobile-sheet-divider" />
-
-          {/* Destructive — always at the bottom */}
-          <button
-            className="mobile-sheet-action-btn critical"
-            onClick={() => { onDelete(member); onClose(); }}
-          >
-            <Trash2 size={20} strokeWidth={1.8} />
-            Eliminar Integrante
-          </button>
+          {/* Destructivo — siempre al final, solo con permiso */}
+          {onDelete && (
+            <>
+              <div className="mobile-sheet-divider" />
+              <button
+                className="mobile-sheet-action-btn critical"
+                onClick={() => { onDelete(member); onClose(); }}
+              >
+                <Trash2 size={20} strokeWidth={1.8} />
+                Eliminar manzana
+              </button>
+            </>
+          )}
 
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import type { Member } from '@/lib/types'
-import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X, MessageCircle, Megaphone } from 'lucide-react'
+import { Home, TreePine, Users, Image as ImageIcon, Calendar, Settings as SettingsIcon, X, MessageCircle, Megaphone, Lightbulb } from 'lucide-react'
 import NetworkPanel from '@/components/NetworkPanel'
 import EventsPanel from '@/components/EventsPanel'
 
@@ -15,19 +15,22 @@ interface SidebarProps {
   onTabChange: (tab: string | null) => void
   onInviteMember?: (member: Member) => void
   onOpenEventThread?: (event: { id: string; title: string; dateLabel: string }) => void
+  onOpenSuggestions?: () => void
+  suggestionsLabel?: string
 }
 
-export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, activeTab, onTabChange, onInviteMember, onOpenEventThread }: SidebarProps) {
+export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, activeTab, onTabChange, onInviteMember, onOpenEventThread, onOpenSuggestions, suggestionsLabel = 'Sugerencias' }: SidebarProps) {
 
   const menuItems = [
-    { icon: <Home size={20} />, label: 'Home' },
-    { icon: <TreePine size={20} />, label: 'My Tree' },
-    { icon: <Megaphone size={20} />, label: 'Buzón' },
-    { icon: <MessageCircle size={20} />, label: 'Chats' },
-    { icon: <Users size={20} />, label: 'Network' },
-    { icon: <ImageIcon size={20} />, label: 'Photo Albums' },
-    { icon: <Calendar size={20} />, label: 'Events' },
-    { icon: <SettingsIcon size={20} />, label: 'Settings' }
+    // 'label' es la clave interna de la pestaña; 'text' es lo que se muestra.
+    { icon: <Home size={20} />, label: 'Home', text: 'Inicio' },
+    { icon: <TreePine size={20} />, label: 'My Tree', text: 'Mi árbol' },
+    { icon: <Megaphone size={20} />, label: 'Buzón', text: 'Buzón' },
+    { icon: <MessageCircle size={20} />, label: 'Chats', text: 'Chats' },
+    { icon: <Users size={20} />, label: 'Network', text: 'Familia' },
+    { icon: <ImageIcon size={20} />, label: 'Photo Albums', text: 'Fotos' },
+    { icon: <Calendar size={20} />, label: 'Events', text: 'Eventos' },
+    { icon: <SettingsIcon size={20} />, label: 'Settings', text: 'Ajustes' }
   ]
 
   const albums = [
@@ -67,6 +70,8 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
           {menuItems.map((item) => (
             <div
               key={item.label}
+              role="button"
+              aria-label={item.text}
               onClick={() => onTabChange(item.label)}
               style={{
                 display: 'flex',
@@ -90,10 +95,25 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em'
               }}>
-                {item.label}
+                {item.text}
               </span>
             </div>
           ))}
+          {onOpenSuggestions && (
+            <div
+              role="button"
+              aria-label={suggestionsLabel}
+              onClick={onOpenSuggestions}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '13px 0', cursor: 'pointer', borderLeft: '3px solid transparent' }}
+            >
+              <div style={{ color: 'var(--sidebar-fg)', opacity: 0.65, marginBottom: '6px' }}>
+                <Lightbulb size={20} />
+              </div>
+              <span style={{ fontSize: '9px', fontWeight: '600', color: 'var(--sidebar-fg)', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {suggestionsLabel}
+              </span>
+            </div>
+          )}
         </nav>
 
         {/* SECURE SYSTEM LEGEND (Below container, no border, single line) */}
@@ -120,7 +140,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
             letterSpacing: '1.5px',
             animation: 'matrixPulse 2.4s infinite'
           }}>
-            SECURE SYSTEM
+            RED PRIVADA
           </span>
         </div>
       </div>

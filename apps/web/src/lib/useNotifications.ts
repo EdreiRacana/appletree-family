@@ -21,7 +21,7 @@ export interface AppNotification {
   title: string
   body?: string
   time: string
-  action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall'
+  action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall' | 'open_suggestions'
   sortKey: string
   senderMemberId?: string
   activityId?: string

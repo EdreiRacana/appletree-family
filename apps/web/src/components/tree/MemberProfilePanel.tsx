@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Briefcase, BookOpen, MapPin, Award, Share2, Edit3, UserPlus, Eye, MessageCircle, Link2 } from 'lucide-react'
+import { X, Briefcase, BookOpen, MapPin, Award, Share2, Edit3, UserPlus, Eye, MessageCircle, Link2, Lightbulb } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface MemberProfilePanelProps {
@@ -13,9 +13,10 @@ interface MemberProfilePanelProps {
   onFocusBranch?: (member: Member) => void
   onChat?: (member: Member) => void
   onConnect?: (member: Member) => void
+  onSuggest?: (member: Member) => void
 }
 
-export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, onAddRelative, onFocusBranch, onChat, onConnect }: MemberProfilePanelProps) {
+export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, onAddRelative, onFocusBranch, onChat, onConnect, onSuggest }: MemberProfilePanelProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -35,11 +36,10 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
   const lifeSpan = deathYear ? `${birthYear} — ${deathYear}` : `Desde ${birthYear}`
   const isDeceased = !!member.dateOfDeath
 
-  // Mock Timeline Data (In a real app, this would come from a 'milestones' table)
+  // Línea de tiempo solo con datos reales de la manzana (nada inventado).
   const timeline = [
-    { year: birthYear, title: 'Nacimiento', desc: `Nacido/a en ${member.birthPlace || 'Lugar desconocido'}` },
-    { year: '1995', title: 'Graduación', desc: 'Completó sus estudios con honores.' },
-    { year: '2005', title: 'Matrimonio', desc: 'Unión con su pareja actual.' },
+    { year: birthYear, title: 'Nacimiento', desc: member.birthPlace ? `En ${member.birthPlace}` : 'Lugar no registrado' },
+    ...(deathYear ? [{ year: deathYear, title: 'Fallecimiento', desc: 'Su legado sigue en la familia.' }] : []),
   ].filter(item => item.year !== '?')
 
   return (
@@ -239,7 +239,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
             )}
             {onAddRelative && (
               <button onClick={() => onAddRelative(member)} style={actionButtonStyle}>
-                <UserPlus size={16} /> Añadir familiar
+                <UserPlus size={16} /> Añadir hijo o pareja
               </button>
             )}
             {onConnect && (
@@ -258,6 +258,11 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
                 style={{ ...actionButtonStyle, border: '2px solid var(--drawer-accent)', color: 'var(--drawer-accent)' }}
               >
                 <Share2 size={16} /> Invitar
+              </button>
+            )}
+            {onSuggest && (
+              <button onClick={() => onSuggest(member)} style={actionButtonStyle}>
+                <Lightbulb size={16} /> Sugerir un cambio
               </button>
             )}
             {onEdit && (

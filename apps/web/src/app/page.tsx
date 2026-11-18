@@ -11,6 +11,8 @@ import EditMemberModal from '@/components/tree/EditMemberModal'
 import InviteMemberModal from '@/components/tree/InviteMemberModal'
 import ConnectMemberModal from '@/components/tree/ConnectMemberModal'
 import ChatPanel from '@/components/chat/ChatPanel'
+import SuggestionModal from '@/components/SuggestionModal'
+import SuggestionsInbox from '@/components/SuggestionsInbox'
 import ChatsListPanel from '@/components/chat/ChatsListPanel'
 import AccountSettingsModal from '@/components/AccountSettingsModal'
 import FamilyWallPanel from '@/components/wall/FamilyWallPanel'
@@ -22,6 +24,12 @@ import MobileBottomSheet from '@/components/MobileBottomSheet'
 import MobileBottomNav from '@/components/MobileBottomNav'
 import OnboardingModal from '@/components/OnboardingModal'
 import PublicLanding from '@/components/PublicLanding'
+import LoadingScreen from '@/components/LoadingScreen'
+import ResetPasswordScreen from '@/components/ResetPasswordScreen'
+
+// Versión de las reglas que acepta cada persona al registrarse. Cámbiala si
+// las reglas cambian, para saber quién aceptó cuál.
+const TERMS_VERSION = '2026-11-18'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import type { Member, Relationship } from '@/lib/types'
@@ -146,6 +154,12 @@ export default function AppleTreeDashboard() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   // Landing pública antes del login. Si viene de invitación, se salta.
   const [showAuthForm, setShowAuthForm] = useState(false)
+  // true mientras se revisa si hay sesión guardada: se muestra la pantalla de
+  // carga en vez de la portada pública (evita el "parpadeo" al entrar).
+  const [authChecking, setAuthChecking] = useState(true)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  // Volvió desde el correo de "olvidé mi contraseña": pedir la nueva.
+  const [recoveryMode, setRecoveryMode] = useState(false)
 
   // ── Restaurar sesión: prioridad a Supabase Auth, luego al legacy ──
   useEffect(() => {
@@ -154,17 +168,19 @@ export default function AppleTreeDashboard() {
     // 1. Try to restore Supabase Auth session first
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        applySupabaseSession(data.session)
+        applySupabaseSession(data.session).finally(() => setAuthChecking(false))
         return
       }
       // Sin sesión real de Supabase no hay acceso. Limpiamos restos del
       // login antiguo (usuarios fijos) que daban acceso solo con localStorage.
       window.localStorage.removeItem('apple_session_user')
       window.localStorage.removeItem('currentUser')
-    })
+      setAuthChecking(false)
+    }).catch(() => setAuthChecking(false))
 
     // Keep listening for auth state changes (login / logout / token refresh)
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true)
       setSession(newSession)
       if (newSession) applySupabaseSession(newSession)
     })
@@ -291,6 +307,9 @@ export default function AppleTreeDashboard() {
   }, [processPendingInvite])
 
   const fetchFamilyData = React.useCallback(async () => {
+    // El árbol de demostración ya no es público (RLS): no se consulta. Se
+    // espera a que la sesión elija el árbol real del usuario.
+    if (currentTreeId === DEMO_TREE_ID) return
     try {
       const { data: membersData, error: mError } = await supabase.from('members').select('*').eq('tree_id', currentTreeId)
       const { data: relsData, error: rError } = await supabase.from('relationships').select('*').eq('tree_id', currentTreeId)
@@ -316,6 +335,7 @@ export default function AppleTreeDashboard() {
         occupation: m.occupation,
         birthPlace: m.birth_place,
         userId: m.user_id ?? null,
+        createdBy: m.created_by ?? null,
       }))
 
       const mappedRels: Relationship[] = (relsData || []).map((r: any) => ({
@@ -352,22 +372,31 @@ export default function AppleTreeDashboard() {
     if (session?.user) { void touchTreeActivity() }
   }, [session?.user?.id])
 
-  // Helper: ¿puede este usuario editar esta manzana?
-  //   - Owner/Admin: sí, siempre.
-  //   - Miembro vivo con manzana enlazada: sí, solo su propia manzana.
-  //   - Cualquier otro caso: no.
+  // Permisos de la interfaz (la base de datos los vuelve a exigir con RLS):
+  //   - Fundador / administrador: todo.
+  //   - Familiar: edita SU manzana y las manzanas sin cuenta que él creó
+  //     (bebé, pareja); agrega hijos y pareja a esas manzanas; lo demás se
+  //     manda como sugerencia al administrador.
+  const myUserId = session?.user?.id ?? null
   const canEditMember = useCallback((m: Member): boolean => {
     if (isAdmin) return true
-    if (!session?.user?.id) return false
-    return m.userId === session.user.id && !m.dateOfDeath
-  }, [isAdmin, session?.user?.id])
+    if (!myUserId) return false
+    if (m.userId === myUserId) return !m.dateOfDeath
+    return !m.userId && m.createdBy === myUserId
+  }, [isAdmin, myUserId])
+  const canDeleteMember = useCallback((m: Member): boolean => {
+    if (isAdmin) return true
+    return !!myUserId && !m.userId && m.createdBy === myUserId
+  }, [isAdmin, myUserId])
+  const canAddRelativeTo = canEditMember
+  const [suggestingMember, setSuggestingMember] = useState<Member | null>(null)
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false)
 
-  // Interceptor de setEditingMember: si no tiene permiso, muestra aviso y no
-  // abre el modal. Los componentes hijos siguen llamando setEditingMember pero
-  // el gatekeeping vive aquí (fuente única de verdad).
+  // Interceptor de setEditingMember: si no tiene permiso, ofrece mandar una
+  // sugerencia en lugar de editar.
   const handleEditMember = useCallback((m: Member) => {
     if (!canEditMember(m)) {
-      alert('Solo el fundador o los administradores pueden editar los datos de otros miembros. Puedes editar tu propia manzana desde tu perfil.')
+      setSuggestingMember(m)
       return
     }
     setEditingMember(m)
@@ -375,7 +404,7 @@ export default function AppleTreeDashboard() {
 
   // Handle bell click navigation
   const handleNotificationClick = (
-    action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall',
+    action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall' | 'open_suggestions',
     notif?: { senderMemberId?: string; activityId?: string }
   ) => {
     if (action === 'open_events') setActiveTab('Events')
@@ -390,6 +419,8 @@ export default function AppleTreeDashboard() {
       setActiveTab('Events')
     } else if (action === 'open_wall') {
       setActiveTab('Buzón')
+    } else if (action === 'open_suggestions') {
+      setIsSuggestionsOpen(true)
     }
     markAllRead()
   }
@@ -592,6 +623,28 @@ export default function AppleTreeDashboard() {
     if (data.session) await applySupabaseSession(data.session)
   }
 
+  // ── Olvidé mi contraseña: manda un correo con enlace para crear una nueva ──
+  const handleForgotPassword = async () => {
+    setLoginError('')
+    setAuthNotice('')
+    const email = authEmail.trim()
+    if (!email) {
+      setLoginError('Escribe tu correo arriba y vuelve a tocar "¿Olvidaste tu contraseña?".')
+      return
+    }
+    setAuthLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+    })
+    setAuthLoading(false)
+    // Por privacidad no decimos si el correo existe o no.
+    if (error && !/rate|seconds/i.test(error.message)) {
+      setLoginError('No pudimos enviar el correo. Intenta de nuevo en unos minutos.')
+      return
+    }
+    setAuthNotice(`Si ${email} tiene cuenta, te enviamos un correo para crear una contraseña nueva. Revisa también "No deseado".`)
+  }
+
   // ── SUPABASE AUTH: sign up new account ──
   const handleSupabaseSignUp = async () => {
     setLoginError('')
@@ -602,6 +655,10 @@ export default function AppleTreeDashboard() {
     }
     if (authPassword.length < 8) {
       setLoginError('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+    if (!termsAccepted) {
+      setLoginError('Para crear tu cuenta acepta las reglas de la familia.')
       return
     }
     setAuthLoading(true)
@@ -615,7 +672,12 @@ export default function AppleTreeDashboard() {
       email: authEmail.trim(),
       password: authPassword,
       options: {
-        data: { full_name: authName.trim() || authEmail.split('@')[0] },
+        data: {
+          full_name: authName.trim() || authEmail.split('@')[0],
+          // Constancia de que aceptó las reglas (fecha y versión).
+          terms_accepted_at: new Date().toISOString(),
+          terms_version: TERMS_VERSION,
+        },
         emailRedirectTo: redirectBase
           ? `${redirectBase}/${pendingInvite ? `?invite=${encodeURIComponent(pendingInvite)}` : ''}`
           : undefined,
@@ -634,6 +696,16 @@ export default function AppleTreeDashboard() {
       setAuthNotice(`¡Cuenta creada! Revisa ${authEmail.trim()} para confirmar tu correo y luego inicia sesión.`)
       setAuthMode('signin')
     }
+  }
+
+  // Llegó desde el correo de "olvidé mi contraseña": crear la nueva primero.
+  if (recoveryMode) {
+    return <ResetPasswordScreen onDone={() => setRecoveryMode(false)} />
+  }
+
+  // Mientras se revisa la sesión guardada: pantalla de carga (no la portada).
+  if (authChecking) {
+    return <LoadingScreen />
   }
 
   // Onboarding: usuario autenticado pero sin árbol propio ni invitación.
@@ -825,6 +897,43 @@ export default function AppleTreeDashboard() {
                 boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
               }}
             />
+            {authMode === 'signin' && (
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={authLoading}
+                style={{
+                  alignSelf: 'flex-end', background: 'none', border: 'none', padding: '2px 0',
+                  color: '#D4AF37', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline',
+                }}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            )}
+            {authMode === 'signup' && (
+              <label style={{
+                display: 'flex', gap: '10px', alignItems: 'flex-start', textAlign: 'left',
+                fontSize: '12px', lineHeight: 1.45, color: 'rgba(245,230,200,0.85)', cursor: 'pointer',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={e => setTermsAccepted(e.target.checked)}
+                  style={{ width: 18, height: 18, marginTop: 1, accentColor: '#D4AF37', flexShrink: 0 }}
+                />
+                <span>
+                  Acepto las{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setIsTermsOpen(true) }}
+                    style={{ background: 'none', border: 'none', padding: 0, color: '#D4AF37', textDecoration: 'underline', cursor: 'pointer', fontSize: '12px' }}
+                  >
+                    reglas de la familia y el aviso de privacidad
+                  </button>
+                  . Entiendo que esta es una red privada y que cada quien edita solo su manzana.
+                </span>
+              </label>
+            )}
           </div>
 
           <div style={{ minHeight: '28px', marginTop: '10px', marginBottom: '4px' }}>
@@ -868,6 +977,7 @@ export default function AppleTreeDashboard() {
             &copy; {new Date().getFullYear()} AppleFamily Tree. Todos los derechos reservados.
           </p>
         </div>
+        {isTermsOpen && <TermsModal onClose={() => setIsTermsOpen(false)} />}
 
         <style jsx>{`
           @keyframes shake {
@@ -1031,6 +1141,14 @@ export default function AppleTreeDashboard() {
 
       <div className="main-layout" style={{ display: 'flex', width: '100%', height: 'calc(100vh - 76px)', marginTop: '76px', position: 'relative' }}>
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+          {loading && filteredMembers.length === 0 && (
+            <div role="status" style={{
+              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'rgba(245,230,200,0.75)', fontSize: 13, letterSpacing: '0.04em',
+            }}>
+              Cargando tu árbol…
+            </div>
+          )}
           {(filteredMembers.length > 0 || !loading) && (
             <TreeCanvas 
               members={filteredMembers} 
@@ -1085,20 +1203,40 @@ export default function AppleTreeDashboard() {
         <MemberProfilePanel
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
-          onEdit={(m) => { handleEditMember(m); setSelectedMember(null); }}
+          onEdit={selectedMember && canEditMember(selectedMember) ? (m) => { handleEditMember(m); setSelectedMember(null); } : undefined}
+          onSuggest={!isAdmin ? (m) => { setSuggestingMember(m); setSelectedMember(null); } : undefined}
           onInvite={isAdmin ? (m) => { setInvitingMember(m); setSelectedMember(null); } : undefined}
-          onAddRelative={(m) => {
+          onAddRelative={selectedMember && canAddRelativeTo(selectedMember) ? (m) => {
             window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m }))
             setSelectedMember(null)
-          }}
+          } : undefined}
           onFocusBranch={(m) => {
             // Foco activado desde el drawer — el evento lo captura TreeCanvas
             window.dispatchEvent(new CustomEvent('focus-branch', { detail: m }))
             setSelectedMember(null)
           }}
           onChat={(m) => { setChattingWithMember(m); setSelectedMember(null); }}
-          onConnect={(m) => { setConnectingMember(m); setSelectedMember(null); }}
+          onConnect={isAdmin ? (m) => { setConnectingMember(m); setSelectedMember(null); } : undefined}
         />
+
+        {suggestingMember && (
+          <SuggestionModal
+            member={suggestingMember}
+            treeId={currentTreeId}
+            authorName={loginInputUser || 'Un familiar'}
+            onClose={() => setSuggestingMember(null)}
+          />
+        )}
+
+        {isSuggestionsOpen && (
+          <SuggestionsInbox
+            treeId={currentTreeId}
+            members={treeData.members}
+            canReview={isAdmin}
+            onClose={() => setIsSuggestionsOpen(false)}
+            onEditMember={(m) => { setIsSuggestionsOpen(false); handleEditMember(m) }}
+          />
+        )}
 
         {chattingWithMember && (
           <ChatPanel
@@ -1185,6 +1323,8 @@ export default function AppleTreeDashboard() {
             onTabChange={setActiveTab}
             onInviteMember={isAdmin ? (m) => { setInvitingMember(m); setActiveTab(null); } : undefined}
             onOpenEventThread={(ev) => setThreadEvent(ev)}
+            onOpenSuggestions={() => setIsSuggestionsOpen(true)}
+            suggestionsLabel={isAdmin ? 'Sugerencias' : 'Mis sugerencias'}
           />
         </div>
 
@@ -1198,9 +1338,10 @@ export default function AppleTreeDashboard() {
         member={mobileSheetMember}
         focusMember={mobileSheetMember}
         onClose={() => setMobileSheetMember(null)}
-        onEdit={(m) => { handleEditMember(m); setMobileSheetMember(null); }}
-        onAdd={(m) => { window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m })); setMobileSheetMember(null); }}
-        onDelete={async (m) => {
+        onEdit={mobileSheetMember && canEditMember(mobileSheetMember) ? (m) => { handleEditMember(m); setMobileSheetMember(null); } : undefined}
+        onSuggest={!isAdmin ? (m) => { setSuggestingMember(m); setMobileSheetMember(null); } : undefined}
+        onAdd={mobileSheetMember && canAddRelativeTo(mobileSheetMember) ? (m) => { window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m })); setMobileSheetMember(null); } : undefined}
+        onDelete={mobileSheetMember && canDeleteMember(mobileSheetMember) ? async (m) => {
           if (!window.confirm(`¿Eliminar a ${m.firstName} ${m.lastName}? Esta acción no se puede deshacer.`)) return
           try {
             await (await import('@/lib/supabase')).supabase
@@ -1211,10 +1352,10 @@ export default function AppleTreeDashboard() {
             fetchFamilyData()
           } catch { /* handled by TreeCanvas */ }
           setMobileSheetMember(null)
-        }}
+        } : undefined}
         onViewProfile={(m) => { setSelectedMember(m); setMobileSheetMember(null); }}
         onAddStory={(m) => { setStoryActor(m); setIsStoryModalOpen(true); setMobileSheetMember(null); }}
-        onConnect={(m) => { setConnectingMember(m); setMobileSheetMember(null); }}
+        onConnect={isAdmin ? (m) => { setConnectingMember(m); setMobileSheetMember(null); } : undefined}
         onChat={(m) => { setChattingWithMember(m); setMobileSheetMember(null); }}
       />
 

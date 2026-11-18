@@ -16,6 +16,7 @@ export interface Member {
   id: string
   treeId: string
   userId?: string | null
+  createdBy?: string | null      // quién creó la manzana (para bebés/pareja sin cuenta)
 
   firstName: string
   lastName: string

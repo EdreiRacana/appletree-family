@@ -5,6 +5,7 @@ import { X, User as UserIcon, Calendar, ImageIcon, Baby, UserPlus, Heart, Upload
 import { supabase } from '@/lib/supabase'
 import { uploadImageToBucket } from '@/lib/imageUtils'
 import { Member, Relationship } from '@/lib/types'
+import { useTreeRole } from '@/lib/useTreeRole'
 
 interface AddMemberModalProps {
   targetMember: Member
@@ -19,6 +20,8 @@ type RelType = 'child' | 'parent' | 'spouse'
 export default function AddMemberModal({ targetMember, relationships, allMembers, onClose, onSave }: AddMemberModalProps) {
   const [step, setStep] = useState<'choose' | 'form' | 'link-children'>('choose')
   const [relType, setRelType] = useState<RelType>('child')
+  // Solo fundador/administradores agregan padres; los familiares lo sugieren.
+  const { isAdmin } = useTreeRole(targetMember.treeId)
   const [createdMemberId, setCreatedMemberId] = useState<string | null>(null)
   const [linkedChildIds, setLinkedChildIds] = useState<string[]>([])
   
@@ -160,10 +163,10 @@ export default function AddMemberModal({ targetMember, relationships, allMembers
 
         await supabase.from('activities').insert({
           tree_id: targetMember.treeId,
-          type: 'member_added',
+          type: 'new_member',
           title: `¡Creció la Familia!`,
           description: `${currentUser} añadió ${relationText}: ${formData.firstName} ${formData.lastName}.`,
-          privacy: 'family'
+          privacy: 'core'
         })
       } catch (logErr) {
         console.error('Non-critical: failed to log activity', logErr)
@@ -173,7 +176,8 @@ export default function AddMemberModal({ targetMember, relationships, allMembers
       onClose()
     } catch (err) {
       console.error('Error adding member:', err)
-      alert('Error creating family connection')
+      const msg = (err as { message?: string })?.message || ''
+      alert(/Solo puedes|sugerencia/i.test(msg) ? msg : 'No se pudo agregar al familiar. Intenta de nuevo.')
     } finally {
       setIsSaving(false)
     }
@@ -197,11 +201,17 @@ export default function AddMemberModal({ targetMember, relationships, allMembers
               <span>Hijo / Hija</span>
               <p style={choiceDescStyle}>Añadir descendencia de {targetMember.firstName}</p>
             </button>
-            <button onClick={() => { setRelType('parent'); setStep('form') }} style={choiceButtonStyle}>
-              <div style={iconBoxStyle}><UserPlus size={32} /></div>
-              <span>Padre / Madre</span>
-              <p style={choiceDescStyle}>Añadir un nivel superior (Ascendencia)</p>
-            </button>
+            {isAdmin ? (
+              <button onClick={() => { setRelType('parent'); setStep('form') }} style={choiceButtonStyle}>
+                <div style={iconBoxStyle}><UserPlus size={32} /></div>
+                <span>Padre / Madre</span>
+                <p style={choiceDescStyle}>Añadir un nivel superior (Ascendencia)</p>
+              </button>
+            ) : (
+              <p style={{ ...choiceDescStyle, gridColumn: '1 / -1', margin: '4px 0 0' }}>
+                ¿Falta un papá, mamá o hermano? Usa <strong>Sugerir un cambio</strong> y el administrador lo agrega.
+              </p>
+            )}
             <button onClick={() => { setRelType('spouse'); setStep('form') }} style={choiceButtonStyle}>
               <div style={iconBoxStyle}><Heart size={32} /></div>
               <span>Pareja</span>

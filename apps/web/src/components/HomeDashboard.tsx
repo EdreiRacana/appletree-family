@@ -67,19 +67,19 @@ export default function HomeDashboard({ members, onViewTree }: HomeDashboardProp
           />
           <StatCard 
             icon={<TreePine size={20} />} 
-            label="Gens" 
+            label="Generaciones" 
             value={generations} 
             color="#2C1810"
           />
           <StatCard 
             icon={<PieChart size={20} />} 
-            label="H/M" 
+            label="Hombres / Mujeres" 
             value={`${males}/${females}`} 
             color="#2C1810"
           />
           <StatCard 
             icon={<Award size={20} />} 
-            label="Bio" 
+            label="Perfiles completos" 
             value={`${completeness}%`} 
             color="#2C1810"
           />

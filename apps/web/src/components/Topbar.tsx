@@ -493,6 +493,7 @@ export default function Topbar({
                           : n.action === 'open_chat' ? 'Abrir chat →'
                           : n.action === 'open_event_thread' ? 'Ver comentarios →'
                           : n.action === 'open_wall' ? 'Abrir Buzón →'
+                          : n.action === 'open_suggestions' ? 'Ver sugerencias →'
                           : 'Ver Historias →'
                         }
                       </span>

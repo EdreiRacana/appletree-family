@@ -169,7 +169,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
       {/* ── Vertical Tab (tongue) ─────────────────────────────────────────── */}
       <button
         onClick={() => setIsCollapsed(c => !c)}
-        title={isCollapsed ? 'Mostrar Family Stories' : 'Ocultar Family Stories'}
+        title={isCollapsed ? 'Mostrar historias' : 'Ocultar historias'}
         style={{
           width: '30px',
           backgroundColor: 'var(--stories-bg)',
@@ -206,7 +206,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           opacity: 0.85,
           userSelect: 'none',
         }}>
-          Stories
+          Historias
         </span>
 
         {/* Icon */}
@@ -220,7 +220,7 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
       {/* Header */}
       <div style={headerStyle}>
         <div>
-          <h3 style={titleStyle}>Family Stories</h3>
+          <h3 style={titleStyle}>Historias de la familia</h3>
           <p style={subtitleStyle}>Compartiendo nuestro legado</p>
         </div>
         <button onClick={() => setShowAddModal(true)} style={addButtonStyle}>
