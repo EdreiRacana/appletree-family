@@ -152,7 +152,7 @@ export default function AddMemberModal({ targetMember, relationships, allMembers
 
       // 5. Activity Logging
       try {
-        const currentUser = window.localStorage?.getItem('currentUser') || 'Francisco'
+        const currentUser = window.localStorage?.getItem('currentUser') || 'Un familiar'
         let relationText = 'a un nuevo familiar'
         if (relType === 'child') relationText = `a un hijo/a de ${targetMember.firstName}`
         if (relType === 'spouse') relationText = `a una pareja para ${targetMember.firstName}`

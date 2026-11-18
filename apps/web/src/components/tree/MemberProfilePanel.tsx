@@ -252,7 +252,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
                 <MessageCircle size={16} /> Chatear
               </button>
             )}
-            {onInvite && !isDeceased && (
+            {onInvite && !isDeceased && !member.userId && (
               <button
                 onClick={() => onInvite(member)}
                 style={{ ...actionButtonStyle, border: '2px solid var(--drawer-accent)', color: 'var(--drawer-accent)' }}

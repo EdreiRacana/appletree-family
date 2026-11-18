@@ -71,15 +71,31 @@ serve(async (req) => {
   let raw: any = {}
   try { raw = await req.json() } catch { /* ignore */ }
 
-  const n: NotificationRow | undefined =
+  const claimed: { id?: string } | undefined =
     raw?.notification
     ?? (raw?.type === 'INSERT' && raw?.table === 'notifications' ? raw.record : undefined)
 
-  if (!n?.id || !n.user_id) {
+  if (!claimed?.id) {
     return new Response(JSON.stringify({ error: 'invalid body' }), { status: 400 })
   }
 
   const admin = createClient(SB_URL, SB_SERVICE_KEY)
+
+  // Seguridad: NO confiamos en el contenido que llega en el body (cualquiera
+  // con la anon key podía mandar un push con texto arbitrario a cualquier
+  // usuario). Solo usamos el id y cargamos la notificación real de la base;
+  // además debe ser reciente para evitar re-envíos.
+  const { data: n } = await admin
+    .from('notifications')
+    .select('id, user_id, type, title, body, action, related_id, is_important, created_at')
+    .eq('id', claimed.id)
+    .maybeSingle<NotificationRow & { created_at: string }>()
+  if (!n?.user_id) {
+    return new Response(JSON.stringify({ error: 'not found' }), { status: 404 })
+  }
+  if (Date.now() - new Date(n.created_at).getTime() > 5 * 60 * 1000) {
+    return new Response(JSON.stringify({ ok: true, skipped: 'stale' }), { status: 200 })
+  }
 
   // Respeta la preferencia push_enabled
   const { data: pref } = await admin

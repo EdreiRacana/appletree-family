@@ -6,7 +6,7 @@ import type { Member } from '@/lib/types'
 
 interface NetworkPanelProps {
   members: Member[]
-  onInviteMember: (member: Member) => void
+  onInviteMember?: (member: Member) => void
 }
 
 // --- Helpers ---
@@ -44,7 +44,7 @@ function getAppleColor(appleType?: string | null, gender?: string | null): strin
 }
 
 // --- Sub-components ---
-function MemberRow({ member, onInvite }: { member: Member; onInvite: (m: Member) => void }) {
+function MemberRow({ member, onInvite }: { member: Member; onInvite?: (m: Member) => void }) {
   const age = getAge(member.dateOfBirth)
   const isBaby = member.isBaby || (age !== null && age < 13)
   const appleColor = getAppleColor(member.appleType, member.gender)
@@ -130,7 +130,8 @@ function MemberRow({ member, onInvite }: { member: Member; onInvite: (m: Member)
         </p>
       </div>
 
-      {/* Invite Button */}
+      {/* Invite Button (solo admins, solo manzanas sin cuenta) */}
+      {onInvite && !member.userId && (
       <button
         onClick={() => onInvite(member)}
         title="Invitar al árbol"
@@ -160,6 +161,7 @@ function MemberRow({ member, onInvite }: { member: Member; onInvite: (m: Member)
       >
         <UserPlus size={14} />
       </button>
+      )}
     </div>
   )
 }

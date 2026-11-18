@@ -144,7 +144,7 @@ export default function EditMemberModal({ member, onClose, onSave, mode = 'admin
       }
 
       try {
-        const currentUser = window.localStorage?.getItem('currentUser') || 'Francisco'
+        const currentUser = window.localStorage?.getItem('currentUser') || 'Un familiar'
         await supabase.from('activities').insert({
           tree_id: member.treeId,
           type: 'member_updated',

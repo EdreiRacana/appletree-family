@@ -13,7 +13,7 @@ interface SidebarProps {
   treeId: string
   activeTab: string | null
   onTabChange: (tab: string | null) => void
-  onInviteMember: (member: Member) => void
+  onInviteMember?: (member: Member) => void
   onOpenEventThread?: (event: { id: string; title: string; dateLabel: string }) => void
 }
 

@@ -56,7 +56,6 @@ export default function AppleTreeDashboard() {
   // MOCK LOGIN STATE (legacy hardcoded family users — kept as fallback)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loginInputUser, setLoginInputUser] = useState('')
-  const [loginInputPass, setLoginInputPass] = useState('')
   const [loginError, setLoginError] = useState('')
   const [tutorialStep, setTutorialStep] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
@@ -69,7 +68,6 @@ export default function AppleTreeDashboard() {
   const [authName, setAuthName] = useState('')
   const [authNotice, setAuthNotice] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
-  const [showLegacyLogin, setShowLegacyLogin] = useState(false)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768)
@@ -119,17 +117,24 @@ export default function AppleTreeDashboard() {
     // Limpiamos la URL para que un refresh no vuelva a leer el token
     const clean = window.location.pathname + window.location.hash
     window.history.replaceState({}, '', clean)
-    // Pre-llenar el email consultando el registro público del invite
+    // Pre-llenar el email con la vista previa segura de la invitación
+    // (función get_invite_preview: solo devuelve datos de ESTE token).
     supabase
-      .from('invites')
-      .select('email')
-      .eq('token', token)
-      .maybeSingle()
+      .rpc('get_invite_preview', { p_token: token })
       .then(({ data }) => {
-        if (data?.email) {
-          setAuthEmail(data.email)
-          setAuthMode('signup')
+        const preview = Array.isArray(data) ? data[0] : data
+        if (!preview) return
+        if (preview.status === 'expired') {
+          setAuthNotice('Esta invitación expiró. Pide una nueva al familiar que te invitó.')
+          return
         }
+        if (preview.status === 'accepted' || preview.status === 'claimed') {
+          setAuthNotice('Esta invitación ya fue usada. Inicia sesión con tu cuenta.')
+          setAuthMode('signin')
+          return
+        }
+        if (preview.email) setAuthEmail(preview.email)
+        setAuthMode('signup')
       })
   }, [])
 
@@ -152,15 +157,10 @@ export default function AppleTreeDashboard() {
         applySupabaseSession(data.session)
         return
       }
-      // 2. Fall back to legacy hardcoded session (Francisco / Eber)
-      const savedUser = window.localStorage.getItem('apple_session_user')
-      if (savedUser) {
-        setLoginInputUser(savedUser)
-        const savedTreeId = window.localStorage.getItem('apple_user_tree_id')
-        if (savedTreeId) setCurrentTreeId(savedTreeId)
-        setTutorialStep(0)
-        setIsLoggedIn(true)
-      }
+      // Sin sesión real de Supabase no hay acceso. Limpiamos restos del
+      // login antiguo (usuarios fijos) que daban acceso solo con localStorage.
+      window.localStorage.removeItem('apple_session_user')
+      window.localStorage.removeItem('currentUser')
     })
 
     // Keep listening for auth state changes (login / logout / token refresh)
@@ -174,52 +174,21 @@ export default function AppleTreeDashboard() {
 
   // Apply a fresh Supabase Auth session to the app: pick a display name and
   // try to auto-load the user's tree. Falls back to the DEMO tree if none.
-  // Procesa un token de invitación pendiente después del login/signup:
-  //   1. Marca el invite como aceptado (accepted_at, accepted_by)
-  //   2. Enlaza el user_id al member correspondiente
-  //   3. Redirige al usuario al árbol que lo invitó
-  const processPendingInvite = React.useCallback(async (userId: string) => {
+  // Procesa un token de invitación pendiente después del login/signup y
+  // devuelve el árbol al que lo invitaron.
+  const processPendingInvite = React.useCallback(async () => {
     if (typeof window === 'undefined') return null
     const token = window.localStorage.getItem('apple_pending_invite')
     if (!token) return null
-    try {
-      const { data: invite, error } = await supabase
-        .from('invites')
-        .select('id, tree_id, member_id, accepted_at, expires_at')
-        .eq('token', token)
-        .maybeSingle()
-      if (error || !invite) {
-        console.warn('Invite lookup failed:', error?.message)
-        window.localStorage.removeItem('apple_pending_invite')
-        return null
-      }
-      if (invite.accepted_at) {
-        window.localStorage.removeItem('apple_pending_invite')
-        return invite.tree_id
-      }
-      if (new Date(invite.expires_at) < new Date()) {
-        alert('Esta invitación expiró. Pide una nueva al familiar que te invitó.')
-        window.localStorage.removeItem('apple_pending_invite')
-        return null
-      }
-      // Marcar aceptada
-      await supabase
-        .from('invites')
-        .update({ accepted_at: new Date().toISOString(), accepted_by: userId })
-        .eq('id', invite.id)
-      // Enlazar el user al member (el owner de ese node ahora es este usuario)
-      if (invite.member_id) {
-        await supabase
-          .from('members')
-          .update({ user_id: userId })
-          .eq('id', invite.member_id)
-      }
-      window.localStorage.removeItem('apple_pending_invite')
-      return invite.tree_id as string
-    } catch (err) {
-      console.warn('processPendingInvite error:', err)
+    // La validación (token, vigencia, correo, manzana sin dueño) la hace la
+    // función accept_invite en la base de datos.
+    const { data: treeId, error } = await supabase.rpc('accept_invite', { p_token: token })
+    window.localStorage.removeItem('apple_pending_invite')
+    if (error) {
+      setAuthNotice(error.message)
       return null
     }
+    return (treeId as string) || null
   }, [])
 
   const applySupabaseSession = React.useCallback(async (s: Session) => {
@@ -233,80 +202,23 @@ export default function AppleTreeDashboard() {
       window.localStorage.setItem('apple_session_user', displayName)
       window.localStorage.setItem('currentUser', displayName)
     }
-    // Regla dura de una cuenta ↔ una manzana. Si el user ya tiene UN member
-    // linkeado a su auth.uid, NO tocamos nada más (ni auto-accept por correo
-    // ni rescate). Esto evita que múltiples invites al mismo correo
-    // terminen linkeando 2+ manzanas a la misma cuenta.
-    const { data: existingLink } = await supabase
-      .from('members')
-      .select('id')
-      .eq('user_id', s.user.id)
-      .limit(1)
-    const alreadyLinked = !!(existingLink && existingLink.length > 0)
-
-    // 0.a Auto-aceptar invites por CORREO: solo si el usuario NO tiene ya
-    //     una manzana linkeada. Cubre el caso del signup fresco donde el
-    //     token en localStorage se perdió.
-    if (!alreadyLinked) try {
-      const email = s.user.email
-      if (email) {
-        const { data: pendingByEmail } = await supabase
-          .from('invites')
-          .select('id, member_id, tree_id, expires_at')
-          .eq('email', email)
-          .is('accepted_at', null)
-          .order('created_at', { ascending: true })
-          .limit(1)  // Solo el PRIMER invite; el resto se acepta manualmente si aplica
-        if (pendingByEmail && pendingByEmail.length > 0) {
-          const inv = pendingByEmail[0]
-          if (new Date(inv.expires_at) >= new Date()) {
-            await supabase
-              .from('invites')
-              .update({ accepted_at: new Date().toISOString(), accepted_by: s.user.id })
-              .eq('id', inv.id)
-            if (inv.member_id) {
-              await supabase
-                .from('members')
-                .update({ user_id: s.user.id })
-                .eq('id', inv.member_id)
-                .is('user_id', null)  // No pisar links existentes de otra cuenta
-            }
-          }
-        }
+    // 1. Si llegó desde un enlace de invitación, aceptarla primero: tiene
+    //    prioridad porque quiere ver ESE árbol.
+    let invitedTreeId = await processPendingInvite()
+    // 2. Si no, aceptar automáticamente una invitación dirigida a su correo
+    //    (cubre cuando confirmó el correo en otro navegador y se perdió el
+    //    token). La base de datos exige correo confirmado y manzana libre.
+    if (!invitedTreeId) {
+      const { data: existingLink } = await supabase
+        .from('members')
+        .select('id')
+        .eq('user_id', s.user.id)
+        .limit(1)
+      if (!existingLink || existingLink.length === 0) {
+        const { data: emailTreeId } = await supabase.rpc('accept_my_email_invite')
+        invitedTreeId = (emailTreeId as string | null) || null
       }
-    } catch (err) {
-      console.warn('Auto-accept invites by email failed:', err)
     }
-
-    // 0.b Rescate: si el usuario aceptó un invite pero el member.user_id
-    //     quedó en null (bug pre-005 con RLS), reintentar el link. Solo
-    //     si aún no está linkeado a nada.
-    if (!alreadyLinked) try {
-      const { data: orphanInvites } = await supabase
-        .from('invites')
-        .select('member_id')
-        .eq('accepted_by', s.user.id)
-        .not('member_id', 'is', null)
-        .order('accepted_at', { ascending: true })
-        .limit(1)  // Solo el primero — regla dura de un member por cuenta
-      if (orphanInvites && orphanInvites.length > 0) {
-        const inv = orphanInvites[0]
-        if (inv.member_id) {
-          await supabase
-            .from('members')
-            .update({ user_id: s.user.id })
-            .eq('id', inv.member_id)
-            .is('user_id', null)
-        }
-      }
-    } catch (err) {
-      console.warn('Rescue link failed:', err)
-    }
-
-    // 1. Si hay un token de invitación pendiente, procesarlo — tiene
-    //    prioridad sobre el árbol propio del usuario, porque significa que
-    //    llegó al sitio DESDE una invitación y quiere ver ESE árbol.
-    const invitedTreeId = await processPendingInvite(s.user.id)
     if (invitedTreeId) {
       setCurrentTreeId(invitedTreeId)
       if (typeof window !== 'undefined') {
@@ -486,17 +398,6 @@ export default function AppleTreeDashboard() {
     fetchFamilyData()
   }, [fetchFamilyData])
 
-  // CRITICAL AUTO-RECOVERY: Restore Francisco's 24-member tree if it was accidentally overwritten
-  useEffect(() => {
-    if (typeof window !== 'undefined' && isLoggedIn) {
-      const goodTreeId = '4508d01c-2cdf-43eb-80d5-2d0d40989c63';
-      const currentLocal = window.localStorage.getItem('apple_user_tree_id');
-      if (currentLocal && currentLocal !== goodTreeId && currentLocal !== DEMO_TREE_ID && loginInputUser.toLowerCase() === 'francisco') {
-        window.localStorage.setItem('apple_user_tree_id', goodTreeId);
-        setCurrentTreeId(goodTreeId);
-      }
-    }
-  }, [isLoggedIn, loginInputUser])
   // Avatar del usuario logueado — cascada estricta:
   //   1. Manzana enlazada al auth.uid del usuario (m.user_id === session.user.id):
   //      - Si tiene avatarUrl → usarla.
@@ -650,54 +551,6 @@ export default function AppleTreeDashboard() {
     }
   }
 
-  const handleLogin = () => {
-    // ── Family user registry ──────────────────────────────────────────────────
-    // To add a new member: { password, fullName, treeId (optional) }
-    // If treeId is set → user lands directly on that tree (no tutorial).
-    // If treeId is omitted → uses Francisco's localStorage flow (admin).
-    const FRANCISCO_TREE_ID = '4508d01c-2cdf-43eb-80d5-2d0d40989c63'
-    const FAMILY_USERS: Record<string, { password: string; fullName: string; treeId?: string }> = {
-      'francisco': { password: 'admin', fullName: 'Francisco' },
-      'eber':      { password: 'admin', fullName: 'Eber',  treeId: FRANCISCO_TREE_ID },
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const key = loginInputUser.toLowerCase().trim()
-    const matched = FAMILY_USERS[key]
-
-    if (matched && loginInputPass === matched.password) {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('currentUser', matched.fullName)
-        window.localStorage.setItem('apple_session_user', key)
-
-        if (matched.treeId) {
-          // Guest family member → go straight to the family tree, skip tutorial
-          window.localStorage.setItem('apple_user_tree_id', matched.treeId)
-          window.localStorage.setItem('apple_tutorial_skipped', 'true')
-          setCurrentTreeId(matched.treeId)
-          setTutorialStep(0)
-        } else {
-          // Francisco (admin) → original flow with tutorial & localStorage
-          const savedTreeId = window.localStorage.getItem('apple_user_tree_id')
-          const skippedTutorial = window.localStorage.getItem('apple_tutorial_skipped') === 'true'
-          if (savedTreeId) {
-            setCurrentTreeId(savedTreeId)
-            setTutorialStep(0)
-          } else if (skippedTutorial) {
-            setTutorialStep(0)
-          } else {
-            setTutorialStep(1)
-          }
-        }
-      } else {
-        setTutorialStep(1)
-      }
-      setIsLoggedIn(true)
-    } else {
-      setLoginError('Credenciales incorrectas')
-    }
-  }
-
   const handleLogout = async () => {
     // Sign out from Supabase Auth if there was a real session
     try { await supabase.auth.signOut() } catch { /* ignore */ }
@@ -708,7 +561,6 @@ export default function AppleTreeDashboard() {
     setSession(null)
     setIsLoggedIn(false)
     setLoginInputUser('')
-    setLoginInputPass('')
     setLoginError('')
     setAuthEmail('')
     setAuthPassword('')
@@ -748,16 +600,25 @@ export default function AppleTreeDashboard() {
       setLoginError('Escribe tu correo y contraseña.')
       return
     }
-    if (authPassword.length < 6) {
-      setLoginError('La contraseña debe tener al menos 6 caracteres.')
+    if (authPassword.length < 8) {
+      setLoginError('La contraseña debe tener al menos 8 caracteres.')
       return
     }
     setAuthLoading(true)
+    // Si viene de una invitación, el enlace de confirmación de correo regresa
+    // con el token, así funciona aunque confirme desde otro navegador o app.
+    const pendingInvite = typeof window !== 'undefined'
+      ? window.localStorage.getItem('apple_pending_invite')
+      : null
+    const redirectBase = typeof window !== 'undefined' ? window.location.origin : undefined
     const { data, error } = await supabase.auth.signUp({
       email: authEmail.trim(),
       password: authPassword,
       options: {
-        data: { full_name: authName.trim() || authEmail.split('@')[0] }
+        data: { full_name: authName.trim() || authEmail.split('@')[0] },
+        emailRedirectTo: redirectBase
+          ? `${redirectBase}/${pendingInvite ? `?invite=${encodeURIComponent(pendingInvite)}` : ''}`
+          : undefined,
       }
     })
     setAuthLoading(false)
@@ -1003,66 +864,8 @@ export default function AppleTreeDashboard() {
             {authLoading ? '...' : (authMode === 'signin' ? 'Entrar al Legado' : 'Crear mi cuenta')}
           </button>
 
-          {/* ── LEGACY QUICK ACCESS (hardcoded family users) ──── */}
-          <div style={{ width: '100%', marginTop: '18px' }}>
-            <button
-              onClick={() => setShowLegacyLogin(v => !v)}
-              style={{
-                width: '100%',
-                background: 'transparent',
-                border: 'none',
-                color: 'rgba(245, 230, 200, 0.55)',
-                fontSize: '11px',
-                letterSpacing: '0.08em',
-                cursor: 'pointer',
-                padding: '4px'
-              }}
-            >
-              {showLegacyLogin ? '▲ Ocultar acceso rápido familiar' : '▼ Acceso rápido familiar (temporal)'}
-            </button>
-            {showLegacyLogin && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                <input
-                  type="text"
-                  placeholder="Usuario (francisco / eber)"
-                  value={loginInputUser}
-                  onChange={e => setLoginInputUser(e.target.value)}
-                  style={{
-                    padding: '10px 14px', borderRadius: '10px',
-                    border: '1px solid rgba(212, 175, 55, 0.15)',
-                    background: 'rgba(255,255,255,0.03)', color: '#F5E6C8',
-                    fontSize: '13px', outline: 'none'
-                  }}
-                />
-                <input
-                  type="password"
-                  placeholder="Contraseña"
-                  value={loginInputPass}
-                  onChange={e => setLoginInputPass(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleLogin() }}
-                  style={{
-                    padding: '10px 14px', borderRadius: '10px',
-                    border: '1px solid rgba(212, 175, 55, 0.15)',
-                    background: 'rgba(255,255,255,0.03)', color: '#F5E6C8',
-                    fontSize: '13px', outline: 'none'
-                  }}
-                />
-                <button
-                  onClick={handleLogin}
-                  style={{
-                    padding: '10px', borderRadius: '10px', border: '1px solid rgba(212, 175, 55, 0.35)',
-                    background: 'transparent', color: '#D4AF37', fontSize: '12px', fontWeight: 600,
-                    cursor: 'pointer', letterSpacing: '0.03em'
-                  }}
-                >
-                  Entrar con acceso familiar
-                </button>
-              </div>
-            )}
-          </div>
-
           <p style={{ marginTop: '18px', fontSize: '10px', color: '#F5E6C8', opacity: 0.35 }}>
-            &copy; 2025 AppleTree Family Legacy. Todos los derechos reservados.
+            &copy; {new Date().getFullYear()} AppleFamily Tree. Todos los derechos reservados.
           </p>
         </div>
 
@@ -1283,7 +1086,7 @@ export default function AppleTreeDashboard() {
           member={selectedMember}
           onClose={() => setSelectedMember(null)}
           onEdit={(m) => { handleEditMember(m); setSelectedMember(null); }}
-          onInvite={(m) => { setInvitingMember(m); setSelectedMember(null); }}
+          onInvite={isAdmin ? (m) => { setInvitingMember(m); setSelectedMember(null); } : undefined}
           onAddRelative={(m) => {
             window.dispatchEvent(new CustomEvent('open-add-modal', { detail: m }))
             setSelectedMember(null)
@@ -1301,7 +1104,7 @@ export default function AppleTreeDashboard() {
           <ChatPanel
             member={chattingWithMember}
             onClose={() => setChattingWithMember(null)}
-            onInvite={(m) => { setInvitingMember(m); setChattingWithMember(null); }}
+            onInvite={isAdmin ? (m) => { setInvitingMember(m); setChattingWithMember(null); } : undefined}
           />
         )}
 
@@ -1380,7 +1183,7 @@ export default function AppleTreeDashboard() {
             treeId={currentTreeId}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            onInviteMember={(m) => { setInvitingMember(m); setActiveTab(null); }}
+            onInviteMember={isAdmin ? (m) => { setInvitingMember(m); setActiveTab(null); } : undefined}
             onOpenEventThread={(ev) => setThreadEvent(ev)}
           />
         </div>

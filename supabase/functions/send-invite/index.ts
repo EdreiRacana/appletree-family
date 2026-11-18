@@ -135,10 +135,64 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  const json = (status: number, payload: unknown) =>
+    new Response(JSON.stringify(payload), {
+      status, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    })
+
   try {
-    const defaultUrl = Deno.env.get('APP_URL') || 'https://applefamilytree.com'
+    const defaultUrl = Deno.env.get('APP_URL') || 'https://darling-gelato-16e0bb.netlify.app'
     const body = (await req.json()) as InviteBody
     const isLinkOnly = body?.mode === 'link-only'
+
+    // ── Seguridad: quien llama debe tener sesión y ser admin del árbol ──────
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const authHeader = req.headers.get('Authorization') || ''
+    if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+      return json(500, { error: 'Configuración del servidor incompleta' })
+    }
+    if (!authHeader.startsWith('Bearer ')) {
+      return json(401, { error: 'Inicia sesión para invitar' })
+    }
+    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: anonKey, Authorization: authHeader },
+    })
+    if (!userRes.ok) return json(401, { error: 'Sesión inválida' })
+    const caller = await userRes.json()
+    if (!caller?.id) return json(401, { error: 'Sesión inválida' })
+
+    if (!body?.treeId) return json(400, { error: 'Falta treeId' })
+    const adminRes = await fetch(`${supabaseUrl}/rest/v1/rpc/is_tree_admin`, {
+      method: 'POST',
+      headers: { apikey: anonKey, Authorization: authHeader, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_tree_id: body.treeId }),
+    })
+    const isAdmin = adminRes.ok ? await adminRes.json() : false
+    if (isAdmin !== true) {
+      return json(403, { error: 'Solo los administradores del árbol pueden enviar invitaciones' })
+    }
+
+    // La manzana debe pertenecer a ese árbol y no tener cuenta enlazada.
+    if (body.memberId) {
+      const mRes = await fetch(
+        `${supabaseUrl}/rest/v1/members?id=eq.${encodeURIComponent(body.memberId)}&select=tree_id,user_id`,
+        { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
+      )
+      const rows = mRes.ok ? await mRes.json() : []
+      const m = rows?.[0]
+      if (!m || m.tree_id !== body.treeId) return json(400, { error: 'Esa manzana no es de este árbol' })
+      if (m.user_id) return json(409, { error: 'Esa manzana ya tiene una cuenta enlazada' })
+    }
+
+    // El enlace solo puede apuntar a dominios propios (evita phishing).
+    const allowed = (Deno.env.get('ALLOWED_APP_URLS') ||
+      `${defaultUrl},https://darling-gelato-16e0bb.netlify.app,http://localhost:3000`)
+      .split(',').map((s: string) => s.trim().replace(/\/$/, '')).filter(Boolean)
+    const requested = (body.treeUrl || '').replace(/\/$/, '')
+    body.treeUrl = allowed.includes(requested) ? requested : defaultUrl
+    body.invitedByUserId = caller.id
 
     // Validaciones — en modo link-only no exigimos correo válido.
     if (!isLinkOnly && (!body?.toEmail || !isValidEmail(body.toEmail))) {
@@ -174,9 +228,7 @@ Deno.serve(async (req: Request) => {
     let inviteToken: string | null = null
     if (body.treeId) {
       inviteToken = randomToken()
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-      if (supabaseUrl && serviceRoleKey) {
+      {
         const insertRes = await fetch(`${supabaseUrl}/rest/v1/invites`, {
           method: 'POST',
           headers: {
