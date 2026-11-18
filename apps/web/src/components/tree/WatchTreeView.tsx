@@ -22,8 +22,9 @@ interface WatchTreeViewProps {
   onMemberTap: (member: Member) => void
 }
 
-const SPACING = 92          // distancia entre centros de burbujas (px)
-const BUBBLE = 64           // diámetro base de la burbuja (px)
+const SPACING = 98          // distancia entre centros de manzanas (px)
+const BUBBLE = 80           // tamaño base de la manzana (px)
+const MEDALLION = 38        // diámetro de la foto dentro de la manzana (px)
 const TAP_SLOP = 8          // px que puede moverse el dedo y seguir siendo "toque"
 const FRICTION = 0.93       // inercia por cuadro
 const CENTER_EPS = 14       // px para considerar que una burbuja ya está centrada
@@ -53,13 +54,6 @@ function hexSpiral(count: number): Array<{ x: number; y: number }> {
 
 function initials(m: Member) {
   return `${m.firstName?.[0] ?? ''}${m.lastName?.[0] ?? ''}`.toUpperCase()
-}
-
-function ringColor(m: Member) {
-  if (m.dateOfDeath) return '#D4AF37'
-  if (m.appleType === 'green') return '#7FB342'
-  if (m.appleType === 'pink') return '#E58FB0'
-  return '#C8392B'
 }
 
 export default function WatchTreeView({ members, relationships, onMemberTap }: WatchTreeViewProps) {
@@ -341,14 +335,30 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
               willChange: 'transform, opacity', cursor: 'pointer', opacity: 0,
             }}
           >
+            {/* Manzana (misma imagen que el árbol de escritorio) */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={m.appleType === 'green' ? '/assets/Manzana_verde.png' : '/assets/Manzana_roja.png'}
+              alt="" draggable={false}
+              style={{
+                position: 'absolute', inset: 0, width: BUBBLE, height: BUBBLE, objectFit: 'contain',
+                pointerEvents: 'none',
+                opacity: m.dateOfDeath ? 0.5 : 1,
+                filter: m.dateOfDeath
+                  ? 'drop-shadow(0 0 8px rgba(212,175,55,0.7)) drop-shadow(0 4px 8px rgba(0,0,0,0.45))'
+                  : isMe
+                    ? 'drop-shadow(0 0 10px rgba(212,175,55,0.85)) drop-shadow(0 6px 10px rgba(0,0,0,0.5))'
+                    : 'drop-shadow(0 6px 10px rgba(0,0,0,0.5))',
+              }}
+            />
+            {/* Medallón con la foto, en el cuerpo de la manzana */}
             <div style={{
-              width: BUBBLE, height: BUBBLE, borderRadius: '50%', overflow: 'hidden',
-              border: `3px solid ${ringColor(m)}`,
-              boxShadow: isMe
-                ? '0 0 0 3px rgba(212,175,55,0.55), 0 8px 22px rgba(0,0,0,0.55)'
-                : '0 6px 18px rgba(0,0,0,0.5)',
-              background: '#F5EEDC', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: m.dateOfDeath ? 0.78 : 1, pointerEvents: 'none',
+              position: 'absolute', left: '50%', top: '57%', transform: 'translate(-50%, -50%)',
+              width: MEDALLION, height: MEDALLION, borderRadius: '50%', overflow: 'hidden',
+              border: `2px solid ${isMe ? '#D4AF37' : 'rgba(255,255,255,0.92)'}`,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.45)',
+              background: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              pointerEvents: 'none',
             }}>
               {m.avatarUrl && !isBaby ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -357,23 +367,21 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
               ) : isBaby ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={m.gender === 'female' ? '/assets/baby-girl.png' : '/assets/baby-boy.png'} alt="" draggable={false}
-                  style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
+                  style={{ width: '72%', height: '72%', objectFit: 'contain' }} />
               ) : (
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, color: '#5A3A22' }}>
+                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#5A3A22' }}>
                   {initials(m)}
                 </span>
               )}
             </div>
             {m.dateOfDeath && (
               <span aria-hidden style={{
-                position: 'absolute', top: -4, right: -2, width: 20, height: 20, borderRadius: '50%',
-                background: '#1B2414', color: '#D4AF37', fontSize: 11, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #D4AF37',
+                position: 'absolute', top: '24%', left: '50%', transform: 'translateX(-50%)',
+                color: '#D4AF37', fontSize: 12, fontWeight: 700, textShadow: '0 1px 3px rgba(0,0,0,0.9)',
                 pointerEvents: 'none',
               }}>✝</span>
-            )}
-            <div style={{
-              position: 'absolute', top: BUBBLE + 4, left: '50%', transform: 'translateX(-50%)',
+            )}            <div style={{
+              position: 'absolute', top: BUBBLE - 2, left: '50%', transform: 'translateX(-50%)',
               whiteSpace: 'nowrap', fontSize: 11, fontWeight: 600, color: '#F5E6C8',
               textShadow: '0 1px 3px rgba(0,0,0,0.95)', pointerEvents: 'none',
               transition: 'opacity 0.2s ease-out', opacity: 0,
@@ -396,7 +404,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
           {centered ? `${centered.firstName} ${centered.lastName}` : ''}
         </div>
         <div style={{ fontSize: 10.5, color: 'rgba(245,230,200,0.6)', letterSpacing: '0.04em' }}>
-          Desliza para explorar · toca una burbuja para ver opciones
+          Desliza para explorar · toca una manzana
         </div>
       </div>
 
