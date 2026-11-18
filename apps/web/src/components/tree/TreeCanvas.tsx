@@ -10,6 +10,7 @@ import HoverPeek from './HoverPeek'
 import EditMemberModal from './EditMemberModal'
 import AddMemberModal from './AddMemberModal'
 import MobileTreeView from './MobileTreeView'
+import WatchTreeView from './WatchTreeView'
 
 // ── Mobile detection hook ────────────────────────────────────────
 function useIsMobile(): boolean {
@@ -46,6 +47,19 @@ const DRAWER_WIDTH = 340
 
 export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
   const isMobile = useIsMobile()
+  // Vista en celular: 'esfera' (panal tipo reloj) o 'ramas' (vista anterior).
+  // (La vista móvil solo se pinta después de montar, así que leer localStorage
+  // aquí no causa diferencias de hidratación.)
+  const [mobileView, setMobileView] = useState<'esfera' | 'ramas'>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage.getItem('apple_mobile_view') === 'ramas') return 'ramas'
+    } catch { /* sin almacenamiento: usar la predeterminada */ }
+    return 'esfera'
+  })
+  const changeMobileView = (v: 'esfera' | 'ramas') => {
+    setMobileView(v)
+    try { window.localStorage.setItem('apple_mobile_view', v) } catch { /* ignore */ }
+  }
   const [hoveredMemberId, setHoveredMemberId] = useState<string | null>(null)
   // Two-stage hover: hover shows the compact HoverPeek pill; clicking its
   // "…" opens the full HoverMenu identified here.
@@ -595,13 +609,46 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   // ── MOBILE: delegate to dedicated mobile view ─────────────────
   if (isMobile) {
     return (
-      <>
-        <MobileTreeView
-          members={members}
-          relationships={relationships}
-          onMemberTap={onViewProfile}
-          onDeleteMember={async (member) => { await handleDeleteMember(member) }}
-        />
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        {mobileView === 'esfera' ? (
+          <WatchTreeView
+            members={members}
+            relationships={relationships}
+            onMemberTap={onViewProfile}
+          />
+        ) : (
+          <MobileTreeView
+            members={members}
+            relationships={relationships}
+            onMemberTap={onViewProfile}
+            onDeleteMember={async (member) => { await handleDeleteMember(member) }}
+          />
+        )}
+        {/* Selector de vista */}
+        <div role="tablist" aria-label="Vista del árbol" style={{
+          position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 5,
+          display: 'flex', padding: 3, borderRadius: 20, gap: 2,
+          background: 'rgba(20,26,14,0.72)', border: '1px solid rgba(212,175,55,0.35)',
+          backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+        }}>
+          {(['esfera', 'ramas'] as const).map(v => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={mobileView === v}
+              onClick={() => changeMobileView(v)}
+              style={{
+                border: 'none', borderRadius: 16, padding: '6px 14px', cursor: 'pointer',
+                fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                background: mobileView === v ? '#D4AF37' : 'transparent',
+                color: mobileView === v ? '#1B2414' : 'rgba(245,230,200,0.75)',
+              }}
+            >
+              {v === 'esfera' ? 'Esfera' : 'Ramas'}
+            </button>
+          ))}
+        </div>
         {addingToMember && (
           <AddMemberModal
             targetMember={addingToMember}
@@ -611,7 +658,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             onSave={onRefresh}
           />
         )}
-      </>
+      </div>
     )
   }
 
