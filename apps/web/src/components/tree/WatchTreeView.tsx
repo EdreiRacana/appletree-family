@@ -22,9 +22,9 @@ interface WatchTreeViewProps {
   onMemberTap: (member: Member) => void
 }
 
-const SPACING = 98          // distancia entre centros de manzanas (px)
-const BUBBLE = 80           // tamaño base de la manzana (px)
-const MEDALLION = 38        // diámetro de la foto dentro de la manzana (px)
+const SPACING = 112         // distancia entre centros de manzanas (px)
+const BUBBLE = 90           // tamaño base de la manzana (px)
+const MEDALLION = 43        // diámetro de la foto dentro de la manzana (px)
 const TAP_SLOP = 8          // px que puede moverse el dedo y seguir siendo "toque"
 const FRICTION = 0.93       // inercia por cuadro
 const CENTER_EPS = 14       // px para considerar que una burbuja ya está centrada
@@ -147,7 +147,11 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
     // altos); se deja espacio arriba para el selector y abajo para el pie.
     const ex = w / 2 - 6
     const ey = Math.max(ex, h / 2 - 70)
-    const FLAT = 0.5                          // zona central sin deformar (0..1)
+    // Lupa tipo reloj: escala continua según la distancia al centro.
+    //   centro ≈ 1.5×, primer anillo ≈ 0.9×, orilla ≈ 0.35× y se desvanece.
+    const SIGMA = 0.68                        // qué tan rápido se encogen
+    const MAX_GAIN = 1.2                      // 0.3 + 1.2 = 1.5× en el centro
+    const CURVE_FROM = 0.55                   // desde aquí se curvan hacia adentro
     let closest: { id: string; d: number } | null = null
     for (const m of layout.order) {
       const el = bubbleRefs.current.get(m.id)
@@ -157,24 +161,20 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
       let y = p.y - pan.current.y
       const r = Math.hypot(x, y)
       const u = Math.hypot(x / ex, y / ey)    // distancia normalizada a la orilla
-      let s = 1
-      if (u > FLAT) {
-        // Comprime la distancia (las orillas se curvan hacia adentro)…
-        const over = u - FLAT
-        const k = (FLAT + over * 0.7) / u
+      if (u > CURVE_FROM) {
+        // Las de la orilla se acercan al centro (efecto de esfera).
+        const k = (CURVE_FROM + (u - CURVE_FROM) * 0.72) / u
         x *= k
         y *= k
-        // …y encoge la burbuja suavemente hacia la orilla.
-        const t = Math.min(1, over / 0.75)
-        s = 1 - t * t * (3 - 2 * t) * 0.8     // smoothstep → hasta 0.2
       }
-      if (r < SPACING * 0.5) s *= 1.12        // la del centro un poco más grande
-      const visible = s > 0.24
+      const s = 0.3 + MAX_GAIN * Math.exp(-((u / SIGMA) ** 2))
+      const fade = Math.max(0, Math.min(1, (s - 0.3) / 0.22))
       el.style.transform = `translate3d(${cx + x - BUBBLE / 2}px, ${cy + y - BUBBLE / 2}px, 0) scale(${s.toFixed(3)})`
-      el.style.opacity = visible ? String(Math.min(1, s * 1.4)) : '0'
+      el.style.opacity = fade.toFixed(2)
+      el.style.pointerEvents = fade > 0.15 ? 'auto' : 'none'
       el.style.zIndex = String(Math.round(s * 100))
       const label = el.lastElementChild as HTMLElement | null
-      if (label) label.style.opacity = s > 0.9 ? '1' : '0'
+      if (label) label.style.opacity = s > 0.8 ? '1' : '0'
       if (!closest || r < closest.d) closest = { id: m.id, d: r }
     }
     return closest
