@@ -64,6 +64,9 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
           padding: '14px 0',
           border: '1px solid var(--sidebar-border)',
           overflowY: 'auto',
+          overflowX: 'hidden',
+          // Sin barras blancas: se puede desplazar con la rueda, pero no se ve la barra.
+          scrollbarWidth: 'none',
           flex: 1,
           color: 'var(--sidebar-fg)'
         }}>
@@ -77,7 +80,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '13px 0',
+                padding: '10px 0',
                 cursor: 'pointer',
                 backgroundColor: activeTab === item.label ? 'rgba(212,175,55,0.16)' : 'transparent',
                 transition: 'all 0.3s ease',
@@ -104,7 +107,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
               role="button"
               aria-label={suggestionsLabel}
               onClick={onOpenSuggestions}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '13px 0', cursor: 'pointer', borderLeft: '3px solid transparent' }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0', cursor: 'pointer', borderLeft: '3px solid transparent' }}
             >
               <div style={{ color: 'var(--sidebar-fg)', opacity: 0.65, marginBottom: '6px' }}>
                 <Lightbulb size={20} />

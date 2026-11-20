@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import type { FeedActivity } from '@/lib/types'
 import AddStoryModal from './AddStoryModal'
 import RichTextWithVideo from '@/components/media/RichTextWithVideo'
+import StoryLightbox, { type LightboxStory } from './StoryLightbox'
 
 export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?: number, treeId: string }) {
   const [stories, setStories] = useState<FeedActivity[]>([])
@@ -18,6 +19,21 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
   const [storyComments, setStoryComments] = useState<Record<string, any[]>>({})
   const [reactionCounts, setReactionCounts] = useState<Record<string, Record<string, number>>>({})
   const [isCollapsed, setIsCollapsed] = useState(false)
+  // Ventana de foto en grande: solo historias con imagen, en el mismo orden.
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const photoStories: LightboxStory[] = stories
+    .filter(s => !!s.imageUrl)
+    .map(s => ({
+      id: s.id,
+      imageUrl: s.imageUrl as string,
+      title: s.title || 'Historia familiar',
+      description: s.description,
+      badge: typeof s.metadata?.year === 'string' || typeof s.metadata?.year === 'number' ? String(s.metadata.year) : 'Recuerdo',
+    }))
+  const openLightbox = (id: string) => {
+    const i = photoStories.findIndex(p => p.id === id)
+    if (i >= 0) setLightboxIndex(i)
+  }
 
   const fetchReactions = async () => {
     try {
@@ -241,13 +257,31 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
           stories.map(story => (
             <div key={story.id} style={{...cardStyle, overflow: 'visible', marginBottom: '10px'}}>
               {story.imageUrl && (
-                <div style={{...imageContainerStyle, height: '84px', borderRadius: '12px 12px 0 0', backgroundImage: `url(${story.imageUrl})`}}>
-                  <div style={badgeStyle}>
+                // Foto COMPLETA (sin recortar): fondo con la misma foto
+                // desenfocada y encima la foto entera. Al tocarla se abre en grande.
+                <button
+                  type="button"
+                  onClick={() => openLightbox(story.id)}
+                  aria-label={`Ver foto: ${story.title || 'Historia'}`}
+                  style={{
+                    ...imageContainerStyle, height: 'auto', aspectRatio: '4 / 3', borderRadius: '12px 12px 0 0',
+                    overflow: 'hidden', border: 'none', padding: 0, display: 'block', cursor: 'zoom-in', background: '#1a1a14',
+                  }}
+                >
+                  <span aria-hidden style={{
+                    position: 'absolute', inset: -12, backgroundImage: `url(${story.imageUrl})`, backgroundSize: 'cover',
+                    backgroundPosition: 'center', filter: 'blur(14px) brightness(0.7)',
+                  }} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={story.imageUrl} alt="" loading="lazy" style={{
+                    position: 'relative', width: '100%', height: '100%', objectFit: 'contain', display: 'block',
+                  }} />
+                  <span style={badgeStyle}>
                     {typeof story.metadata?.year === 'string' || typeof story.metadata?.year === 'number' 
                       ? String(story.metadata.year) 
                       : 'Recuerdo'}
-                  </div>
-                </div>
+                  </span>
+                </button>
               )}
               
               <div style={{...cardBodyStyle, borderRadius: story.imageUrl ? '0 0 13px 13px' : '13px', borderTop: '1px solid rgba(212,175,55,0.18)'}}>
@@ -356,6 +390,15 @@ export default function FeedPanel({ refreshTrigger, treeId }: { refreshTrigger?:
 
       </div>
 
+      {lightboxIndex !== null && (
+        <StoryLightbox
+          stories={photoStories}
+          index={lightboxIndex}
+          onIndexChange={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
+
       {/* MODAL */}
       {(showAddModal || editingStory) && (
         <AddStoryModal
@@ -400,7 +443,7 @@ const addButtonStyle: React.CSSProperties = {
   boxShadow: '0 4px 10px rgba(0,0,0,0.2)', transition: 'all 0.2s ease'
 }
 
-const scrollAreaStyle: React.CSSProperties = { flex: 1, overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }
+const scrollAreaStyle: React.CSSProperties = { flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px', display: 'flex', flexDirection: 'column', gap: '10px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(212,175,55,0.45) transparent' }
 const statusTextStyle: React.CSSProperties = { textAlign: 'center', fontSize: '13px', opacity: 0.6, marginTop: '20px' }
 const emptyStateStyle: React.CSSProperties = { textAlign: 'center', padding: '40px 20px', opacity: 0.7 }
 const emptyButtonStyle: React.CSSProperties = { background: 'none', border: '1px solid #2C1810', padding: '8px 16px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', marginTop: '10px' }
