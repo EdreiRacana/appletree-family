@@ -53,7 +53,7 @@ export default function HomeDashboard({ members, onViewTree }: HomeDashboardProp
             Resumen Familiar
           </h2>
           <p style={{ color: '#2C1810', opacity: 0.6, fontSize: '13px', fontWeight: '800', marginTop: '5px' }}>
-            Legado AppleTree
+            Legado AppleFamily Tree
           </p>
         </div>
 

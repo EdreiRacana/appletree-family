@@ -14,7 +14,7 @@ interface InviteMemberModalProps {
 
 export default function InviteMemberModal({ member, onClose, onSend, onCreateLink }: InviteMemberModalProps) {
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState(`¡Hola! Te invito a unirte a nuestro árbol genealógico familiar en AppleTree para que nos ayudes a documentar nuestra historia.`)
+  const [message, setMessage] = useState(`¡Hola! Te invito a unirte a nuestro árbol genealógico familiar en AppleFamily Tree para que nos ayudes a documentar nuestra historia.`)
   const [isSending, setIsSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false)

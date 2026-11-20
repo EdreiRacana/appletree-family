@@ -137,7 +137,7 @@ export default function Topbar({
         >
           <img 
             src="/assets/logo.png" 
-            alt="AppleTree Family Logo" 
+            alt="AppleFamily Tree" 
             style={{ 
               height: '100%', 
               width: 'auto',

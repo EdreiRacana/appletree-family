@@ -777,7 +777,7 @@ export default function AppleTreeDashboard() {
             filter: 'drop-shadow(0 0 15px rgba(212, 175, 55, 0.4))',
             transition: 'transform 0.3s ease'
           }} className="hover:scale-105">
-            <img src="/assets/logo.png" alt="AppleTree Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <img src="/assets/logo.png" alt="AppleFamily Tree" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
 
           <h1 style={{ 

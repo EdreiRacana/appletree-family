@@ -207,7 +207,7 @@ export default function Sidebar({ bgOpacity, onOpacityChange, members, treeId, a
                      <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '900', color: '#2C1810' }}>Display Name</p>
                      <input 
                        type="text" 
-                       defaultValue="AppleTree Family" 
+                       defaultValue="AppleFamily Tree" 
                        style={{ 
                          width: '100%', background: 'white', border: '1.5px solid rgba(44,24,16,0.2)', 
                          borderRadius: '10px', padding: '10px', fontSize: '14px', color: '#2C1810', fontWeight: '700',
