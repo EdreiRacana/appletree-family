@@ -22,12 +22,12 @@ interface WatchTreeViewProps {
   onMemberTap: (member: Member) => void
 }
 
-const BUBBLE = 92           // tamaño base de la manzana (px, a escala 1)
-const MEDALLION = 44        // diámetro de la foto dentro de la manzana (px)
+const BUBBLE = 104          // tamaño base de la manzana (px, a escala 1)
+const MEDALLION = 36        // foto ≈ un tercio de la manzana: se ve el cuerpo de la fruta
 // Lupa
-const SMAX = 1.25           // escala de la manzana del centro
+const SMAX = 1.45           // escala de la manzana del centro (≈150px)
 const SMIN = 0.3            // escala mínima (orilla)
-const SIGMA = 1.7           // en casillas: qué tan rápido se encogen
+const SIGMA = 1.45          // en casillas: qué tan rápido se encogen (1er anillo ≈105px)
 const GAP = 0.8             // separación entre manzanas vecinas (1 = se tocan las cajas)
 const HALF_SQRT_PI = Math.sqrt(Math.PI) / 2
 // Distancia entre casillas del panal "en el centro" (para arrastrar 1:1).
@@ -158,7 +158,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
   // Escribe la posición/escala de cada burbuja con el efecto lupa.
   const paint = useCallback(() => {
     const { w, h } = size
-    const cx = w / 2, cy = h / 2 - 10
+    const cx = w / 2, cy = h / 2
     // Lupa tipo reloj inteligente (igual en todas direcciones):
     //  - la escala depende de la distancia al centro, medida en "casillas"
     //    del panal (rg): centro SMAX, se encoge suave hasta SMIN.
@@ -185,7 +185,8 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
       el.style.pointerEvents = fade > 0.15 ? 'auto' : 'none'
       el.style.zIndex = String(Math.round(s * 100))
       const label = el.lastElementChild as HTMLElement | null
-      if (label) label.style.opacity = s > 0.78 ? '1' : '0'
+      // Solo la manzana central muestra su nombre (en el panal junto se enciman).
+      if (label) label.style.opacity = s > SMAX * 0.88 ? '1' : '0'
       if (!closest || r < closest.d) closest = { id: m.id, d: r }
     }
     return closest
@@ -369,7 +370,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
             <div style={{
               position: 'absolute', left: '50%', top: '57%', transform: 'translate(-50%, -50%)',
               width: MEDALLION, height: MEDALLION, borderRadius: '50%', overflow: 'hidden',
-              border: `2px solid ${isMe ? '#D4AF37' : 'rgba(255,255,255,0.92)'}`,
+              border: `1.5px solid ${isMe ? '#D4AF37' : 'rgba(255,255,255,0.9)'}`,
               boxShadow: '0 2px 6px rgba(0,0,0,0.45)',
               background: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
               pointerEvents: 'none',
@@ -383,7 +384,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
                 <img src={m.gender === 'female' ? '/assets/baby-girl.png' : '/assets/baby-boy.png'} alt="" draggable={false}
                   style={{ width: '72%', height: '72%', objectFit: 'contain' }} />
               ) : (
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 700, color: '#5A3A22' }}>
+                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#5A3A22' }}>
                   {initials(m)}
                 </span>
               )}
@@ -395,7 +396,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
                 pointerEvents: 'none',
               }}>✝</span>
             )}            <div style={{
-              position: 'absolute', top: BUBBLE - 2, left: '50%', transform: 'translateX(-50%)',
+              position: 'absolute', top: BUBBLE - 6, left: '50%', transform: 'translateX(-50%)',
               whiteSpace: 'nowrap', fontSize: 11, fontWeight: 600, color: '#F5E6C8',
               textShadow: '0 1px 3px rgba(0,0,0,0.95)', pointerEvents: 'none',
               transition: 'opacity 0.2s ease-out', opacity: 0,
