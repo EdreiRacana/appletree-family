@@ -1,0 +1,79 @@
+name: Respaldo semanal de la base de datos
+
+# Copia la base de datos de AppleFamily Tree cada domingo, la CIFRA con una
+# contraseña que solo conoce el dueño y la guarda 30 días como artefacto.
+# El repositorio es público: sin la contraseña el archivo no se puede abrir.
+#
+# Secretos necesarios (GitHub → Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL    Cadena de conexión "Session pooler" de Supabase (con la contraseña de la base).
+#   BACKUP_PASSPHRASE  Contraseña para cifrar el respaldo. Guárdala en un lugar seguro: sin ella no se puede restaurar.
+#
+# Restaurar (en una computadora con PostgreSQL instalado):
+#   openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in respaldo.tar.gz.enc -out respaldo.tar.gz -pass pass:"TU_CONTRASEÑA"
+#   tar -xzf respaldo.tar.gz      →  publico.dump  y  cuentas.dump
+#   pg_restore --no-owner -d "CADENA_DE_CONEXION" publico.dump
+#   pg_restore --no-owner --data-only -d "CADENA_DE_CONEXION" cuentas.dump
+
+on:
+  schedule:
+    - cron: '0 8 * * 0'   # domingos 08:00 UTC (02:00 en CDMX)
+  workflow_dispatch:       # también se puede correr a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Revisar secretos
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then
+            echo "::error::Faltan los secretos SUPABASE_DB_URL o BACKUP_PASSPHRASE."
+            exit 1
+          fi
+
+      - name: Instalar cliente de PostgreSQL 17
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Copiar la base de datos
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          PGD=/usr/lib/postgresql/17/bin/pg_dump
+          mkdir respaldo
+          # Todo lo de la familia: tablas, reglas, funciones y datos.
+          $PGD "$DB" --format=custom --no-owner --no-privileges --schema=public --file=respaldo/publico.dump
+          # Cuentas de usuario y registro de archivos subidos (solo datos).
+          $PGD "$DB" --format=custom --no-owner --no-privileges --data-only \
+            --table=auth.users --table=auth.identities --table=storage.objects \
+            --file=respaldo/cuentas.dump
+          ls -la respaldo
+
+      - name: Cifrar
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          tar -czf respaldo.tar.gz -C respaldo .
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in respaldo.tar.gz -out respaldo.tar.gz.enc -pass env:PASS
+          rm -rf respaldo respaldo.tar.gz
+          ls -la respaldo.tar.gz.enc
+
+      - name: Guardar el respaldo (30 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-${{ github.run_number }}
+          path: respaldo.tar.gz.enc
+          retention-days: 30
+          if-no-files-found: error
