@@ -91,6 +91,7 @@ export default function AddMemberModal({ targetMember, relationships, allMembers
         date_of_death: formData.dateOfDeath || null,
         avatar_url: formData.avatarUrl || null,
         apple_type: formData.appleType,
+        gender: formData.gender,   // antes se pedía pero no se guardaba
         generation: newGen,
         parents: parentIds
       }
