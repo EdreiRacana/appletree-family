@@ -1,0 +1,40 @@
+<!-- Supabase → Authentication → Emails → Templates → "Reset Password"
+     Asunto: Crea tu nueva contraseña · AppleFamily Tree -->
+<!DOCTYPE html>
+<html lang="es">
+  <body style="margin:0;padding:0;background:#F4EEDF;font-family:Arial,Helvetica,sans-serif;color:#2C1810">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4EEDF;padding:32px 12px">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFDF6;border-radius:18px;overflow:hidden;border:1px solid rgba(212,175,55,0.35)">
+          <tr><td align="center" style="background:#1B2E1B;padding:28px 24px">
+            <img src="https://applefamilytree.com/assets/logo.png" width="64" height="64" alt="AppleFamily Tree" style="display:block;border:0" />
+            <p style="margin:12px 0 0;font-family:Georgia,'Times New Roman',serif;font-size:22px;color:#F5E6C8">AppleFamily <em style="color:#D4AF37">Tree</em></p>
+          </td></tr>
+          <tr><td style="padding:30px 32px 8px">
+            <h1 style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:normal;color:#2C1810">Crea tu nueva contraseña</h1>
+            <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#5A4636">
+              Recibimos una solicitud para cambiar la contraseña de tu cuenta ({{ .Email }}). Toca el botón para crear una nueva.
+            </p>
+          </td></tr>
+          <tr><td align="center" style="padding:10px 32px 26px">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#D4AF37;color:#1B1208;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 28px;border-radius:12px">
+              Crear nueva contraseña
+            </a>
+          </td></tr>
+          <tr><td style="padding:0 32px 26px">
+            <p style="margin:0;font-size:12px;line-height:1.6;color:#8A7A6D">
+              Este enlace vence en una hora. Si el botón no funciona, copia y pega este enlace en tu navegador:<br />
+              <a href="{{ .ConfirmationURL }}" style="color:#8B6914;word-break:break-all">{{ .ConfirmationURL }}</a>
+            </p>
+          </td></tr>
+          <tr><td style="padding:18px 32px 24px;border-top:1px solid rgba(212,175,55,0.25);background:#FAF6F0">
+            <p style="margin:0;font-size:11px;line-height:1.6;color:#8A7A6D;text-align:center">
+              Si tú no pediste cambiar tu contraseña, ignora este mensaje: tu cuenta sigue segura.<br />
+              AppleFamily Tree · applefamilytree.com
+            </p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>
