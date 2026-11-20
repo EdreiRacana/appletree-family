@@ -12,6 +12,7 @@ import InviteMemberModal from '@/components/tree/InviteMemberModal'
 import ConnectMemberModal from '@/components/tree/ConnectMemberModal'
 import ChatPanel from '@/components/chat/ChatPanel'
 import SuggestionModal from '@/components/SuggestionModal'
+import { computeKinship, kinshipPhrase } from '@/lib/kinship'
 import SuggestionsInbox from '@/components/SuggestionsInbox'
 import ChatsListPanel from '@/components/chat/ChatsListPanel'
 import AccountSettingsModal from '@/components/AccountSettingsModal'
@@ -367,6 +368,12 @@ export default function AppleTreeDashboard() {
     return !!myUserId && !m.userId && m.createdBy === myUserId
   }, [isAdmin, myUserId])
   const canAddRelativeTo = canEditMember
+  // Parentesco de cada manzana visto desde la mía ("Tu abuela", "Tu tío"…).
+  const kinship = React.useMemo(() => {
+    const mine = myUserId ? treeData.members.find(m => m.userId === myUserId) : undefined
+    return computeKinship(treeData.members, treeData.relationships, mine?.id ?? null)
+  }, [treeData, myUserId])
+  const relationFor = (m: Member | null) => (m ? kinshipPhrase(kinship.get(m.id)) || undefined : undefined)
   const [suggestingMember, setSuggestingMember] = useState<Member | null>(null)
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false)
 
@@ -1180,6 +1187,7 @@ export default function AppleTreeDashboard() {
 
         <MemberProfilePanel
           member={selectedMember}
+          relationLabel={relationFor(selectedMember)}
           onClose={() => setSelectedMember(null)}
           onEdit={selectedMember && canEditMember(selectedMember) ? (m) => { handleEditMember(m); setSelectedMember(null); } : undefined}
           onSuggest={!isAdmin ? (m) => { setSuggestingMember(m); setSelectedMember(null); } : undefined}
@@ -1315,6 +1323,7 @@ export default function AppleTreeDashboard() {
       <MobileBottomSheet
         member={mobileSheetMember}
         focusMember={mobileSheetMember}
+        relationLabel={relationFor(mobileSheetMember)}
         onClose={() => setMobileSheetMember(null)}
         onEdit={mobileSheetMember && canEditMember(mobileSheetMember) ? (m) => { handleEditMember(m); setMobileSheetMember(null); } : undefined}
         onSuggest={!isAdmin ? (m) => { setSuggestingMember(m); setMobileSheetMember(null); } : undefined}
@@ -1340,6 +1349,8 @@ export default function AppleTreeDashboard() {
       {/* ── MOBILE BOTTOM NAV ─────────────────────────────────────────── */}
       <MobileBottomNav
         activeTab={mobileActiveTab}
+        onOpenSuggestions={() => setIsSuggestionsOpen(true)}
+        suggestionsLabel={isAdmin ? 'Sugerencias' : 'Mis sugerencias'}
         onTabChange={(tab) => {
           // 'Profile' abre el modal de Configuracion de Cuenta (contrasena,
           // correo, notificaciones). Es la ruta principal en movil para

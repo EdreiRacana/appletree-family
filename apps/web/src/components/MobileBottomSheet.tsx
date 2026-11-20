@@ -7,6 +7,7 @@ import type { Member } from '@/lib/types'
 interface MobileBottomSheetProps {
   member: Member | null
   focusMember: Member | null   // used to compute relation label
+  relationLabel?: string       // parentesco desde quien mira ("Tu abuela")
   onClose: () => void
   onEdit?: (member: Member) => void      // solo si tiene permiso
   onAdd?: (member: Member) => void
@@ -60,7 +61,7 @@ function isMinor(member: Member): boolean {
 }
 
 export default function MobileBottomSheet({
-  member, focusMember, onClose, onEdit, onAdd, onDelete, onSuggest, onViewProfile, onAddStory, onConnect, onChat
+  member, focusMember, relationLabel, onClose, onEdit, onAdd, onDelete, onSuggest, onViewProfile, onAddStory, onConnect, onChat
 }: MobileBottomSheetProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [imgError, setImgError] = useState(false)
@@ -83,7 +84,7 @@ export default function MobileBottomSheet({
   if (!member) return null
 
   const protected_ = isMinor(member)
-  const relation = getRelationLabel(member, focusMember)
+  const relation = relationLabel || getRelationLabel(member, focusMember)
   const birthYear = getBirthYear(member)
   const deathYear = member.dateOfDeath?.split('-')[0] ?? ''
   const dates = deathYear ? `${birthYear}–${deathYear}` : birthYear

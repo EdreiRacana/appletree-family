@@ -14,9 +14,10 @@ interface MemberProfilePanelProps {
   onChat?: (member: Member) => void
   onConnect?: (member: Member) => void
   onSuggest?: (member: Member) => void
+  relationLabel?: string        // parentesco desde quien mira ("Tu abuela")
 }
 
-export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, onAddRelative, onFocusBranch, onChat, onConnect, onSuggest }: MemberProfilePanelProps) {
+export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, onAddRelative, onFocusBranch, onChat, onConnect, onSuggest, relationLabel }: MemberProfilePanelProps) {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -138,6 +139,11 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
           }}>
             {lifeSpan.toUpperCase()}
           </p>
+          {relationLabel && (
+            <p style={{ margin: '4px 0 0', fontSize: '12px', fontWeight: 700, color: 'var(--drawer-accent)' }}>
+              {relationLabel}
+            </p>
+          )}
         </div>
 
         {/* Content Area — overflow-x hidden para que no aparezca scroll

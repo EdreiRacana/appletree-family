@@ -363,8 +363,8 @@ export default function Topbar({
             style={{
               width: '38px', height: '38px',
               backgroundColor: showUserMenu ? 'rgba(212,175,55,0.22)' : 'rgba(232,218,183,0.08)',
-              borderRadius: '10px',
-              border: '1px solid rgba(212,175,55,0.18)',
+              borderRadius: '50%',
+              border: '1.5px solid rgba(212,175,55,0.55)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer',
               overflow: 'hidden',

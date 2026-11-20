@@ -15,6 +15,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Member, Relationship } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
+import { computeKinship, kinshipPhrase } from '@/lib/kinship'
 
 interface WatchTreeViewProps {
   members: Member[]
@@ -90,6 +91,27 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
     return (members.find(m => (m.generation ?? 0) === 0) ?? members[0])?.id ?? null
   }, [members, myUserId])
 
+  // Parentesco de cada familiar visto desde MI manzana ("Tu abuela", "Tu tío"…).
+  // Solo si la cuenta tiene manzana enlazada (si no, no hay "yo" desde dónde medir).
+  const kinship = useMemo(() => {
+    const mine = myUserId ? members.find(m => m.userId === myUserId) : undefined
+    return computeKinship(members, relationships, mine?.id ?? null)
+  }, [members, relationships, myUserId])
+
+  // La ayuda "Desliza para explorar…" solo las primeras 3 visitas.
+  const [showHint] = useState(() => {
+    try {
+      if (typeof window === 'undefined') return true
+      return Number(window.localStorage.getItem('apple_esfera_visits') || '0') < 3
+    } catch { return true }
+  })
+  useEffect(() => {
+    try {
+      const n = Number(window.localStorage.getItem('apple_esfera_visits') || '0')
+      window.localStorage.setItem('apple_esfera_visits', String(n + 1))
+    } catch { /* sin almacenamiento */ }
+  }, [])
+
   const layout = useMemo(() => {
     const byId = new Map(members.map(m => [m.id, m]))
     const adj = new Map<string, Set<string>>()
@@ -158,7 +180,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
   // Escribe la posición/escala de cada burbuja con el efecto lupa.
   const paint = useCallback(() => {
     const { w, h } = size
-    const cx = w / 2, cy = h / 2
+    const cx = w / 2, cy = h / 2 - 28   // un poco arriba: abajo va el nombre
     // Lupa tipo reloj inteligente (igual en todas direcciones):
     //  - la escala depende de la distancia al centro, medida en "casillas"
     //    del panal (rg): centro SMAX, se encoge suave hasta SMIN.
@@ -184,9 +206,6 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
       el.style.opacity = fade.toFixed(2)
       el.style.pointerEvents = fade > 0.15 ? 'auto' : 'none'
       el.style.zIndex = String(Math.round(s * 100))
-      const label = el.lastElementChild as HTMLElement | null
-      // Solo la manzana central muestra su nombre (en el panal junto se enciman).
-      if (label) label.style.opacity = s > SMAX * 0.88 ? '1' : '0'
       if (!closest || r < closest.d) closest = { id: m.id, d: r }
     }
     return closest
@@ -366,63 +385,67 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
                     : 'drop-shadow(0 6px 10px rgba(0,0,0,0.5))',
               }}
             />
-            {/* Medallón con la foto, en el cuerpo de la manzana */}
+            {/* Medallón con la foto, en el cuerpo de la manzana. Fallecidos:
+                aro dorado + crucecita discreta en el aro (no junto al tallo). */}
             <div style={{
               position: 'absolute', left: '50%', top: '57%', transform: 'translate(-50%, -50%)',
-              width: MEDALLION, height: MEDALLION, borderRadius: '50%', overflow: 'hidden',
-              border: `1.5px solid ${isMe ? '#D4AF37' : 'rgba(255,255,255,0.9)'}`,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.45)',
-              background: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              pointerEvents: 'none',
+              width: MEDALLION, height: MEDALLION, pointerEvents: 'none',
             }}>
-              {m.avatarUrl && !isBaby ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.avatarUrl} alt="" draggable={false}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : isBaby ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.gender === 'female' ? '/assets/baby-girl.png' : '/assets/baby-boy.png'} alt="" draggable={false}
-                  style={{ width: '72%', height: '72%', objectFit: 'contain' }} />
-              ) : (
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#5A3A22' }}>
-                  {initials(m)}
-                </span>
+              <div style={{
+                width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', boxSizing: 'border-box',
+                border: m.dateOfDeath ? '2px solid #D4AF37' : `1.5px solid ${isMe ? '#D4AF37' : 'rgba(255,255,255,0.9)'}`,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.45)',
+                background: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {m.avatarUrl && !isBaby ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.avatarUrl} alt="" draggable={false}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : isBaby ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.gender === 'female' ? '/assets/baby-girl.png' : '/assets/baby-boy.png'} alt="" draggable={false}
+                    style={{ width: '72%', height: '72%', objectFit: 'contain' }} />
+                ) : (
+                  <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 13, fontWeight: 700, color: '#5A3A22' }}>
+                    {initials(m)}
+                  </span>
+                )}
+              </div>
+              {m.dateOfDeath && (
+                <span aria-hidden style={{
+                  position: 'absolute', right: -3, top: -3, width: 14, height: 14, borderRadius: '50%',
+                  background: '#1B2414', border: '1px solid #D4AF37', color: '#D4AF37',
+                  fontSize: 8, fontWeight: 700, lineHeight: '12px', textAlign: 'center',
+                }}>✝</span>
               )}
-            </div>
-            {m.dateOfDeath && (
-              <span aria-hidden style={{
-                position: 'absolute', top: '24%', left: '50%', transform: 'translateX(-50%)',
-                color: '#D4AF37', fontSize: 12, fontWeight: 700, textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-                pointerEvents: 'none',
-              }}>✝</span>
-            )}            <div style={{
-              position: 'absolute', top: BUBBLE - 6, left: '50%', transform: 'translateX(-50%)',
-              whiteSpace: 'nowrap', fontSize: 11, fontWeight: 600, color: '#F5E6C8',
-              textShadow: '0 1px 3px rgba(0,0,0,0.95)', pointerEvents: 'none',
-              transition: 'opacity 0.2s ease-out', opacity: 0,
-            }}>
-              {isMe ? 'Tú' : m.firstName}
             </div>
           </div>
         )
       })}
 
-      {/* Pie: quién está al centro + ayuda */}
+      {/* Pie: quién está al centro, su parentesco contigo y (las primeras
+          veces) la ayuda de uso. */}
       <div style={{
         position: 'absolute', left: 0, right: 0, bottom: 14, display: 'flex',
-        flexDirection: 'column', alignItems: 'center', gap: 4, pointerEvents: 'none',
+        flexDirection: 'column', alignItems: 'center', gap: 3, pointerEvents: 'none', padding: '0 70px',
       }}>
         <div style={{
-          fontFamily: "'Playfair Display', serif", fontSize: 16, color: '#F5E6C8',
-          textShadow: '0 1px 4px rgba(0,0,0,0.9)', minHeight: 20,
+          fontFamily: "'Playfair Display', serif", fontSize: 17, color: '#F5E6C8', textAlign: 'center',
+          textShadow: '0 1px 4px rgba(0,0,0,0.9)', minHeight: 22, lineHeight: 1.25,
         }}>
           {centered ? `${centered.firstName} ${centered.lastName}` : ''}
         </div>
-        <div style={{ fontSize: 10.5, color: 'rgba(245,230,200,0.6)', letterSpacing: '0.04em' }}>
-          Desliza para explorar · toca una manzana
-        </div>
+        {centered && kinship.get(centered.id) && (
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#D4AF37', letterSpacing: '0.04em' }}>
+            {kinshipPhrase(kinship.get(centered.id))}
+          </div>
+        )}
+        {showHint && (
+          <div style={{ fontSize: 10.5, color: 'rgba(245,230,200,0.55)', letterSpacing: '0.04em', marginTop: 2 }}>
+            Desliza para explorar · toca una manzana
+          </div>
+        )}
       </div>
-
       {/* Volver a mí */}
       {meId && (
         <button
