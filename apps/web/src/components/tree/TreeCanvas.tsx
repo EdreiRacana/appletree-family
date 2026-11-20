@@ -3,7 +3,8 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
-import { computeTreeLayout, NODE_SIZE } from '@/lib/treeLayout'
+import { computeTreeLayout, NODE_SIZE, SPOUSE_SPACING } from '@/lib/treeLayout'
+import { kinshipPhrase } from '@/lib/kinship'
 import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
 import HoverPeek from './HoverPeek'
@@ -38,6 +39,8 @@ interface TreeCanvasProps {
   // and fit-to-view math treat that band as reserved so the tree stays
   // visually centered in the remaining space.
   profilePanelOpen?: boolean
+  // Parentesco de cada manzana visto desde quien mira (id -> "abuela"...).
+  relationLabels?: Map<string, string>
 }
 
 // Chrome insets — the fixed UI edges the canvas must avoid.
@@ -45,7 +48,7 @@ interface TreeCanvasProps {
 const SIDEBAR_INSET = 116
 const DRAWER_WIDTH = 340
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false }: TreeCanvasProps) {
+export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false, relationLabels }: TreeCanvasProps) {
   const isMobile = useIsMobile()
   // Vista en celular: 'esfera' (panal tipo reloj) o 'ramas' (vista anterior).
   // (La vista móvil solo se pinta después de montar, así que leer localStorage
@@ -182,6 +185,32 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     return set
   }, [focusedMemberId, positionedMembers, relationships])
 
+  // Rama iluminada al pasar el mouse: la manzana, todos sus ancestros, todos
+  // sus descendientes y sus parejas. Las líneas de esa rama se encienden y
+  // el resto queda tenue (en vez de una telaraña dorada uniforme).
+  const hoverLineage = useMemo<Set<string> | null>(() => {
+    if (!hoveredMemberId || focusedMemberId) return null
+    const byId = new Map(positionedMembers.map(m => [m.id, m]))
+    const set = new Set<string>([hoveredMemberId])
+    const up = (id: string) => {
+      for (const p of byId.get(id)?.parents ?? []) if (!set.has(p) && byId.has(p)) { set.add(p); up(p) }
+    }
+    const down = (id: string) => {
+      for (const m of positionedMembers) {
+        if ((m.parents ?? []).includes(id) && !set.has(m.id)) { set.add(m.id); down(m.id) }
+      }
+    }
+    up(hoveredMemberId)
+    down(hoveredMemberId)
+    for (const s of byId.get(hoveredMemberId)?.spouses ?? []) set.add(s)
+    relationships.forEach(rel => {
+      if (rel.relationship !== 'spouse') return
+      if (rel.member1Id === hoveredMemberId) set.add(rel.member2Id)
+      if (rel.member2Id === hoveredMemberId) set.add(rel.member1Id)
+    })
+    return set
+  }, [hoveredMemberId, focusedMemberId, positionedMembers, relationships])
+
   // Adjacency: for each parent id → array of direct child members.
   // Computed once per tree change, reused by the derived collapse maps below.
   const childrenByParent = useMemo(() => {
@@ -288,23 +317,24 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   const fitToView = useCallback(() => {
     if (!treeBounds || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    const PAD = 40
+    // Encajar el árbol DENTRO DE LA COPA del fondo (no en toda la pantalla):
+    // así ninguna manzana flota en el cielo ni se corta en la orilla.
+    // La copa ocupa aprox. del 10% al 90% del ancho y del 4% al 80% del alto
+    // del área del lienzo; se respeta además la barra lateral y el panel.
     const leftInset = SIDEBAR_INSET
     const rightInset = profilePanelOpen ? DRAWER_WIDTH + 24 : 24
-    const usableW = Math.max(rect.width - leftInset - rightInset, 200)
-    const usableH = Math.max(rect.height - PAD * 2, 200)
+    const canopyLeft = Math.max(leftInset + 12, rect.width * 0.1)
+    const canopyRight = Math.min(rect.width - rightInset - 12, rect.width * 0.9)
+    const canopyTop = rect.height * 0.04
+    const canopyBottom = rect.height * 0.8
+    const usableW = Math.max(canopyRight - canopyLeft, 200)
+    const usableH = Math.max(canopyBottom - canopyTop, 200)
     const treeW = treeBounds.maxX - treeBounds.minX
     const treeH = treeBounds.maxY - treeBounds.minY
-    // ZOOM_BOOST: fit-to-view natural mostraría el árbol completo con aire
-    // extra; multiplicamos por 1.2 para que las manzanas se vean más
-    // grandes al arrancar. El sphere global se encarga de que las orillas
-    // encogidas visualmente sigan cabiendo.
-    const ZOOM_BOOST = 1.2
-    const fitScale = Math.min(usableW / treeW, usableH / treeH, 1) * ZOOM_BOOST
+    const fitScale = Math.min(usableW / treeW, usableH / treeH, 1.1)
     const newScale = Math.max(Math.min(fitScale, MAX_SCALE), MIN_SCALE)
-    // Center on the usable band [leftInset, rect.width - rightInset]
-    const usableCenterX = leftInset + usableW / 2
-    const usableCenterY = rect.height / 2
+    const usableCenterX = canopyLeft + usableW / 2
+    const usableCenterY = canopyTop + usableH / 2
     const treeCenterX = (treeBounds.minX + treeBounds.maxX) / 2
     const treeCenterY = (treeBounds.minY + treeBounds.maxY) / 2
     setScale(newScale)
@@ -711,6 +741,11 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         }}
       />
 
+      {/* Orillas un poco más oscuras: las manzanas resaltan sobre el atardecer. */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 7,
+        background: 'radial-gradient(ellipse 75% 70% at 52% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.38) 100%)',
+      }} />
       {/* PAN + ZOOM WRAPPER (For performance during dragging) */}
       <div style={{
         position: 'absolute',
@@ -749,14 +784,17 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             const lineIsKin = kinIds
               ? kinIds.has(child.id) && parents.some(p => kinIds.has(p.id))
               : true
-            const lineOpacity = kinIds ? (lineIsKin ? 0.9 : 0.12) : 0.5
+            const inLineage = !!hoverLineage && hoverLineage.has(child.id) && parents.some(p => hoverLineage.has(p.id))
+            const lineOpacity = kinIds
+              ? (lineIsKin ? 0.9 : 0.12)
+              : hoverLineage ? (inLineage ? 0.95 : 0.08) : 0.22
             return (
               <path
                 key={`path-trunk-${child.id}`}
                 d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
                 fill="none"
-                stroke="var(--tree-line)"
-                strokeWidth={1.5}
+                stroke={inLineage ? 'var(--accent-gold)' : 'var(--tree-line)'}
+                strokeWidth={inLineage ? 2.6 : 1.3}
                 strokeLinecap="round"
                 opacity={lineOpacity}
                 style={{ transition: 'opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1)' }}
@@ -781,9 +819,10 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
                 const x2 = l2 ? l2.lensedX : m2.canvasX
                 const y2 = (l2 ? l2.lensedY : m2.canvasY) + NODE_SIZE / 2
                 
+                const spouseInLineage = !!hoverLineage && hoverLineage.has(m1.id) && hoverLineage.has(m2.id)
                 const spouseLineOpacity = kinIds
                   ? (kinIds.has(m1.id) && kinIds.has(m2.id) ? 0.85 : 0.12)
-                  : 0.6
+                  : hoverLineage ? (spouseInLineage ? 0.9 : 0.08) : 0.3
                 return (
                   <line
                     key={`spouse-line-${rel.id}`}
@@ -876,7 +915,21 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
               onHover={() => {}}
               onLeave={() => {}}
               viewportScale={scale}
+              hideText
             />
+            {/* Nombre debajo, siempre ~11px en pantalla (compensa el zoom);
+                se oculta cuando el árbol está muy alejado. */}
+            {scale >= 0.42 && (
+              <div style={{
+                position: 'absolute', left: '50%', top: NODE_SIZE - 6,
+                transform: `translateX(-50%) scale(${1 / (scale * composedScale)})`, transformOrigin: 'top center',
+                maxWidth: (SPOUSE_SPACING - 4) * scale * composedScale, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                fontSize: 11, fontWeight: 600, color: '#F5E6C8', letterSpacing: '0.02em',
+                textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.6)', pointerEvents: 'none',
+              }}>
+                {member.nickname || member.firstName}
+              </div>
+            )}
 
             {/* HoverPeek eliminado — el click directo en la manzana abre el
                 ProfilePanel con todas las acciones (Añadir, Conectar, Chatear,
@@ -925,6 +978,37 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         </div>
       </div>
 
+      {/* TARJETA AL PASAR EL MOUSE: nombre completo, parentesco contigo y años.
+          Va en coordenadas de pantalla (fuera del zoom) para leerse siempre igual. */}
+      {hoveredMemberId && !isDragging && !focusedMemberId && (() => {
+        const hm = spherizedMembers.find(m => m.id === hoveredMemberId)
+        if (!hm || hiddenIds.has(hm.id)) return null
+        const sx = offset.x + hm.lensedX * scale
+        const sy = offset.y + hm.lensedY * scale
+        const phrase = kinshipPhrase(relationLabels?.get(hm.id))
+        const by = hm.dateOfBirth?.split('-')[0]
+        const dy = hm.dateOfDeath?.split('-')[0]
+        const years = dy ? `${by || '?'} – ${dy}` : by ? `Nació en ${by}` : ''
+        return (
+          <div style={{
+            position: 'absolute', left: sx, top: sy - 10, transform: 'translate(-50%, -100%)',
+            zIndex: 600, pointerEvents: 'none', textAlign: 'center', whiteSpace: 'nowrap',
+            padding: '8px 14px', borderRadius: 12,
+            background: 'rgba(20,26,14,0.88)', border: '1px solid rgba(212,175,55,0.45)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+          }}>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: '#F5E6C8' }}>
+              {hm.firstName} {hm.lastName}
+            </div>
+            {(phrase || years) && (
+              <div style={{ marginTop: 2, fontSize: 11.5, color: 'rgba(245,230,200,0.75)' }}>
+                {phrase && <strong style={{ color: '#D4AF37', fontWeight: 700 }}>{phrase}</strong>}
+                {phrase && years ? ' · ' : ''}{years}
+              </div>
+            )}
+          </div>
+        )
+      })()}
       {/* ZOOM CONTROLS · floating, bottom center */}
       <div style={{
         position: 'absolute',
@@ -985,80 +1069,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         </span>
       </div>
 
-      {/* MINI-MAP · bottom-LEFT past the sidebar (donde el owner lo señaló).
-         Zona 100% segura: sidebar a la izquierda + zoom pill al centro +
-         drawer/Stories a la derecha, nada lo cubre. Tamaño más compacto
-         y muy translúcido para que sea guía, no obstáculo visual. */}
-      {treeBounds && miniMapInfo && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '24px',
-            left: '120px',
-            width: `${MINIMAP_W}px`,
-            height: `${MINIMAP_H}px`,
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            border: '1px solid var(--panel-border)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(14px) saturate(140%)',
-            WebkitBackdropFilter: 'blur(14px) saturate(140%)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-            overflow: 'hidden',
-            zIndex: 500,
-            opacity: 0.72,
-            transition: 'opacity 0.2s ease'
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1' }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.72' }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <svg
-            width={MINIMAP_W}
-            height={MINIMAP_H}
-            onClick={handleMinimapClick}
-            style={{ cursor: 'crosshair', display: 'block' }}
-          >
-            {positionedMembers.map(m => {
-              if (hiddenIds.has(m.id)) return null
-              const isKin = !kinIds || kinIds.has(m.id)
-              const isFocused = focusedMemberId === m.id
-              const dx = ((m.canvasX ?? 0) - treeBounds.minX) * miniMapInfo.s + miniMapInfo.offsetX
-              const dy = ((m.canvasY ?? 0) - treeBounds.minY) * miniMapInfo.s + miniMapInfo.offsetY
-              return (
-                <circle
-                  key={m.id}
-                  cx={dx}
-                  cy={dy}
-                  r={isFocused ? 3.2 : isKin ? 2 : 1.4}
-                  fill={
-                    isFocused ? '#FFD873'
-                      : isKin ? 'var(--accent-gold)'
-                      : 'var(--accent-gold-soft)'
-                  }
-                />
-              )
-            })}
-            {containerRect && (() => {
-              const treeLeft = (0 - offset.x) / scale
-              const treeTop = (0 - offset.y) / scale
-              const treeRight = (containerRect.width - offset.x) / scale
-              const treeBottom = (containerRect.height - offset.y) / scale
-              return (
-                <rect
-                  x={(treeLeft - treeBounds.minX) * miniMapInfo.s + miniMapInfo.offsetX}
-                  y={(treeTop - treeBounds.minY) * miniMapInfo.s + miniMapInfo.offsetY}
-                  width={(treeRight - treeLeft) * miniMapInfo.s}
-                  height={(treeBottom - treeTop) * miniMapInfo.s}
-                  fill="var(--accent-gold-soft)"
-                  stroke="var(--accent-gold)"
-                  strokeWidth={1.2}
-                  pointerEvents="none"
-                />
-              )
-            })()}
-          </svg>
-        </div>
-      )}
+      {/* (Minimapa retirado: con el encuadre automático en la copa ya no hace falta.) */}
 
       {/* EXIT FOCUS BUTTON · appears only while focus mode is active */}
       {focusedMemberId && (

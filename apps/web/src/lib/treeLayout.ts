@@ -320,5 +320,24 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     })
   })
 
+  // ── 6. COPA EN ARCO ───────────────────────────────────────────────
+  // Las filas rectas parecen tabla; una copa es redonda. Cada manzana baja
+  // según su distancia horizontal al centro del árbol (parábola): el centro
+  // queda arriba y las orillas cuelgan, como fruta en una copa. Todas las
+  // filas usan la misma curva, así siguen paralelas y nunca se cruzan
+  // (la caída máxima es menor que el espacio entre generaciones).
+  if (positioned.length > 1) {
+    const xs = positioned.map(p => p.canvasX)
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const cx = (minX + maxX) / 2
+    const half = Math.max((maxX - minX) / 2, NODE_SIZE)
+    const DROOP = GENERATION_GAP * 0.55
+    positioned.forEach(p => {
+      const t = (p.canvasX - cx) / half
+      p.canvasY = p.canvasY + DROOP * t * t
+    })
+  }
+
   return positioned
 }

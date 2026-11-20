@@ -1156,6 +1156,7 @@ export default function AppleTreeDashboard() {
               onConnectMember={(m) => setConnectingMember(m)}
               bgOpacity={bgOpacity}
               profilePanelOpen={!!selectedMember}
+              relationLabels={kinship}
             />
           )}
 
