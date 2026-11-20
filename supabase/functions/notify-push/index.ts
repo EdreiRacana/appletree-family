@@ -14,7 +14,24 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import webpush from 'https://esm.sh/web-push@3.6.7'
 
 const SB_URL = Deno.env.get('SUPABASE_URL') || ''
-const SB_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+// ── Llaves de Supabase ───────────────────────────────────────────────────
+// Se usan las llaves NUEVAS (sb_publishable_… / sb_secret_…) que Supabase
+// inyecta como JSON en SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS; si
+// no existen, se cae a las viejas (anon / service_role). Así se pueden
+// desactivar las llaves viejas sin romper la función.
+function firstKey(jsonVar: string, legacyVar: string): string {
+  try {
+    const raw = Deno.env.get(jsonVar)
+    if (raw) {
+      const v = Object.values(JSON.parse(raw) as Record<string, string>)[0]
+      if (v) return v
+    }
+  } catch { /* formato inesperado: usar la vieja */ }
+  return Deno.env.get(legacyVar) || ''
+}
+const SB_SERVICE_KEY = firstKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY')
+// Secreto compartido con el trigger de la base (Vault 'push_webhook_secret').
+const PUSH_SECRET = Deno.env.get('PUSH_WEBHOOK_SECRET') || ''
 const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY') || ''
 const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') || ''
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') || 'mailto:no-reply@applefamilytree.com'
@@ -59,6 +76,13 @@ function actionToUrl(action: string | null, relatedId: string | null): string {
 serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 })
+  }
+
+  // Solo la base de datos (con el secreto compartido) puede pedir un push.
+  // La función se despliega sin verificación JWT del gateway (las llaves
+  // nuevas no son JWT), así que esta revisión es la que protege.
+  if (!PUSH_SECRET || req.headers.get('x-push-secret') !== PUSH_SECRET) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
   }
 
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {

@@ -47,6 +47,26 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
+// ── Llaves de Supabase ───────────────────────────────────────────────────
+// Se usan las llaves NUEVAS (sb_publishable_… / sb_secret_…) que Supabase
+// inyecta como JSON en SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS; si
+// no existen, se cae a las viejas (anon / service_role). Así se pueden
+// desactivar las llaves viejas sin romper la función.
+function firstKey(jsonVar: string, legacyVar: string): string {
+  try {
+    const raw = Deno.env.get(jsonVar)
+    if (raw) {
+      const v = Object.values(JSON.parse(raw) as Record<string, string>)[0]
+      if (v) return v
+    }
+  } catch { /* formato inesperado: usar la vieja */ }
+  return Deno.env.get(legacyVar) || ''
+}
+// Encabezados para hablar con la base como servidor: las llaves nuevas van
+// solo en `apikey` (no son JWT); las viejas también en Authorization.
+function serverHeaders(key: string): Record<string, string> {
+  return key.startsWith('sb_') ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` }
+}
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -147,8 +167,8 @@ Deno.serve(async (req: Request) => {
 
     // ── Seguridad: quien llama debe tener sesión y ser admin del árbol ──────
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const anonKey = firstKey('SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_ANON_KEY')
+    const serviceRoleKey = firstKey('SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY')
     const authHeader = req.headers.get('Authorization') || ''
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
       return json(500, { error: 'Configuración del servidor incompleta' })
@@ -178,7 +198,7 @@ Deno.serve(async (req: Request) => {
     if (body.memberId) {
       const mRes = await fetch(
         `${supabaseUrl}/rest/v1/members?id=eq.${encodeURIComponent(body.memberId)}&select=tree_id,user_id`,
-        { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } },
+        { headers: serverHeaders(serviceRoleKey) },
       )
       const rows = mRes.ok ? await mRes.json() : []
       const m = rows?.[0]
@@ -232,8 +252,7 @@ Deno.serve(async (req: Request) => {
         const insertRes = await fetch(`${supabaseUrl}/rest/v1/invites`, {
           method: 'POST',
           headers: {
-            'apikey': serviceRoleKey,
-            'Authorization': `Bearer ${serviceRoleKey}`,
+            ...serverHeaders(serviceRoleKey),
             'Content-Type': 'application/json',
             'Prefer': 'return=minimal',
           },
