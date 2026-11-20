@@ -12,7 +12,7 @@
 // Rendimiento: el movimiento NO re-renderiza React. Cada cuadro se escribe
 // directo al style.transform de cada burbuja vía refs.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Member, Relationship } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 
@@ -22,9 +22,25 @@ interface WatchTreeViewProps {
   onMemberTap: (member: Member) => void
 }
 
-const SPACING = 112         // distancia entre centros de manzanas (px)
-const BUBBLE = 90           // tamaño base de la manzana (px)
-const MEDALLION = 43        // diámetro de la foto dentro de la manzana (px)
+const BUBBLE = 92           // tamaño base de la manzana (px, a escala 1)
+const MEDALLION = 44        // diámetro de la foto dentro de la manzana (px)
+// Lupa
+const SMAX = 1.25           // escala de la manzana del centro
+const SMIN = 0.3            // escala mínima (orilla)
+const SIGMA = 1.7           // en casillas: qué tan rápido se encogen
+const GAP = 0.8             // separación entre manzanas vecinas (1 = se tocan las cajas)
+const HALF_SQRT_PI = Math.sqrt(Math.PI) / 2
+// Distancia entre casillas del panal "en el centro" (para arrastrar 1:1).
+const SPACING = BUBBLE * GAP * SMAX
+
+// Función de error (aprox. Abramowitz–Stegun 7.1.26), para la integral de la lupa.
+function erf(x: number): number {
+  const sign = x < 0 ? -1 : 1
+  const ax = Math.abs(x)
+  const t = 1 / (1 + 0.3275911 * ax)
+  const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-ax * ax)
+  return sign * y
+}
 const TAP_SLOP = 8          // px que puede moverse el dedo y seguir siendo "toque"
 const FRICTION = 0.93       // inercia por cuadro
 const CENTER_EPS = 14       // px para considerar que una burbuja ya está centrada
@@ -142,39 +158,34 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
   // Escribe la posición/escala de cada burbuja con el efecto lupa.
   const paint = useCallback(() => {
     const { w, h } = size
-    const cx = w / 2, cy = h / 2
-    // La "esfera" es una elipse que llena la pantalla (los celulares son
-    // altos); se deja espacio arriba para el selector y abajo para el pie.
-    const ex = w / 2 - 6
-    const ey = Math.max(ex, h / 2 - 70)
-    // Lupa tipo reloj: escala continua según la distancia al centro.
-    //   centro ≈ 1.5×, primer anillo ≈ 0.9×, orilla ≈ 0.35× y se desvanece.
-    const SIGMA = 0.68                        // qué tan rápido se encogen
-    const MAX_GAIN = 1.2                      // 0.3 + 1.2 = 1.5× en el centro
-    const CURVE_FROM = 0.55                   // desde aquí se curvan hacia adentro
+    const cx = w / 2, cy = h / 2 - 10
+    // Lupa tipo reloj inteligente (igual en todas direcciones):
+    //  - la escala depende de la distancia al centro, medida en "casillas"
+    //    del panal (rg): centro SMAX, se encoge suave hasta SMIN.
+    //  - la posición en pantalla es la suma (integral) de esas escalas, así
+    //    cada manzana ocupa justo el espacio de su tamaño: quedan juntas, sin
+    //    huecos, y las de la orilla se curvan hacia adentro solas.
     let closest: { id: string; d: number } | null = null
     for (const m of layout.order) {
       const el = bubbleRefs.current.get(m.id)
       const p = layout.pos.get(m.id)
       if (!el || !p) continue
-      let x = p.x - pan.current.x
-      let y = p.y - pan.current.y
-      const r = Math.hypot(x, y)
-      const u = Math.hypot(x / ex, y / ey)    // distancia normalizada a la orilla
-      if (u > CURVE_FROM) {
-        // Las de la orilla se acercan al centro (efecto de esfera).
-        const k = (CURVE_FROM + (u - CURVE_FROM) * 0.72) / u
-        x *= k
-        y *= k
-      }
-      const s = 0.3 + MAX_GAIN * Math.exp(-((u / SIGMA) ** 2))
-      const fade = Math.max(0, Math.min(1, (s - 0.3) / 0.22))
+      const dx = p.x - pan.current.x
+      const dy = p.y - pan.current.y
+      const r = Math.hypot(dx, dy)
+      const rg = r / SPACING                              // distancia en casillas
+      const g = Math.exp(-((rg / SIGMA) ** 2))
+      const s = SMIN + (SMAX - SMIN) * g
+      const R = BUBBLE * GAP * (SMIN * rg + (SMAX - SMIN) * SIGMA * HALF_SQRT_PI * erf(rg / SIGMA))
+      const x = r > 0 ? (dx / r) * R : 0
+      const y = r > 0 ? (dy / r) * R : 0
+      const fade = Math.max(0, Math.min(1, (s - SMIN) / 0.16))
       el.style.transform = `translate3d(${cx + x - BUBBLE / 2}px, ${cy + y - BUBBLE / 2}px, 0) scale(${s.toFixed(3)})`
       el.style.opacity = fade.toFixed(2)
       el.style.pointerEvents = fade > 0.15 ? 'auto' : 'none'
       el.style.zIndex = String(Math.round(s * 100))
       const label = el.lastElementChild as HTMLElement | null
-      if (label) label.style.opacity = s > 0.8 ? '1' : '0'
+      if (label) label.style.opacity = s > 0.78 ? '1' : '0'
       if (!closest || r < closest.d) closest = { id: m.id, d: r }
     }
     return closest
@@ -235,6 +246,9 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
     kick()
   }, [meId, layout, kick])
 
+  // Pintar de inmediato (sin esperar al siguiente cuadro) al cambiar tamaño o
+  // familia: evita un instante en blanco al abrir la vista.
+  useLayoutEffect(() => { paint() }, [paint])
   useEffect(() => { kick() }, [size, kick])
   useEffect(() => () => { if (raf.current != null) cancelAnimationFrame(raf.current) }, [])
 
