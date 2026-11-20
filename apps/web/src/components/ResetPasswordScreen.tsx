@@ -20,9 +20,12 @@ export default function ResetPasswordScreen({ onDone }: { onDone: () => void }) 
     const { error: err } = await supabase.auth.updateUser({ password: pass })
     setSaving(false)
     if (err) {
-      setError(/expired|invalid/i.test(err.message)
-        ? 'El enlace ya venció. Pide otro desde "¿Olvidaste tu contraseña?".'
-        : 'No se pudo guardar la contraseña. Intenta de nuevo.')
+      setError(
+        /different|same/i.test(err.message)
+          ? 'La contraseña nueva debe ser distinta a la anterior.'
+          : /expired|invalid|session|missing/i.test(err.message)
+            ? 'El enlace ya se usó o venció. Pide otro desde "¿Olvidaste tu contraseña?".'
+            : 'No se pudo guardar la contraseña. Intenta de nuevo.')
       return
     }
     setSaved(true)

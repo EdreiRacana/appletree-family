@@ -161,6 +161,11 @@ export default function AppleTreeDashboard() {
   const [termsAccepted, setTermsAccepted] = useState(false)
   // Volvió desde el correo de "olvidé mi contraseña": pedir la nueva.
   const [recoveryMode, setRecoveryMode] = useState(false)
+  // Volvió desde el correo "Crea tu nueva contraseña" (?recuperar=1).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (new URLSearchParams(window.location.search).has('recuperar')) setRecoveryMode(true)
+  }, [])
 
   // ── Restaurar sesión: prioridad a Supabase Auth, luego al legacy ──
   useEffect(() => {
@@ -621,7 +626,10 @@ export default function AppleTreeDashboard() {
     }
     setAuthLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+      // ?recuperar=1: al volver del correo la página sabe que debe pedir la
+      // contraseña nueva (el aviso PASSWORD_RECOVERY puede llegar antes de
+      // que la página empiece a escucharlo y perderse).
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/?recuperar=1` : undefined,
     })
     setAuthLoading(false)
     // Por privacidad no decimos si el correo existe o no.
