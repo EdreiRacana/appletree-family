@@ -77,6 +77,17 @@ export default function ResetPasswordScreen({ onDone }: { onDone: () => void }) 
             <button onClick={save} disabled={saving} style={{ ...btn, opacity: saving ? 0.65 : 1 }}>
               {saving ? 'Guardando…' : 'Guardar contraseña'}
             </button>
+            {/* Por si abrió el enlace sin querer cambiar su contraseña. */}
+            <button
+              type="button"
+              onClick={() => {
+                try { window.history.replaceState({}, '', window.location.pathname) } catch { /* ignore */ }
+                onDone()
+              }}
+              style={{ marginTop: 12, background: 'none', border: 'none', color: 'rgba(245,230,200,0.7)', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Ahora no, dejar mi contraseña como está
+            </button>
           </>
         )}
       </div>
