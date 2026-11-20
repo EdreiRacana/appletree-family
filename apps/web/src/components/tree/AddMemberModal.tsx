@@ -69,7 +69,10 @@ export default function AddMemberModal({ targetMember, relationships, allMembers
       if (relType === 'parent') newGen -= 1
 
       // 2. Prepare Parent IDs if adding a child
-      let parentIds: string[] = [targetMember.id]
+      // Solo un HIJO lleva padres. Antes se ponía [targetMember] para todo:
+      // la pareja quedaba como "hija" de su cónyuge y el padre nuevo como
+      // "hijo" de su propio hijo (ciclo), lo que rompía los parentescos.
+      let parentIds: string[] = relType === 'child' ? [targetMember.id] : []
       if (relType === 'child') {
         // Find spouse in relationships to add as co-parent
         const spouseRel = relationships.find(rel => 

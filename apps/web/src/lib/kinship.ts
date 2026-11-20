@@ -125,8 +125,37 @@ export function computeKinship(
     if (!edges.has(a)) edges.set(a, [])
     edges.get(a)!.push({ to: b, step })
   }
+  // Parejas conocidas (arrays + tabla relationships), para descartar
+  // vínculos padre-hijo imposibles entre esposos.
+  const spousePair = new Set<string>()
+  const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`)
+  for (const m of members) for (const s of m.spouses ?? []) spousePair.add(pairKey(m.id, s))
+  for (const r of relationships) {
+    if (r.relationship === 'spouse' && r.isActive !== false) spousePair.add(pairKey(r.member1Id, r.member2Id))
+  }
+
+  // ¿Es confiable que `parentId` sea padre/madre de `child`? Se descartan los
+  // datos dañados por un error anterior del formulario "Agregar familiar":
+  //  - un esposo registrado como "padre" de su pareja;
+  //  - ciclos (A padre de B y B padre de A): se conserva solo el sentido
+  //    que concuerda con las generaciones (el padre va una arriba).
+  const validParent = (child: Member, parentId: string): boolean => {
+    const parent = byId.get(parentId)
+    if (!parent) return false
+    if (spousePair.has(pairKey(child.id, parentId))) return false
+    if ((parent.parents ?? []).includes(child.id)) {
+      const gp = parent.generation, gc = child.generation
+      if (gp == null || gc == null || gp === gc) return false
+      return gp < gc
+    }
+    return true
+  }
+
   for (const m of members) {
-    for (const p of m.parents ?? []) { add(m.id, p, 'U'); add(p, m.id, 'D') }
+    for (const p of m.parents ?? []) {
+      if (!validParent(m, p)) continue
+      add(m.id, p, 'U'); add(p, m.id, 'D')
+    }
     for (const s of m.spouses ?? []) { add(m.id, s, 'S'); add(s, m.id, 'S') }
   }
   for (const r of relationships) {
