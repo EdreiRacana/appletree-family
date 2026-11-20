@@ -131,7 +131,7 @@ function MemberRow({ member, onInvite }: { member: Member; onInvite?: (m: Member
       </div>
 
       {/* Invite Button (solo admins, solo manzanas sin cuenta) */}
-      {onInvite && !member.userId && (
+      {onInvite && !member.userId && !isDead && (
       <button
         onClick={() => onInvite(member)}
         title="Invitar al árbol"

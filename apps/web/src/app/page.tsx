@@ -375,6 +375,8 @@ export default function AppleTreeDashboard() {
   }, [treeData, myUserId])
   const relationFor = (m: Member | null) => (m ? kinshipPhrase(kinship.get(m.id)) || undefined : undefined)
   const [suggestingMember, setSuggestingMember] = useState<Member | null>(null)
+  // Con quien ya falleció no se puede chatear ni se le puede invitar.
+  const canContact = (m: Member | null) => !!m && !m.dateOfDeath
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false)
 
   // Interceptor de setEditingMember: si no tiene permiso, ofrece mandar una
@@ -1224,7 +1226,7 @@ export default function AppleTreeDashboard() {
           />
         )}
 
-        {chattingWithMember && (
+        {chattingWithMember && canContact(chattingWithMember) && (
           <ChatPanel
             member={chattingWithMember}
             onClose={() => setChattingWithMember(null)}
@@ -1271,7 +1273,7 @@ export default function AppleTreeDashboard() {
           />
         )}
         
-        {invitingMember && (
+        {invitingMember && canContact(invitingMember) && (
           <InviteMemberModal
             member={invitingMember}
             onClose={() => setInvitingMember(null)}

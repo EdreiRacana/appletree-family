@@ -138,7 +138,8 @@ export default function MobileBottomSheet({
         <div className="mobile-sheet-actions">
 
           {/* Contact actions — hidden for minors */}
-          {!protected_ && onChat && (
+          {/* Contacto: no para menores ni para quien ya falleció */}
+          {!protected_ && !member.dateOfDeath && onChat && (
             <>
               <button className="mobile-sheet-action-btn" onClick={() => { onChat(member); onClose(); }}>
                 <MessageCircle size={20} strokeWidth={1.8} />
@@ -178,7 +179,7 @@ export default function MobileBottomSheet({
 
           <button className="mobile-sheet-action-btn" onClick={() => { onAddStory(member); onClose(); }}>
             <Trophy size={20} strokeWidth={1.8} />
-            Publicar logro
+            {member.dateOfDeath ? 'Compartir un recuerdo' : 'Publicar logro'}
           </button>
 
           <button className="mobile-sheet-action-btn" onClick={() => { onViewProfile(member); onClose(); }}>

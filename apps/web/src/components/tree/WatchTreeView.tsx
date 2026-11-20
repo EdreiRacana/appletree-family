@@ -44,7 +44,7 @@ function erf(x: number): number {
 }
 const TAP_SLOP = 8          // px que puede moverse el dedo y seguir siendo "toque"
 const FRICTION = 0.93       // inercia por cuadro
-const CENTER_EPS = 14       // px para considerar que una burbuja ya está centrada
+const CENTER_ZONE = 0.55    // en casillas: la manzana más cercana dentro de esta zona es "la del centro"
 
 // Coordenadas de un panal en espiral: anillo 0 (centro), anillo 1 (6), anillo 2 (12)…
 function hexSpiral(count: number): Array<{ x: number; y: number }> {
@@ -79,6 +79,7 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
   const [myUserId, setMyUserId] = useState<string | null>(null)
   const [size, setSize] = useState({ w: 360, h: 640 })
   const [centeredId, setCenteredId] = useState<string | null>(null)
+  const centeredRef = useRef<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMyUserId(data.user?.id ?? null)).catch(() => {})
@@ -208,6 +209,10 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
       el.style.zIndex = String(Math.round(s * 100))
       if (!closest || r < closest.d) closest = { id: m.id, d: r }
     }
+    // "La del centro" = la más cercana si está en la zona central. Se actualiza
+    // en cada cuadro (también al deslizar), solo cuando cambia.
+    const cid = closest && closest.d < SPACING * CENTER_ZONE ? closest.id : null
+    if (cid !== centeredRef.current) { centeredRef.current = cid; setCenteredId(cid) }
     return closest
   }, [layout, size])
 
@@ -228,9 +233,8 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
         moving = true
       }
     }
-    const closest = paint()
+    paint()
     if (moving) raf.current = requestAnimationFrame(() => loopRef.current())
-    else if (closest) setCenteredId(closest.d < CENTER_EPS ? closest.id : null)
   }, [paint, clampPan])
   useEffect(() => { loopRef.current = loop }, [loop])
 
