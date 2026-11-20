@@ -73,6 +73,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   // Starting at 0,0 since we calibrated BASE_Y in the layout engine
   const [offset, setOffset] = useState({ x: 0, y: 0 }) 
   const [scale, setScale] = useState(1)
+  // true cuando el usuario mueve el zoom o arrastra: así el reencuadre
+  // automático (al cambiar el espacio de la pantalla) no le quita su vista.
+  const userMovedRef = useRef(false)
   const [isDragging, setIsDragging] = useState(false)
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -331,18 +334,33 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     const usableH = Math.max(canopyBottom - canopyTop, 200)
     const treeW = treeBounds.maxX - treeBounds.minX
     const treeH = treeBounds.maxY - treeBounds.minY
-    const fitScale = Math.min(usableW / treeW, usableH / treeH, 1.1)
+    const treeCenterX = (treeBounds.minX + treeBounds.maxX) / 2
+    const treeCenterY = (treeBounds.minY + treeBounds.maxY) / 2
+    // La copa es REDONDA, no rectangular: las esquinas del rectángulo son
+    // cielo. Además del ajuste al rectángulo, cada manzana (con su nombre)
+    // debe caer dentro del óvalo de la copa.
+    const rx = usableW / 2
+    const ry = (usableH / 2) * 1.08
+    let ovalScale = Infinity
+    for (const m of positionedMembers) {
+      const dx = Math.abs((m.canvasX ?? 0) - treeCenterX) + NODE_SIZE * 0.5
+      const dy = Math.abs((m.canvasY ?? 0) + NODE_SIZE / 2 - treeCenterY) + NODE_SIZE * 0.6
+      // Súper-elipse (exponente 3): entre óvalo y rectángulo. Recorta las
+      // esquinas (cielo) sin encoger de más el árbol como un óvalo puro.
+      const k = Math.cbrt((dx / rx) ** 3 + (dy / ry) ** 3)
+      if (k > 0) ovalScale = Math.min(ovalScale, 1 / k)
+    }
+    const fitScale = Math.min(usableW / treeW, usableH / treeH, ovalScale, 1.1)
     const newScale = Math.max(Math.min(fitScale, MAX_SCALE), MIN_SCALE)
     const usableCenterX = canopyLeft + usableW / 2
     const usableCenterY = canopyTop + usableH / 2
-    const treeCenterX = (treeBounds.minX + treeBounds.maxX) / 2
-    const treeCenterY = (treeBounds.minY + treeBounds.maxY) / 2
+    userMovedRef.current = false
     setScale(newScale)
     setOffset({
       x: usableCenterX - treeCenterX * newScale,
       y: usableCenterY - treeCenterY * newScale
     })
-  }, [treeBounds, profilePanelOpen])
+  }, [treeBounds, profilePanelOpen, positionedMembers])
 
   // ── ZOOM AROUND A SCREEN POINT (cursor or viewport center) ──
   const zoomAt = useCallback((screenX: number, screenY: number, factor: number) => {
@@ -351,6 +369,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     if (newScale === oldScale) return
     const ratio = newScale / oldScale
     const o = offsetRef.current
+    userMovedRef.current = true
     setScale(newScale)
     setOffset({
       x: screenX - (screenX - o.x) * ratio,
@@ -519,8 +538,9 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     if (!didInitialFit.current) return
     const count = positionedMembers.length
     if (count === 0) return
-    // Solo re-fit si crecio o encogio significativamente (evita jitter)
-    if (Math.abs(count - lastFittedCount.current) >= 1) {
+    // Re-encuadrar si cambió el número de manzanas, o si cambió el tamaño
+    // del lienzo y el usuario no ha movido la vista.
+    if (Math.abs(count - lastFittedCount.current) >= 1 || !userMovedRef.current) {
       lastFittedCount.current = count
       requestAnimationFrame(() => fitToView())
     }
@@ -530,6 +550,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     if (!isDragging) return
     const deltaX = e.clientX - lastMousePos.x
     const deltaY = e.clientY - lastMousePos.y
+    userMovedRef.current = true
     setOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
     setLastMousePos({ x: e.clientX, y: e.clientY })
   }, [isDragging, lastMousePos])
@@ -558,6 +579,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     const touch = e.touches[0]
     const deltaX = touch.clientX - lastMousePos.x
     const deltaY = touch.clientY - lastMousePos.y
+    userMovedRef.current = true
     setOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }))
     setLastMousePos({ x: touch.clientX, y: touch.clientY })
   }, [isDragging, lastMousePos])
@@ -597,7 +619,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
         return
       }
 
-      setOffset(prev => ({ 
+      userMovedRef.current = true
+      setOffset(prev => ({
         x: prev.x - e.deltaX * 0.8,
         y: prev.y - e.deltaY * 0.8 
       }))

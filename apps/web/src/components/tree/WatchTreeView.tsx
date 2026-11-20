@@ -172,7 +172,9 @@ export default function WatchTreeView({ members, relationships, onMemberTap }: W
   const lastDragEnd = useRef(0)           // cuándo terminó el último arrastre
 
   const clampPan = useCallback((p: { x: number; y: number }) => {
-    const lim = Math.max(SPACING, layout.maxR * 0.8)
+    // Se puede llevar al centro CUALQUIER manzana, incluso las de la orilla
+    // (antes el límite era 80% del radio y las últimas no se alcanzaban).
+    const lim = Math.max(SPACING, layout.maxR + SPACING * 0.25)
     const r = Math.hypot(p.x, p.y)
     if (r <= lim) return p
     return { x: (p.x / r) * lim, y: (p.y / r) * lim }
