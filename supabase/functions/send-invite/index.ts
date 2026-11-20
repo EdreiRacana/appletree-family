@@ -141,7 +141,7 @@ Deno.serve(async (req: Request) => {
     })
 
   try {
-    const defaultUrl = Deno.env.get('APP_URL') || 'https://darling-gelato-16e0bb.netlify.app'
+    const defaultUrl = Deno.env.get('APP_URL') || 'https://applefamilytree.com'
     const body = (await req.json()) as InviteBody
     const isLinkOnly = body?.mode === 'link-only'
 
@@ -188,7 +188,7 @@ Deno.serve(async (req: Request) => {
 
     // El enlace solo puede apuntar a dominios propios (evita phishing).
     const allowed = (Deno.env.get('ALLOWED_APP_URLS') ||
-      `${defaultUrl},https://darling-gelato-16e0bb.netlify.app,http://localhost:3000`)
+      `${defaultUrl},https://applefamilytree.com,https://www.applefamilytree.com,http://localhost:3000`)
       .split(',').map((s: string) => s.trim().replace(/\/$/, '')).filter(Boolean)
     const requested = (body.treeUrl || '').replace(/\/$/, '')
     body.treeUrl = allowed.includes(requested) ? requested : defaultUrl

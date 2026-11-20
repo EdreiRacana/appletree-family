@@ -13,6 +13,14 @@
   NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
 
+# Dominio oficial: applefamilytree.com. La dirección vieja de Netlify
+# redirige ahí (301) para que haya una sola dirección y una sola sesión.
+[[redirects]]
+  from = "https://darling-gelato-16e0bb.netlify.app/*"
+  to = "https://applefamilytree.com/:splat"
+  status = 301
+  force = true
+
 # El Service Worker DEBE servirse sin cache. Si el CDN de Netlify cachea el
 # sw.js viejo, las mejoras de push (requireInteraction, tag unico, renotify)
 # no llegan a los usuarios porque siguen con el SW anterior.
