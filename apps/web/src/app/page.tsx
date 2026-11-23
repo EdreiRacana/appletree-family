@@ -21,6 +21,7 @@ import FamilyWallPanel from '@/components/wall/FamilyWallPanel'
 import EventCommentsPanel from '@/components/events/EventCommentsPanel'
 import PhotoAlbums from '@/components/PhotoAlbums'
 import HomeDashboard from '@/components/HomeDashboard'
+import InMemoriamPanel from '@/components/InMemoriamPanel'
 import TermsModal from '@/components/TermsModal'
 import MobileBottomSheet from '@/components/MobileBottomSheet'
 import MobileBottomNav from '@/components/MobileBottomNav'
@@ -406,6 +407,8 @@ export default function AppleTreeDashboard() {
   // Con quien ya falleció no se puede chatear ni se le puede invitar.
   const canContact = (m: Member | null) => !!m && !m.dateOfDeath
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false)
+  // Sube al publicar un recuerdo, para que "En memoria" lo muestre sin recargar
+  const [memoryRefresh, setMemoryRefresh] = useState(0)
 
   // Interceptor de setEditingMember: si no tiene permiso, ofrece mandar una
   // sugerencia en lugar de editar.
@@ -1189,8 +1192,26 @@ export default function AppleTreeDashboard() {
 
           {activeTab === 'Home' && (
             <div style={{ position: 'absolute', inset: 0, zIndex: 50 }}>
-              <HomeDashboard members={filteredMembers} onViewTree={() => setActiveTab('My Tree')} />
+              <HomeDashboard
+                members={treeData.members}
+                treeId={currentTreeId}
+                meId={treeData.members.find(m => session?.user?.id && m.userId === session.user.id)?.id ?? null}
+                onViewTree={() => setActiveTab('My Tree')}
+                onOpenChat={(m) => { setChattingWithMember(m); setActiveTab('My Tree') }}
+                canContact={canContact}
+                onOpenMemorial={() => setActiveTab('Memoria')}
+              />
             </div>
+          )}
+
+          {activeTab === 'Memoria' && (
+            <InMemoriamPanel
+              treeId={currentTreeId}
+              members={treeData.members}
+              refreshKey={memoryRefresh}
+              onClose={() => setActiveTab('My Tree')}
+              onShareMemory={(m) => { setStoryActor(m); setIsStoryModalOpen(true) }}
+            />
           )}
 
           {activeTab === 'Photo Albums' && (
@@ -1320,7 +1341,7 @@ export default function AppleTreeDashboard() {
           />
         )}
 
-        {isStoryModalOpen && <AddStoryModal treeId={currentTreeId} onClose={() => { setIsStoryModalOpen(false); setStoryActor(null); }} onSave={fetchFamilyData} />}
+        {isStoryModalOpen && <AddStoryModal treeId={currentTreeId} actorMember={storyActor} onClose={() => { setIsStoryModalOpen(false); setStoryActor(null); }} onSave={() => { fetchFamilyData(); setMemoryRefresh(k => k + 1) }} />}
 
         {isTermsOpen && <TermsModal onClose={() => setIsTermsOpen(false)} />}
 
@@ -1392,7 +1413,7 @@ export default function AppleTreeDashboard() {
             return
           }
           setMobileActiveTab(tab)
-          if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums' || tab === 'Chats' || tab === 'Buzón' || tab === 'Events') {
+          if (tab === 'My Tree' || tab === 'Home' || tab === 'Photo Albums' || tab === 'Chats' || tab === 'Buzón' || tab === 'Events' || tab === 'Memoria') {
             setActiveTab(tab)
           } else {
             setActiveTab(null)

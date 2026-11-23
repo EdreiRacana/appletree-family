@@ -869,3 +869,12 @@ html, body {
   to   { opacity: 1; transform: none; }
 }
 @keyframes afSpin { to { transform: rotate(360deg); } }
+
+/* --- Inicio y En memoria en celular --- */
+@media (max-width: 768px) {
+  .home-dash-wrap { padding: 12px 10px 96px !important; justify-content: center !important; }
+  .home-dash-panel { width: 100% !important; max-height: calc(100dvh - 170px) !important; }
+  .memoriam-overlay { padding: 68px 8px 84px !important; }
+  .memoriam-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+  .memoriam-hero { flex-direction: column; text-align: center; }
+}

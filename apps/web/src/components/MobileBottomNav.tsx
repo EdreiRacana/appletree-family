@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Home, TreePine, MessageCircle, Megaphone, Image as ImageIcon, BookOpen, User, MoreHorizontal, Lightbulb, X } from 'lucide-react'
+import { Home, TreePine, MessageCircle, Megaphone, Image as ImageIcon, BookOpen, User, MoreHorizontal, Lightbulb, X, Flame } from 'lucide-react'
 
 interface MobileBottomNavProps {
   activeTab: string | null
@@ -21,6 +21,7 @@ const MAIN_ITEMS = [
 const MORE_ITEMS = [
   { id: 'Photo Albums', icon: ImageIcon, label: 'Fotos' },
   { id: 'Events',       icon: BookOpen,  label: 'Eventos' },
+  { id: 'Memoria',      icon: Flame,     label: 'En memoria' },
   { id: 'Profile',      icon: User,      label: 'Mi perfil y ajustes' },
 ]
 

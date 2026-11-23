@@ -1,4 +1,5 @@
 'use client'
+import type { Member } from '@/lib/types'
 
 import React, { useState } from 'react'
 import { X, Camera, Save, Calendar, Type } from 'lucide-react'
@@ -15,9 +16,11 @@ interface AddStoryModalProps {
   }
   onClose: () => void
   onSave: () => void
+  // Persona a la que pertenece la historia (p.ej. un recuerdo de alguien que ya partió)
+  actorMember?: Member | null
 }
 
-export default function AddStoryModal({ treeId, initialData, onClose, onSave }: AddStoryModalProps) {
+export default function AddStoryModal({ treeId, initialData, onClose, onSave, actorMember }: AddStoryModalProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -117,7 +120,8 @@ export default function AddStoryModal({ treeId, initialData, onClose, onSave }: 
             title: `${formData.title} (${formData.year})`,
             description: formData.description,
             image_url: finalImageUrl,
-            privacy: 'core'
+            privacy: 'core',
+            ...(actorMember ? { actor_member_id: actorMember.id } : {}),
           })
         if (error) throw error
       }
@@ -136,7 +140,7 @@ export default function AddStoryModal({ treeId, initialData, onClose, onSave }: 
     <div style={overlayStyle}>
       <div style={modalStyle}>
         <div style={headerStyle}>
-          <h2 style={titleStyle}>Nueva Historia Familiar</h2>
+          <h2 style={titleStyle}>{actorMember?.dateOfDeath ? `Un recuerdo de ${actorMember.firstName}` : actorMember ? `Historia de ${actorMember.firstName}` : 'Nueva Historia Familiar'}</h2>
           <button onClick={onClose} style={closeButtonStyle}><X size={20} /></button>
         </div>
 
