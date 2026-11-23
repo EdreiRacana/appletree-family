@@ -337,7 +337,7 @@ BEGIN
   -- El apellido de la familia no cambia con el nombre (evita duplicados);
   -- solo se toma del nombre si el árbol aún no tenía ("Familia X" → "x").
   v_sur := public.norm_surname(regexp_replace(v_name, '^(familia|fam\.?)\s+', '', 'i'));
-  UPDATE public.trees SET name = v_name, surname = COALESCE(surname, v_sur), updated_at = NOW()
+  UPDATE public.trees SET name = v_name, surname = COALESCE(surname, v_sur)
   WHERE id = p_tree;
 END;
 $$;
