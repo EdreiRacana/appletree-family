@@ -183,8 +183,8 @@ export default function FamilySwitcher({
             return (
               <button key={f.tree_id} role="menuitemradio" aria-checked={active}
                 onClick={() => { close(); if (!active) onSwitch(f.tree_id) }}
-                style={{ ...row, background: active ? 'rgba(212,175,55,0.16)' : 'transparent' }}>
-                <span style={{ width: 18, display: 'inline-flex' }}>{active && <Check size={16} color="#D4AF37" />}</span>
+                style={{ ...row, background: active ? 'var(--menu-active)' : 'transparent' }}>
+                <span style={{ width: 18, display: 'inline-flex' }}>{active && <Check size={16} color="var(--accent-gold)" />}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={rowTitle}>{familyLabel(f)}</span>
                   <span style={rowSub}>
@@ -207,7 +207,7 @@ export default function FamilySwitcher({
                 onKeyDown={e => { if (e.key === 'Enter') void rename() }}
                 aria-label="Nuevo nombre de la familia" style={input} />
               <button disabled={busy === 'rename' || newName.trim().length < 2} onClick={() => void rename()} style={smallBtn}>Guardar</button>
-              <button onClick={() => setRenaming(false)} aria-label="Cancelar" style={{ ...smallBtn, background: 'transparent', color: '#E8DAB2' }}><X size={14} /></button>
+              <button onClick={() => setRenaming(false)} aria-label="Cancelar" style={{ ...smallBtn, background: 'transparent', color: 'var(--menu-fg)' }}><X size={14} /></button>
             </div>
           )}
 
@@ -257,7 +257,7 @@ export default function FamilySwitcher({
                 <button disabled={busy === confirm.key} onClick={() => void create(confirm)} style={smallBtn}>
                   {busy === confirm.key ? 'Creando…' : 'Sí, crear'}
                 </button>
-                <button onClick={() => setConfirm(null)} style={{ ...smallBtn, background: 'transparent', color: '#E8DAB2', border: '1px solid rgba(232,218,178,0.35)' }}>Cancelar</button>
+                <button onClick={() => setConfirm(null)} style={{ ...smallBtn, background: 'transparent', color: 'var(--menu-fg)', border: '1px solid var(--menu-border)' }}>Cancelar</button>
               </div>
             </div>
           )}
@@ -278,7 +278,7 @@ export default function FamilySwitcher({
             </div>
           )}
 
-          {error && <p role="alert" style={{ margin: '8px 4px 0', color: '#FFB4A2', fontSize: 12, fontWeight: 600 }}>{error}</p>}
+          {error && <p role="alert" style={{ margin: '8px 4px 0', color: '#D9534F', fontSize: 12, fontWeight: 600 }}>{error}</p>}
         </div>
       )}
     </div>
@@ -287,13 +287,13 @@ export default function FamilySwitcher({
 
 const triggerBtn: CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8, maxWidth: 260, height: 38, padding: '0 14px',
-  borderRadius: 12, border: '1px solid rgba(212,175,55,0.35)', background: 'rgba(232,218,183,0.1)',
-  color: '#E8DAB2', fontSize: 13, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.01em',
+  borderRadius: 12, border: '1px solid var(--chrome-border)', background: 'var(--accent-gold-soft)',
+  color: 'var(--chrome-fg-strong)', fontSize: 13, fontWeight: 700, cursor: 'pointer', letterSpacing: '0.01em',
 }
 const panel: CSSProperties = {
   position: 'absolute', top: 46, left: 0, width: 360, maxHeight: '70vh', overflowY: 'auto',
-  padding: 10, borderRadius: 16, background: 'rgba(22,32,24,0.97)', color: '#E8DAB2',
-  border: '1px solid rgba(212,175,55,0.3)', boxShadow: '0 18px 48px rgba(0,0,0,0.5)', zIndex: 2600,
+  padding: 10, borderRadius: 16, background: 'var(--menu-bg)', color: 'var(--menu-fg)',
+  border: '1px solid var(--menu-border)', boxShadow: '0 18px 48px rgba(0,0,0,0.5)', zIndex: 2600,
   backdropFilter: 'blur(18px)',
 }
 const sectionTitle: CSSProperties = {
@@ -307,21 +307,21 @@ const rowTitle: CSSProperties = { display: 'block', fontSize: 14, fontWeight: 70
 const rowSub: CSSProperties = { display: 'block', fontSize: 11.5, opacity: 0.65, marginTop: 1 }
 const pill: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 20,
-  fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', border: '1px solid rgba(232,218,178,0.3)',
+  fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', border: '1px solid var(--menu-border)',
 }
 const pillBtn: CSSProperties = { ...pill, background: '#D4AF37', color: '#16201A', border: 'none', cursor: 'pointer' }
 const linkBtn: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 8px', border: 'none', background: 'none',
-  color: '#D4AF37', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
+  color: 'var(--accent-gold)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
 }
 const input: CSSProperties = {
-  flex: 1, minWidth: 0, height: 34, padding: '0 10px', borderRadius: 9, border: '1px solid rgba(212,175,55,0.4)',
-  background: 'rgba(255,255,255,0.06)', color: '#F5E6C8', fontSize: 14, outline: 'none',
+  flex: 1, minWidth: 0, height: 34, padding: '0 10px', borderRadius: 9, border: '1px solid var(--menu-border)',
+  background: 'var(--menu-input-bg)', color: 'var(--menu-fg)', fontSize: 14, outline: 'none',
 }
 const smallBtn: CSSProperties = {
   height: 34, padding: '0 12px', borderRadius: 9, border: 'none', background: '#D4AF37', color: '#16201A',
   fontSize: 12.5, fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
 }
 const confirmBox: CSSProperties = {
-  margin: '6px 4px', padding: 12, borderRadius: 12, background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.35)', fontSize: 13,
+  margin: '6px 4px', padding: 12, borderRadius: 12, background: 'var(--menu-active)', border: '1px solid var(--menu-border)', fontSize: 13,
 }

@@ -56,7 +56,9 @@ const THEME_INIT = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    // El script de tema pone data-theme antes de que cargue React: es
+    // intencional, así que no se marca como diferencia de hidratación.
+    <html lang="es" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
