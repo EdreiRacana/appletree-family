@@ -1,5 +1,6 @@
 'use client'
 
+import BrandLogo from '@/components/BrandLogo'
 import React from 'react'
 import { Search, Bell, User, Plus, Share2, Settings, HelpCircle, Shield, LogOut, Sun, Moon, KeyRound, X } from 'lucide-react'
 import type { AppNotification } from '@/lib/useNotifications'
@@ -134,16 +135,7 @@ export default function Topbar({
             justifyContent: 'center'
           }}
         >
-          <img 
-            src="/assets/logo.png" 
-            alt="AppleFamily Tree" 
-            style={{ 
-              height: '100%', 
-              width: 'auto',
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))'
-            }}
-          />
+          <BrandLogo height="100%" />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '2px' }}>
           <h1 

@@ -146,7 +146,7 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
         {/* 3. Small Medallion (48px Lux Style). Finados: moño negro discreto. */}
         <div style={{ position: 'relative', marginBottom: '6px', opacity: medallionOpacity, transition: 'opacity 0.25s ease-out' }}>
         {isDeceased && (
-          <MourningRibbon size={16} style={{ position: 'absolute', right: '-7px', bottom: '-5px', zIndex: 2 }} />
+          <MourningRibbon size={15} style={{ position: 'absolute', right: '-8px', top: '-7px', transform: 'rotate(14deg)', zIndex: 2 }} />
         )}
         <div style={{
           width: '48px',

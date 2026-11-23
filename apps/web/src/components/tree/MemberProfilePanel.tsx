@@ -144,7 +144,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
               />
             </div>
             {isDeceased && (
-              <MourningRibbon size={21} style={{ position: 'absolute', right: '-6px', bottom: '-4px' }} />
+              <MourningRibbon size={22} style={{ position: 'absolute', right: '-9px', top: '-8px', transform: 'rotate(14deg)' }} />
             )}
           </div>
 

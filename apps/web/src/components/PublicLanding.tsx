@@ -6,6 +6,15 @@
 
 import React from 'react'
 import { TreePine, Shield, Heart, Users, Camera, MessageCircle, ArrowRight } from 'lucide-react'
+import BrandLogo from '@/components/BrandLogo'
+
+// Luciérnagas doradas: posiciones fijas (no aleatorias) para evitar
+// diferencias entre servidor y navegador.
+const FIREFLIES = [
+  [8, 72, 0, 14], [16, 38, 3, 17], [24, 84, 6, 13], [33, 22, 1.5, 19], [41, 64, 8, 15],
+  [52, 30, 4.5, 18], [60, 78, 2, 16], [68, 18, 7, 14], [76, 56, 5, 20], [84, 34, 9, 15],
+  [91, 70, 3.5, 17], [12, 52, 10, 18], [47, 88, 11, 16], [88, 86, 12, 19],
+]
 
 interface PublicLandingProps {
   onStartSignup: () => void
@@ -22,12 +31,21 @@ export default function PublicLanding({ onStartSignup, onStartSignin, onShowTerm
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
       {/* Background tree */}
-      <div style={{
+      <div className="landing-bg" style={{
         position: 'fixed', inset: 0,
         backgroundImage: 'url("/assets/arbol-base.png")',
         backgroundSize: 'cover', backgroundPosition: 'center bottom',
         opacity: 0.18, pointerEvents: 'none', zIndex: 0,
       }} />
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, overflow: 'hidden' }}>
+        {FIREFLIES.map(([x, y, delay, dur], i) => (
+          <span
+            key={i}
+            className="landing-firefly"
+            style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${delay}s, ${delay}s`, animationDuration: `${dur}s, ${dur / 3}s` }}
+          />
+        ))}
+      </div>
 
       {/* Header */}
       <header style={{
@@ -37,14 +55,7 @@ export default function PublicLanding({ onStartSignup, onStartSignin, onShowTerm
         maxWidth: '1200px', margin: '0 auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '36px', height: '36px', borderRadius: '50%',
-            backgroundColor: '#D4AF37', color: '#1E2A22',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 10px rgba(212,175,55,0.3)',
-          }}>
-            <TreePine size={18} strokeWidth={2.2} />
-          </div>
+          <BrandLogo height={44} />
           <div style={{ fontFamily: 'Georgia, serif', fontSize: '17px', fontWeight: 700, color: '#D4AF37' }}>
             AppleFamily <em style={{ fontStyle: 'italic', opacity: 0.85 }}>Tree</em>
           </div>
@@ -69,7 +80,10 @@ export default function PublicLanding({ onStartSignup, onStartSignin, onShowTerm
         padding: '28px 32px 20px',
         textAlign: 'center',
       }}>
-        <h1 style={{
+        <div className="landing-rise landing-hero-logo" style={{ animationDelay: '0.05s' }}>
+          <BrandLogo height={104} />
+        </div>
+        <h1 className="landing-rise" style={{ animationDelay: '0.25s',
           margin: 0, fontFamily: 'Georgia, serif',
           fontSize: 'clamp(26px, 4.2vw, 42px)', lineHeight: 1.1, fontWeight: 600,
           color: '#D4AF37', letterSpacing: '-0.01em',
@@ -77,7 +91,7 @@ export default function PublicLanding({ onStartSignup, onStartSignin, onShowTerm
           La red privada <br />
           de tu familia.
         </h1>
-        <p style={{
+        <p className="landing-rise" style={{ animationDelay: '0.45s',
           margin: '14px auto 0', maxWidth: '540px',
           fontSize: 'clamp(14px, 1.5vw, 16px)', lineHeight: 1.5,
           color: '#F5E6C8', opacity: 0.88,
@@ -87,12 +101,13 @@ export default function PublicLanding({ onStartSignup, onStartSignin, onShowTerm
           sin extraños.
         </p>
 
-        <div style={{
+        <div className="landing-rise" style={{ animationDelay: '0.65s',
           marginTop: '22px',
           display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center',
         }}>
           <button
             onClick={onStartSignup}
+            className="landing-cta"
             style={{
               padding: '12px 22px', borderRadius: '999px',
               backgroundColor: '#D4AF37', color: '#1E2A22',
@@ -134,34 +149,40 @@ export default function PublicLanding({ onStartSignup, onStartSignin, onShowTerm
         gap: '14px',
       }}>
         <Feature
+          index={0}
           icon={<TreePine size={20} />}
           title="Árbol interactivo"
           desc="Agrega padres, hijos, hermanos y parejas tocando manzanas. Visualiza generaciones."
         />
         <Feature
+          index={1}
           icon={<MessageCircle size={20} />}
           title="Chat privado"
           desc="Mensajes 1 a 1 con cada familiar + un Buzón grupal para toda la familia."
         />
         <Feature
+          index={2}
           icon={<Camera size={20} />}
           title="Historias y fotos"
           desc="Comparte memorias y logros. Videos de YouTube o Vimeo sin ocupar espacio."
         />
         <Feature
+          index={3}
           icon={<Heart size={20} />}
           title="Fechas importantes"
           desc="Cumpleaños y aniversarios te llegan a tiempo. Nunca olvides una fecha."
         />
         <Feature
+          index={4}
           icon={<Shield size={20} />}
           title="100% privado"
-          desc="Solo quien tu invites ve tu árbol. RLS en Postgres. Sin tracking, sin ads."
+          desc="Solo quien tú invitas ve tu árbol. Chats privados, sin rastreo y sin anuncios."
         />
         <Feature
+          index={5}
           icon={<Users size={20} />}
           title="Roles claros"
-          desc="Owner, admins y miembros. Cada quien edita lo suyo. Audit log de cambios."
+          desc="Fundador, administradores y familiares. Cada quien edita lo suyo y queda historial de cambios."
         />
       </section>
 
@@ -232,9 +253,9 @@ export default function PublicLanding({ onStartSignup, onStartSignin, onShowTerm
   )
 }
 
-function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
+function Feature({ icon, title, desc, index = 0 }: { icon: React.ReactNode; title: string; desc: string; index?: number }) {
   return (
-    <div style={{
+    <div className="landing-rise landing-card" style={{ animationDelay: `${0.85 + index * 0.08}s`,
       padding: '14px 16px', borderRadius: '14px',
       backgroundColor: 'rgba(30,42,34,0.6)',
       border: '1px solid rgba(212,175,55,0.2)',

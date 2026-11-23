@@ -127,7 +127,7 @@ export default function MobileBottomSheet({
               onError={() => setImgError(true)}
             />
             {member.dateOfDeath && (
-              <MourningRibbon size={16} style={{ position: 'absolute', right: '-4px', bottom: '-2px' }} />
+              <MourningRibbon size={15} style={{ position: 'absolute', right: '-7px', top: '-7px', transform: 'rotate(14deg)' }} />
             )}
           </div>
           <div>
