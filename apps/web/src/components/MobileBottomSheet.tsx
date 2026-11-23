@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { MessageCircle, UserPlus, Edit2, Trophy, User, Trash2, Link2, Lightbulb } from 'lucide-react'
+import { MessageCircle, UserPlus, Edit2, Trophy, User, Trash2, Link2, Lightbulb, GitBranch } from 'lucide-react'
 import type { Member } from '@/lib/types'
 
 interface MobileBottomSheetProps {
@@ -180,6 +180,15 @@ export default function MobileBottomSheet({
           <button className="mobile-sheet-action-btn" onClick={() => { onAddStory(member); onClose(); }}>
             <Trophy size={20} strokeWidth={1.8} />
             {member.dateOfDeath ? 'Compartir un recuerdo' : 'Publicar logro'}
+          </button>
+
+          <button className="mobile-sheet-action-btn" onClick={() => {
+            // Muestra solo su rama (la captura el árbol)
+            window.dispatchEvent(new CustomEvent('focus-branch', { detail: member }))
+            onClose()
+          }}>
+            <GitBranch size={20} strokeWidth={1.8} />
+            Ver su rama
           </button>
 
           <button className="mobile-sheet-action-btn" onClick={() => { onViewProfile(member); onClose(); }}>

@@ -187,12 +187,12 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
   // una fila extra si la generación de abajo se partió en dos.
   let yOffset = 0
   let lastGen: number | null = null
-  let lastSplit = false
+  let lastExtraRows = 0
   let anySplit = false
 
   sortedGens.forEach(g => {
     const genMembers = [...gens[g]]
-    if (lastGen !== null) yOffset += (g - lastGen) * GENERATION_GAP + (lastSplit ? SUB_ROW_GAP : 0)
+    if (lastGen !== null) yOffset += (g - lastGen) * GENERATION_GAP + lastExtraRows * SUB_ROW_GAP
     else yOffset = g * GENERATION_GAP
 
     // ── 2. CLUSTER SPOUSES INTO UNITS ──────────────────────────────
@@ -325,14 +325,14 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
       : CENTER_X
     const desired = units.map(u => unitDesired.get(u) ?? fallbackDesire)
 
-    // ── 4b. ¿UNA FILA O DOS? ─────────────────────────────────────
-    // Si la generación es más ancha que la copa, se reparte en dos filas.
-    // Los hermanos (mismos padres) se quedan juntos en la misma fila y las
-    // familias se alternan abajo/arriba, en orden de izquierda a derecha.
+    // ── 4b. ¿CUÁNTAS FILAS? ──────────────────────────────────────
+    // Si la generación es más ancha que la copa, se reparte en 2 filas (o
+    // hasta 4 en familias muy grandes). Los hermanos (mismos padres) se
+    // quedan juntos y las familias se reparten de izquierda a derecha.
     const rowWidth = widths.reduce((a, w) => a + w, 0) + UNIT_AIR * Math.max(0, n - 1)
     const subRow: number[] = new Array(n).fill(0)
-    const isSplit = rowWidth > MAX_ROW_WIDTH && n >= 4
-    if (isSplit) {
+    const nRows = n >= 4 ? Math.min(4, Math.ceil(rowWidth / MAX_ROW_WIDTH)) : 1
+    if (nRows > 1) {
       const famKey = (u: Member[]) => u
         .map(m => [...(m.parents || [])].sort().join('+'))
         .filter(Boolean).sort()[0] || `solo:${u[0].id}`
@@ -343,32 +343,32 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
         if (last && famKey(units[last[0]]) === famKey(u)) last.push(i)
         else groups.push([i])
       })
-      // Familias grandes se parten a la mitad para no desbalancear
-      const half = Math.ceil(n / 2)
+      // Familias más grandes que una fila se parten para no desbalancear
+      const maxChunk = Math.ceil(n / nRows)
       const chunks: number[][] = []
       groups.forEach(gr => {
-        if (gr.length > half) { chunks.push(gr.slice(0, Math.ceil(gr.length / 2))); chunks.push(gr.slice(Math.ceil(gr.length / 2))) }
-        else chunks.push(gr)
+        for (let k = 0; k < gr.length; k += maxChunk) chunks.push(gr.slice(k, k + maxChunk))
       })
-      // Repartir alternando, pero mandando cada familia a la fila más corta
-      // cuando la diferencia ya es grande.
-      const load = [0, 0]
+      // Repartir en orden (fila 0, 1, 2…) pero mandando cada familia a la
+      // fila más corta cuando la diferencia ya es grande.
+      const load = new Array(nRows).fill(0)
       let next = 0
       chunks.forEach(ch => {
         const w = ch.reduce((a, i) => a + widths[i] + UNIT_AIR, 0)
         let row = next
-        if (load[row] - load[1 - row] > MAX_ROW_WIDTH * 0.15) row = 1 - row
+        const lightest = load.indexOf(Math.min(...load))
+        if (load[row] - load[lightest] > MAX_ROW_WIDTH * 0.15) row = lightest
         ch.forEach(i => { subRow[i] = row })
         load[row] += w
-        next = 1 - row
+        next = (row + 1) % nRows
       })
     }
 
     // ── 5. EMIT POSITIONS ──────────────────────────────────────────
     const baseY = ROOT_Y - yOffset
-    ;[0, 1].forEach(row => {
+    for (let row = 0; row < nRows; row++) {
       const idx = units.map((_, i) => i).filter(i => subRow[i] === row)
-      if (idx.length === 0) return
+      if (idx.length === 0) continue
       const centers = placeRow(idx.map(i => widths[i]), idx.map(i => desired[i]))
       const rowY = baseY - row * SUB_ROW_GAP
       idx.forEach((ui, k) => {
@@ -379,9 +379,9 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
           positioned.push({ ...member, canvasX: centers[k] + startOffset + j * SPOUSE_SPACING, canvasY: rowY })
         })
       })
-    })
-    lastSplit = isSplit
-    if (isSplit) anySplit = true
+    }
+    lastExtraRows = nRows - 1
+    if (nRows > 1) anySplit = true
     lastGen = g
   })
 

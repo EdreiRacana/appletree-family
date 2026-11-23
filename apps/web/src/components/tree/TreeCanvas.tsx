@@ -5,6 +5,7 @@ import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
 import { computeTreeLayout, NODE_SIZE, SPOUSE_SPACING } from '@/lib/treeLayout'
 import { kinshipPhrase } from '@/lib/kinship'
+import { filterTreeView, AUTO_HIDE_FROM, type GenMode } from '@/lib/treeView'
 import { supabase } from '@/lib/supabase'
 import HoverMenu from './HoverMenu'
 import HoverPeek from './HoverPeek'
@@ -41,6 +42,8 @@ interface TreeCanvasProps {
   profilePanelOpen?: boolean
   // Parentesco de cada manzana visto desde quien mira (id -> "abuela"...).
   relationLabels?: Map<string, string>
+  // Manzana de quien mira (para "Generaciones: desde mis abuelos")
+  meId?: string | null
 }
 
 // Chrome insets — the fixed UI edges the canvas must avoid.
@@ -48,8 +51,32 @@ interface TreeCanvasProps {
 const SIDEBAR_INSET = 116
 const DRAWER_WIDTH = 340
 
-export default function TreeCanvas({ members, relationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false, relationLabels }: TreeCanvasProps) {
+export default function TreeCanvas({ members: allMembers, relationships: allRelationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false, relationLabels, meId }: TreeCanvasProps) {
   const isMobile = useIsMobile()
+
+  // ── QUÉ PARTE DEL ÁRBOL SE VE ──────────────────────────────────
+  // Generaciones: la elección de la persona se recuerda; si no ha elegido,
+  // una familia grande (100+ manzanas) abre "desde mis abuelos".
+  const [genChoice, setGenChoice] = useState<GenMode | null>(() => {
+    try {
+      const v = typeof window !== 'undefined' ? window.localStorage.getItem('apple_gen_mode') : null
+      return v === 'all' || v === 'grandparents' || v === 'parents' ? v : null
+    } catch { return null }
+  })
+  const chooseGenMode = useCallback((m: GenMode) => {
+    setGenChoice(m)
+    try { window.localStorage.setItem('apple_gen_mode', m) } catch { /* sin almacenamiento */ }
+  }, [])
+  const genMode: GenMode = genChoice ?? (allMembers.length >= AUTO_HIDE_FROM ? 'grandparents' : 'all')
+  const [genMenuOpen, setGenMenuOpen] = useState(false)
+  // Rama: solo una persona con sus papás, pareja y descendientes.
+  const [branchRootId, setBranchRootId] = useState<string | null>(null)
+  const treeView = useMemo(
+    () => filterTreeView(allMembers, allRelationships, { meId, genMode, branchRootId }),
+    [allMembers, allRelationships, meId, genMode, branchRootId],
+  )
+  const members = treeView.members
+  const relationships = treeView.relationships
   // Vista en celular: 'esfera' (panal tipo reloj) o 'ramas' (vista anterior).
   // (La vista móvil solo se pinta después de montar, así que leer localStorage
   // aquí no causa diferencias de hidratación.)
@@ -447,6 +474,7 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && focusedMemberId) setFocusedMemberId(null)
+      if (e.key === 'Escape') setBranchRootId(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -537,8 +565,13 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     const handleOpenModal = (e: any) => {
       if (e.detail) setAddingToMember(e.detail)
     }
+    // "Ver su rama" (perfil o tarjeta): muestra SOLO esa rama, re-acomodada.
     const handleFocusBranch = (e: any) => {
-      if (e.detail?.id) setFocusedMemberId(e.detail.id)
+      if (e.detail?.id) {
+        setFocusedMemberId(null)
+        userMovedRef.current = false
+        setBranchRootId(e.detail.id)
+      }
     }
     window.addEventListener('open-add-modal', handleOpenModal)
     window.addEventListener('focus-branch', handleFocusBranch)
@@ -696,6 +729,112 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
     }
   }
 
+  // ── CONTROLES DE VISTA: generaciones ocultas, rama y menú ─────────
+  const pickGenMode = useCallback((m: GenMode) => {
+    userMovedRef.current = false
+    setGenMenuOpen(false)
+    chooseGenMode(m)
+  }, [chooseGenMode])
+  const showAll = useCallback(() => pickGenMode('all'), [pickGenMode])
+  const exitBranch = useCallback(() => {
+    userMovedRef.current = false
+    setBranchRootId(null)
+  }, [])
+  const renderViewChrome = (mobile: boolean) => {
+    const hidden = treeView.hiddenAncestors
+    const names = hidden.slice(0, 3).map(m => m.firstName)
+    const extra = hidden.length - names.length
+    const pill: React.CSSProperties = {
+      display: 'flex', alignItems: 'center', gap: 10, padding: mobile ? '7px 8px 7px 14px' : '8px 8px 8px 16px',
+      borderRadius: 999, background: 'var(--menu-bg)', color: 'var(--menu-fg)',
+      border: '1px solid var(--menu-border)', boxShadow: 'var(--panel-shadow)',
+      backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', fontSize: mobile ? 12 : 13,
+      maxWidth: mobile ? 'calc(100vw - 24px)' : 640, whiteSpace: 'nowrap',
+    }
+    const goldBtn: React.CSSProperties = {
+      border: 'none', borderRadius: 999, padding: mobile ? '6px 12px' : '7px 14px', cursor: 'pointer',
+      background: 'var(--accent-gold)', color: '#16201A', fontWeight: 800, fontSize: mobile ? 11.5 : 12, flexShrink: 0,
+    }
+    const genOptions: Array<{ id: GenMode, label: string, sub: string }> = [
+      { id: 'all', label: 'Todas', sub: 'Todo el árbol, desde las raíces' },
+      { id: 'grandparents', label: 'Desde mis abuelos', sub: 'Oculta bisabuelos y anteriores' },
+      { id: 'parents', label: 'Desde mis papás', sub: 'Oculta abuelos y anteriores' },
+    ]
+    return (
+      <>
+        {/* Rama: barra arriba para volver al árbol completo */}
+        {treeView.branchRoot && (
+          <div style={{ position: 'absolute', top: mobile ? 54 : 22, left: '50%', transform: 'translateX(-50%)', zIndex: 650 }}
+            onMouseDown={e => e.stopPropagation()}>
+            <div style={pill}>
+              <span aria-hidden>🌿</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                Rama de <strong>{treeView.branchRoot.firstName}</strong> · {members.length} {members.length === 1 ? 'persona' : 'personas'}
+              </span>
+              <button onClick={exitBranch} style={goldBtn}>Ver todo el árbol</button>
+            </div>
+          </div>
+        )}
+
+        {/* Raíces ocultas: marca en el tronco */}
+        {!treeView.branchRoot && hidden.length > 0 && (
+          <div style={{ position: 'absolute', bottom: mobile ? 84 : 84, left: '50%', transform: 'translateX(-50%)', zIndex: 620 }}
+            onMouseDown={e => e.stopPropagation()}>
+            <div style={pill}>
+              <span aria-hidden>🌱</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {treeView.hiddenGenerations} {treeView.hiddenGenerations === 1 ? 'generación anterior' : 'generaciones anteriores'}
+                {!mobile && <> · {names.join(', ')}{extra > 0 ? ` y ${extra} más` : ''}</>}
+              </span>
+              <button onClick={showAll} style={goldBtn}>Mostrar</button>
+            </div>
+          </div>
+        )}
+
+        {/* Menú Generaciones */}
+        {!treeView.branchRoot && treeView.canHideGenerations && (
+          <div style={mobile
+            ? { position: 'absolute', top: 54, right: 12, zIndex: 640 }
+            : { position: 'absolute', bottom: 24, left: 'calc(50% + 120px)', zIndex: 640 }}
+            onMouseDown={e => e.stopPropagation()}>
+            <button onClick={() => setGenMenuOpen(o => !o)} aria-haspopup="menu" aria-expanded={genMenuOpen}
+              style={{
+                height: mobile ? 34 : 48, padding: '0 14px', borderRadius: mobile ? 999 : 14, cursor: 'pointer',
+                background: 'var(--panel-bg)', color: 'var(--accent-gold)', border: '1px solid var(--panel-border)',
+                boxShadow: 'var(--panel-shadow)', backdropFilter: 'blur(8px)', fontWeight: 700, fontSize: 12,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+              <span aria-hidden style={{ fontSize: 14 }}>☰</span> Generaciones
+            </button>
+            {genMenuOpen && (
+              <div role="menu" style={{
+                position: 'absolute', [mobile ? 'top' : 'bottom']: mobile ? 40 : 56, [mobile ? 'right' : 'left']: 0,
+                width: 250, padding: 6, borderRadius: 14, background: 'var(--menu-bg)', color: 'var(--menu-fg)',
+                border: '1px solid var(--menu-border)', boxShadow: 'var(--panel-shadow)',
+              }}>
+                {genOptions.map(o => (
+                  <button key={o.id} role="menuitemradio" aria-checked={genMode === o.id}
+                    onClick={() => pickGenMode(o.id)}
+                    style={{
+                      width: '100%', textAlign: 'left', padding: '9px 10px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                      background: genMode === o.id ? 'var(--menu-active)' : 'transparent', color: 'inherit',
+                      display: 'flex', gap: 8, alignItems: 'flex-start',
+                    }}>
+                    <span style={{ width: 14, color: 'var(--accent-gold)', fontWeight: 800 }}>{genMode === o.id ? '✓' : ''}</span>
+                    <span>
+                      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700 }}>{o.label}</span>
+                      <span style={{ display: 'block', fontSize: 11.5, opacity: 0.65 }}>{o.sub}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </>
+    )
+  }
+
   // ── MOBILE: delegate to dedicated mobile view ─────────────────
   if (isMobile) {
     return (
@@ -739,11 +878,12 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
             </button>
           ))}
         </div>
+        {renderViewChrome(true)}
         {addingToMember && (
           <AddMemberModal
             targetMember={addingToMember}
-            relationships={relationships}
-            allMembers={members}
+            relationships={allRelationships}
+            allMembers={allMembers}
             onClose={() => { setAddingToMember(null) }}
             onSave={onRefresh}
           />
@@ -1131,6 +1271,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
 
       {/* (Minimapa retirado: con el encuadre automático en la copa ya no hace falta.) */}
 
+      {renderViewChrome(false)}
+
       {/* EXIT FOCUS BUTTON · appears only while focus mode is active */}
       {focusedMemberId && (
         <button
@@ -1169,8 +1311,8 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
       {addingToMember && (
         <AddMemberModal
           targetMember={addingToMember}
-          relationships={relationships}
-          allMembers={members}
+          relationships={allRelationships}
+          allMembers={allMembers}
           onClose={() => {
             setAddingToMember(null)
             setHoveredMemberId(null)

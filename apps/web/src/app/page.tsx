@@ -1183,6 +1183,7 @@ export default function AppleTreeDashboard() {
               bgOpacity={bgOpacity}
               profilePanelOpen={!!selectedMember}
               relationLabels={kinship}
+              meId={treeData.members.find(m => session?.user?.id && m.userId === session.user.id)?.id ?? null}
             />
           )}
 
