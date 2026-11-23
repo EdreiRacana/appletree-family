@@ -14,6 +14,7 @@ import ChatPanel from '@/components/chat/ChatPanel'
 import SuggestionModal from '@/components/SuggestionModal'
 import { computeKinship, kinshipPhrase } from '@/lib/kinship'
 import SuggestionsInbox from '@/components/SuggestionsInbox'
+import FamilySwitcher, { type FamilyTree } from '@/components/FamilySwitcher'
 import ChatsListPanel from '@/components/chat/ChatsListPanel'
 import AccountSettingsModal from '@/components/AccountSettingsModal'
 import FamilyWallPanel from '@/components/wall/FamilyWallPanel'
@@ -39,6 +40,25 @@ import { useTreeRole, touchTreeActivity } from '@/lib/useTreeRole'
 
 // Build trigger: v4.1-professional-invites
 
+// Familias (árboles) del usuario. Si la base aún no tiene get_my_families
+// (migración 021 sin aplicar), usa la función vieja get_user_trees.
+const DEMO_TREE = '00000000-0000-0000-0000-000000000001'
+async function fetchMyFamilies(): Promise<FamilyTree[]> {
+  let rows: FamilyTree[] = []
+  const { data, error } = await supabase.rpc('get_my_families')
+  if (!error && data) {
+    rows = data as FamilyTree[]
+  } else {
+    const { data: old } = await supabase.rpc('get_user_trees')
+    rows = ((old as Array<{ tree_id: string; tree_name: string; role: 'owner' | 'member'; member_count: number }> | null) ?? [])
+      .map(t => ({ tree_id: t.tree_id, tree_name: t.tree_name, surname: null, role: t.role, member_count: Number(t.member_count), created_at: '' }))
+  }
+  const all = rows.filter(t => t.tree_id !== DEMO_TREE)
+  // Árboles viejos de prueba (una sola manzana y sin apellido) no se muestran.
+  const list = all.filter(t => Number(t.member_count) > 1 || !!t.surname)
+  return list.length > 0 ? list : all
+}
+
 export default function AppleTreeDashboard() {
   const [treeData, setTreeData] = useState<{ members: Member[], relationships: Relationship[] }>({
     members: [],
@@ -58,7 +78,8 @@ export default function AppleTreeDashboard() {
   const [activeTab, setActiveTab] = useState<string | null>('My Tree')
   const [mobileActiveTab, setMobileActiveTab] = useState<string>('My Tree')
   const [mobileSheetMember, setMobileSheetMember] = useState<Member | null>(null)
-  const [viewFocus, setViewFocus] = useState<'all' | 'paternal' | 'maternal'>('all')
+  // Familias (árboles) a las que pertenece el usuario
+  const [families, setFamilies] = useState<FamilyTree[]>([])
   const [isTermsOpen, setIsTermsOpen] = useState(false)
 
 
@@ -256,18 +277,15 @@ export default function AppleTreeDashboard() {
     //    Prioridad: el último que abrió (si aún pertenece) → el que tenga más
     //    familiares.
     try {
-      const { data: myTrees } = await supabase.rpc('get_user_trees')
-      const list = ((myTrees as Array<{ tree_id: string; member_count: number }> | null) ?? [])
-        .filter(t => t.tree_id !== DEMO_TREE_ID)
-      if (list.length > 0) {
+      const visible = await fetchMyFamilies()
+      setFamilies(visible)
+      if (visible.length > 0) {
         const saved = typeof window !== 'undefined'
           ? window.localStorage.getItem('apple_user_tree_id')
           : null
-        const largest = [...list].sort((a, b) => Number(b.member_count) - Number(a.member_count))[0]
-        // El guardado solo gana si no es un árbol vacío (de pruebas); si no,
-        // el teléfono que se "quedó" en un árbol vacío volvería a abrirlo.
-        const savedTree = list.find(t => t.tree_id === saved)
-        const pick = savedTree && Number(savedTree.member_count) > 1 ? savedTree : largest
+        const largest = [...visible].sort((a, b) => Number(b.member_count) - Number(a.member_count))[0]
+        // El último que abrió gana si sigue en la lista.
+        const pick = visible.find(t => t.tree_id === saved) || largest
         setCurrentTreeId(pick.tree_id)
         if (typeof window !== 'undefined') {
           window.localStorage.setItem('apple_user_tree_id', pick.tree_id)
@@ -395,10 +413,41 @@ export default function AppleTreeDashboard() {
   }, [canEditMember])
 
   // Handle bell click navigation
+  // Cambiar de familia: carga ese árbol y cierra lo que estaba abierto del otro.
+  const switchTree = useCallback((treeId: string) => {
+    setSelectedMember(null)
+    setMobileSheetMember(null)
+    setChattingWithMember(null)
+    setActiveTab('My Tree')
+    setCurrentTreeId(treeId)
+    if (typeof window !== 'undefined') window.localStorage.setItem('apple_user_tree_id', treeId)
+  }, [])
+
+  const reloadFamilies = useCallback(async () => {
+    try { setFamilies(await fetchMyFamilies()) } catch { /* sin red: se queda la lista anterior */ }
+  }, [])
+
+  // La lista se refresca al entrar por invitación o al cambiar de familia.
+  const sessionUserId = session?.user?.id
+  useEffect(() => {
+    if (!sessionUserId || currentTreeId === DEMO_TREE_ID) return
+    let alive = true
+    fetchMyFamilies().then(list => { if (alive) setFamilies(list) }).catch(() => {})
+    return () => { alive = false }
+  }, [sessionUserId, currentTreeId])
+
   const handleNotificationClick = (
-    action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall' | 'open_suggestions',
-    notif?: { senderMemberId?: string; activityId?: string }
+    action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall' | 'open_suggestions' | 'open_tree',
+    notif?: { senderMemberId?: string; activityId?: string; treeId?: string | null }
   ) => {
+    // Avisos de otra familia: primero se abre esa familia.
+    if (notif?.treeId && notif.treeId !== currentTreeId && currentTreeId !== DEMO_TREE_ID) {
+      void reloadFamilies()
+      switchTree(notif.treeId)
+      if (action === 'open_suggestions') setIsSuggestionsOpen(true)
+      markAllRead()
+      return
+    }
     if (action === 'open_events') setActiveTab('Events')
     else if (action === 'open_stories') {
       setActiveTab(null)
@@ -453,55 +502,11 @@ export default function AppleTreeDashboard() {
     const seed = loginInputUser || session?.user?.email?.split('@')[0] || 'user'
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=1E2A22&textColor=D4AF37`
   }, [isLoggedIn, loginInputUser, treeData.members, session])
-  // LINEAGE FILTERING LOGIC — versión basada en APELLIDO PRINCIPAL
-  // Idea del owner: si todos los miembros comparten el apellido "Elias",
-  // esos son la rama paterna (consanguíneos); los que tienen otro apellido
-  // son cónyuges que se casaron in — rama materna.
-  const { filteredMembers, filteredRelationships } = useMemo(() => {
-    if (viewFocus === 'all' || treeData.members.length === 0) {
-      return { filteredMembers: treeData.members, filteredRelationships: treeData.relationships }
-    }
-    // Contar apellidos y elegir el más frecuente como "apellido principal"
-    const surnameCount = new Map<string, number>()
-    treeData.members.forEach(m => {
-      const last = (m.lastName || '').trim().toLowerCase()
-      if (!last) return
-      // Solo el primer apellido (para casos "Elias Fuentes")
-      const first = last.split(/\s+/)[0]
-      surnameCount.set(first, (surnameCount.get(first) || 0) + 1)
-    })
-    let mainSurname = ''
-    let max = 0
-    surnameCount.forEach((count, name) => { if (count > max) { max = count; mainSurname = name } })
-    if (!mainSurname) {
-      return { filteredMembers: treeData.members, filteredRelationships: treeData.relationships }
-    }
-    const isMain = (m: Member) => {
-      const first = (m.lastName || '').trim().toLowerCase().split(/\s+/)[0]
-      return first === mainSurname
-    }
-    // paternal: solo consanguíneos (con el apellido principal) — sus cónyuges NO
-    // maternal: solo cónyuges casados in (con OTRO apellido) — los consanguíneos NO
-    const visibleIds = new Set<string>()
-    if (viewFocus === 'paternal') {
-      treeData.members.forEach(m => { if (isMain(m)) visibleIds.add(m.id) })
-    } else {
-      // maternal: agrega los cónyuges de apellido distinto + sus hijos (para que
-      // no queden líneas colgadas). Empezamos por los que no son main, y les
-      // añadimos también los del main que sean sus hijos (para conectar).
-      const nonMain = treeData.members.filter(m => !isMain(m))
-      nonMain.forEach(m => visibleIds.add(m.id))
-      // Descendientes de non-main (para conectar líneas de hijos mixtos)
-      treeData.members.forEach(m => {
-        if ((m.parents || []).some(pid => visibleIds.has(pid))) visibleIds.add(m.id)
-      })
-    }
-    const members = treeData.members.filter(m => visibleIds.has(m.id))
-    const relationships = treeData.relationships.filter(r =>
-      visibleIds.has(r.member1Id) && visibleIds.has(r.member2Id)
-    )
-    return { filteredMembers: members, filteredRelationships: relationships }
-  }, [treeData, viewFocus])
+  // Cada árbol ya es UNA familia (Elías, Fuentes…): se muestra completo.
+  // La otra rama se ve cambiando de familia en la lista de arriba.
+  const filteredMembers = treeData.members
+  const filteredRelationships = treeData.relationships
+
 
   // Genera un token de invitación via Edge Function (bypasa RLS con
   // service_role). Antes lo hacíamos con supabase.from('invites').insert
@@ -1102,8 +1107,16 @@ export default function AppleTreeDashboard() {
         pointerEvents: 'none'
       }} />
       <Topbar 
-        viewFocus={viewFocus} 
-        onViewFocusChange={setViewFocus} 
+        familySwitcher={isLoggedIn && families.length > 0 && currentTreeId !== DEMO_TREE_ID ? (
+          <FamilySwitcher
+            families={families}
+            currentTreeId={currentTreeId}
+            members={treeData.members}
+            myUserId={session?.user?.id ?? null}
+            onSwitch={switchTree}
+            onFamiliesChanged={reloadFamilies}
+          />
+        ) : undefined}
         onAdd={() => {
           // Sin manzana referencia — abre el modal para agregar un nuevo
           // familiar raíz. Se dispara el mismo evento que el HoverMenu usa;
@@ -1232,6 +1245,7 @@ export default function AppleTreeDashboard() {
             canReview={isAdmin}
             onClose={() => setIsSuggestionsOpen(false)}
             onEditMember={(m) => { setIsSuggestionsOpen(false); handleEditMember(m) }}
+            onMembersChanged={() => { void fetchFamilyData(); void reloadFamilies() }}
           />
         )}
 
@@ -1400,7 +1414,7 @@ export default function AppleTreeDashboard() {
               <div style={{ position: 'absolute', top: '150px', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '25px', borderRadius: '24px', border: '3px solid #D4822A', width: '380px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
                 <div style={{ position: 'absolute', top: '-15px', left: '50%', transform: 'translateX(-50%)', width: '0', height: '0', borderLeft: '15px solid transparent', borderRight: '15px solid transparent', borderBottom: '15px solid #D4822A' }} />
                 <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '20px' }}>🔍 Herramientas de Control</h3>
-                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Usa la barra superior para buscar familiares o filtrar el árbol por línea **Paterna** o **Materna** instantáneamente.</p>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Usa la barra superior para buscar familiares o cambiar de familia (por ejemplo, la de tu papá o la de tu mamá).</p>
                 <button onClick={() => setTutorialStep(3)} style={{ padding: '12px 24px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}>Entendido</button>
               </div>
             )}

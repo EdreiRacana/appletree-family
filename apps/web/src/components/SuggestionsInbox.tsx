@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
-import { X, Check, XCircle, Pencil } from 'lucide-react'
+import { X, Check, XCircle, Pencil, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import type { Member } from '@/lib/types'
 
@@ -25,6 +25,13 @@ interface SuggestionsInboxProps {
   onClose: () => void
   onEditMember: (m: Member) => void
   canReview: boolean          // admin: puede resolver; familiar: solo ve las suyas
+  onMembersChanged?: () => void  // tras aprobar a alguien, recargar el árbol
+}
+
+interface JoinRequest {
+  id: string
+  requester_name: string | null
+  created_at: string
 }
 
 const KIND_LABEL: Record<Suggestion['kind'], string> = {
@@ -33,12 +40,56 @@ const KIND_LABEL: Record<Suggestion['kind'], string> = {
   other: 'Otra cosa',
 }
 
-export default function SuggestionsInbox({ treeId, members, onClose, onEditMember, canReview }: SuggestionsInboxProps) {
+export default function SuggestionsInbox({ treeId, members, onClose, onEditMember, canReview, onMembersChanged }: SuggestionsInboxProps) {
   const [items, setItems] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'pending' | 'closed'>('pending')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [joins, setJoins] = useState<JoinRequest[]>([])
+  const [joinPick, setJoinPick] = useState<Record<string, string>>({})
+
+  // Solicitudes para unirse a esta familia (solo admins las ven).
+  const fetchJoins = useCallback(() => supabase
+    .from('tree_join_requests')
+    .select('id, requester_name, created_at')
+    .eq('tree_id', treeId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true }), [treeId])
+
+  const loadJoins = useCallback(() => fetchJoins().then(({ data }) => setJoins((data as JoinRequest[]) ?? [])), [fetchJoins])
+
+  useEffect(() => {
+    if (!canReview) return
+    let alive = true
+    fetchJoins().then(({ data }) => { if (alive) setJoins((data as JoinRequest[]) ?? []) })
+    return () => { alive = false }
+  }, [fetchJoins, canReview])
+
+  // Manzanas que pueden ser esa persona: sin cuenta y vivas.
+  const unclaimed = members
+    .filter(m => !m.userId && !m.dateOfDeath)
+    .sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'es'))
+
+  const guessMember = (name: string | null) => {
+    const first = (name || '').trim().split(/\s+/)[0]?.toLowerCase()
+    if (!first) return ''
+    return unclaimed.find(m => m.firstName.trim().toLowerCase() === first)?.id ?? ''
+  }
+
+  const answerJoin = async (j: JoinRequest, approve: boolean) => {
+    const pick = joinPick[j.id] ?? guessMember(j.requester_name)
+    setBusyId(j.id)
+    const { error: err } = await supabase.rpc('answer_join_request', {
+      p_request: j.id,
+      p_approve: approve,
+      p_member_id: approve && pick && pick !== 'new' ? pick : null,
+    })
+    setBusyId(null)
+    if (err) { setError(err.message || 'No se pudo responder la solicitud.'); return }
+    void loadJoins()
+    if (approve) onMembersChanged?.()
+  }
 
   const fetchRows = useCallback(() => supabase
     .from('member_suggestions')
@@ -78,7 +129,7 @@ export default function SuggestionsInbox({ treeId, members, onClose, onEditMembe
 
   const memberById = new Map(members.map(m => [m.id, m]))
   const shown = items.filter(s => (tab === 'pending' ? s.status === 'pending' : s.status !== 'pending'))
-  const pendingCount = items.filter(s => s.status === 'pending').length
+  const pendingCount = items.filter(s => s.status === 'pending').length + joins.length
 
   return (
     <div role="dialog" aria-modal="true" aria-label="Sugerencias de la familia" onClick={onClose}
@@ -108,9 +159,37 @@ export default function SuggestionsInbox({ treeId, members, onClose, onEditMembe
         {error && <p role="alert" style={{ margin: '0 20px 8px', color: '#C0392B', fontSize: 12, fontWeight: 600 }}>{error}</p>}
 
         <div style={{ overflowY: 'auto', padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {canReview && joins.map(j => {
+            const pick = joinPick[j.id] ?? guessMember(j.requester_name)
+            return (
+              <div key={j.id} style={{ borderRadius: 14, padding: 14, background: '#FFF3D0', border: '1.5px solid #D4AF37' }}>
+                <p style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <UserPlus size={16} /> {j.requester_name || 'Un familiar'} quiere unirse a esta familia
+                </p>
+                <label style={{ display: 'block', fontSize: 12, color: '#5A4A3F', margin: '8px 0 4px', fontWeight: 600 }}>
+                  ¿Quién es en el árbol?
+                </label>
+                <select value={pick || 'new'} onChange={e => setJoinPick(prev => ({ ...prev, [j.id]: e.target.value }))}
+                  style={{ width: '100%', height: 36, borderRadius: 9, border: '1px solid rgba(44,24,16,0.25)', background: '#FFFDF6', color: '#2C1810', fontSize: 13, padding: '0 8px' }}>
+                  <option value="new">No está todavía — agregarlo como manzana nueva</option>
+                  {unclaimed.map(m => (
+                    <option key={m.id} value={m.id}>Es {m.firstName} {m.lastName}</option>
+                  ))}
+                </select>
+                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                  <button disabled={busyId === j.id} onClick={() => answerJoin(j, true)} style={{ ...secondaryBtn, borderColor: '#2E7D32', color: '#2E7D32' }}>
+                    <Check size={14} /> Aceptar
+                  </button>
+                  <button disabled={busyId === j.id} onClick={() => answerJoin(j, false)} style={{ ...secondaryBtn, borderColor: '#A04030', color: '#A04030' }}>
+                    <XCircle size={14} /> No aceptar
+                  </button>
+                </div>
+              </div>
+            )
+          })}
           {loading ? (
             <p style={{ color: '#7A6558', fontSize: 13 }}>Cargando…</p>
-          ) : shown.length === 0 ? (
+          ) : shown.length === 0 && !(tab === 'pending' && joins.length > 0) ? (
             <p style={{ color: '#7A6558', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
               {tab === 'pending' ? 'No hay sugerencias pendientes.' : 'Todavía no hay sugerencias resueltas.'}
             </p>

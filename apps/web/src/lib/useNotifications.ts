@@ -21,7 +21,8 @@ export interface AppNotification {
   title: string
   body?: string
   time: string
-  action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall' | 'open_suggestions'
+  action: 'open_events' | 'open_stories' | 'open_chat' | 'open_event_thread' | 'open_wall' | 'open_suggestions' | 'open_tree'
+  treeId?: string | null      // familia (árbol) de donde viene el aviso
   sortKey: string
   senderMemberId?: string
   activityId?: string
@@ -143,6 +144,7 @@ export function useNotifications(treeId: string, members: Member[]) {
           action: n.action as AppNotification['action'],
           senderMemberId: senderMember?.id,
           activityId: n.type === 'event_comment' ? n.related_id : undefined,
+          treeId: n.tree_id ?? null,
           sortKey: `1-${n.created_at}`,
           isRead: !!n.read_at,
           isDerived: false,

@@ -103,6 +103,8 @@ export default function EditMemberModal({ member, onClose, onSave, mode = 'admin
           p_occupation: formData.occupation || null,
           p_birth_place: formData.birthPlace || null,
           p_avatar_url: formData.avatarUrl || null,
+          // Con varias familias, tu manzana de ESTE árbol
+          p_tree_id: member.treeId || null,
         })
         if (rpcError) {
           console.error('Error autoedit:', rpcError)

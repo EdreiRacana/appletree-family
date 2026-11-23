@@ -45,8 +45,8 @@ function ThemeToggle() {
 
 interface TopbarProps {
   onAdd?: () => void
-  viewFocus?: 'all' | 'paternal' | 'maternal'
-  onViewFocusChange?: (focus: 'all' | 'paternal' | 'maternal') => void
+  // Lista desplegable de familias (árboles) del usuario
+  familySwitcher?: React.ReactNode
   notificationCount?: number
   notifications?: AppNotification[]
   onStartMyTree?: () => void
@@ -67,8 +67,7 @@ interface TopbarProps {
 
 export default function Topbar({
   onAdd,
-  viewFocus = 'all',
-  onViewFocusChange,
+  familySwitcher,
   notificationCount = 0,
   notifications = [],
   onStartMyTree,
@@ -167,43 +166,13 @@ export default function Topbar({
             AppleFamily Tree
           </h1>
         </div>
+        {familySwitcher && <div className="family-switcher-mobile">{familySwitcher}</div>}
       </div>
 
       {/* 2. Global Navigation / Search & Toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        {/* Toggle Switch */}
-        <div style={{ 
-          display: 'flex', 
-          backgroundColor: 'rgba(232, 218, 183, 0.1)', 
-          borderRadius: '12px', 
-          padding: '4px',
-          border: '1px solid rgba(212, 175, 55, 0.3)'
-        }}>
-          {[
-            { id: 'paternal', label: 'Paterna' },
-            { id: 'all', label: 'Ambas' },
-            { id: 'maternal', label: 'Materna' }
-          ].map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => onViewFocusChange?.(opt.id as any)}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: viewFocus === opt.id ? '#D4AF37' : 'transparent',
-                color: viewFocus === opt.id ? '#0F1A0F' : '#E8DAB2',
-                fontSize: '10px',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        {/* Familias del usuario (reemplaza el viejo Paterna / Ambas / Materna) */}
+        {familySwitcher && <div className="family-switcher-desktop">{familySwitcher}</div>}
 
         <div 
           className="mobile-hide"
@@ -494,6 +463,7 @@ export default function Topbar({
                           : n.action === 'open_event_thread' ? 'Ver comentarios →'
                           : n.action === 'open_wall' ? 'Abrir Buzón →'
                           : n.action === 'open_suggestions' ? 'Ver sugerencias →'
+                          : n.action === 'open_tree' ? 'Ver familia →'
                           : 'Ver Historias →'
                         }
                       </span>
