@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Briefcase, BookOpen, MapPin, Award, Share2, Edit3, UserPlus, Eye, MessageCircle, Link2, Lightbulb } from 'lucide-react'
+import { X, Briefcase, BookOpen, MapPin, Award, Share2, Edit3, UserPlus, Eye, MessageCircle, Link2, Lightbulb, Heart } from 'lucide-react'
 import type { Member } from '@/lib/types'
+import { ageOn } from '@/lib/familyDates'
+import MourningRibbon from '@/components/MourningRibbon'
 
 interface MemberProfilePanelProps {
   member: Member | null
@@ -37,11 +39,34 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
   const lifeSpan = deathYear ? `${birthYear} — ${deathYear}` : `Desde ${birthYear}`
   const isDeceased = !!member.dateOfDeath
 
+  const age = ageOn(member)
+
   // Línea de tiempo solo con datos reales de la manzana (nada inventado).
   const timeline = [
-    { year: birthYear, title: 'Nacimiento', desc: member.birthPlace ? `En ${member.birthPlace}` : 'Lugar no registrado' },
-    ...(deathYear ? [{ year: deathYear, title: 'Fallecimiento', desc: 'Su legado sigue en la familia.' }] : []),
+    { year: birthYear, title: 'Nacimiento', desc: member.birthPlace ? `Llegó al mundo en ${member.birthPlace}.` : 'Comienzo de su historia en la familia.' },
+    ...(member.biography && !isDeceased ? [{ year: 'HOY', title: 'Vida y legado', desc: 'Su historia sigue escribiéndose en la familia.' }] : []),
+    ...(deathYear ? [{
+      year: deathYear,
+      title: 'Partió',
+      desc: age !== null ? `A los ${age} años. Su legado sigue vivo en la familia.` : 'Su legado sigue vivo en la familia.',
+    }] : []),
   ].filter(item => item.year !== '?')
+
+  // Datos rápidos: a un finado no se le muestran huecos ("Sin ocupación").
+  const chips = isDeceased
+    ? [
+        member.birthPlace && { icon: <MapPin size={16} />, text: `De ${member.birthPlace}`, title: 'Lugar de origen' },
+        member.occupation && { icon: <Briefcase size={16} />, text: member.occupation, title: 'Ocupación' },
+        age !== null && { icon: <Heart size={16} />, text: `Vivió ${age} años`, title: 'Años de vida' },
+      ].filter(Boolean) as { icon: React.ReactNode, text: string, title: string }[]
+    : [
+        { icon: <MapPin size={16} />, text: member.birthPlace || 'Sin ubicación', title: 'Ubicación' },
+        { icon: <Briefcase size={16} />, text: member.occupation || 'Sin ocupación', title: 'Ocupación' },
+      ]
+
+  const defaultBio = isDeceased
+    ? `${member.firstName} es parte de nuestra raíz familiar. Su recuerdo vive en las tradiciones y en el amor que hoy nos une. Comparte una historia o una foto para que su memoria siga presente.`
+    : `${member.firstName} es una parte fundamental de nuestra raíz familiar. Su historia se entrelaza con las tradiciones y el amor que hoy nos une. (Biografía en desarrollo para documentar sus mayores logros y memorias).`
 
   return (
     <>
@@ -101,22 +126,26 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
             <X size={16} />
           </button>
 
-          {/* Medallion — más pequeño */}
-          <div style={{
-            width: '76px',
-            height: '76px',
-            borderRadius: '50%',
-            border: '2px solid var(--drawer-accent)',
-            overflow: 'hidden',
-            backgroundColor: '#FFF',
-            boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
-            marginBottom: '10px'
-          }}>
-            <img
-              src={member.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`}
-              alt={member.firstName}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
+          {/* Medallion — más pequeño. Finados: moño negro discreto. */}
+          <div style={{ position: 'relative', marginBottom: '10px' }}>
+            <div style={{
+              width: '76px',
+              height: '76px',
+              borderRadius: '50%',
+              border: '2px solid var(--drawer-accent)',
+              overflow: 'hidden',
+              backgroundColor: '#FFF',
+              boxShadow: '0 6px 18px rgba(0,0,0,0.35)',
+            }}>
+              <img
+                src={member.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`}
+                alt={member.firstName}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+            {isDeceased && (
+              <MourningRibbon size={21} style={{ position: 'absolute', right: '-6px', bottom: '-4px' }} />
+            )}
           </div>
 
           <h2 style={{
@@ -161,14 +190,15 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
         }}>
           
           {/* Quick Info Bar */}
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-             <div style={badgeStyle} title="Ubicación">
-               <MapPin size={16} /> {member.birthPlace || 'Sin ubicación'}
-             </div>
-             <div style={badgeStyle} title="Ocupación">
-               <Briefcase size={16} /> {member.occupation || 'Sin ocupación'}
-             </div>
-          </div>
+          {chips.length > 0 && (
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {chips.map(c => (
+                <div key={c.title} style={badgeStyle} title={c.title}>
+                  {c.icon} {c.text}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Biography */}
           <section>
@@ -186,7 +216,7 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
               overflowWrap: 'break-word',
               margin: 0,
             }}>
-              {member.biography || `${member.firstName} es una parte fundamental de nuestra raíz familiar. Su historia se entrelaza con las tradiciones y el amor que hoy nos une. (Biografía en desarrollo para documentar sus mayores logros y memorias).`}
+              {member.biography || defaultBio}
             </p>
           </section>
 
@@ -197,33 +227,22 @@ export default function MemberProfilePanel({ member, onClose, onEdit, onInvite, 
               <h3 style={sectionTitleStyle}>Línea del Tiempo & Hitos</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px' }}>
-              {/* Actual Birth Event */}
-              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                <span style={{ minWidth: '50px', fontSize: '14px', fontWeight: '900', color: 'var(--drawer-accent)', paddingTop: '3px' }}>
-                  {birthYear}
-                </span>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--drawer-fg)', fontWeight: '800' }}>Nacimiento</h4>
-                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--drawer-fg)', opacity: 0.75, fontWeight: '500' }}>
-                    {member.birthPlace ? `Llegada al mundo en ${member.birthPlace}` : 'Comienzo de la historia familiar.'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Dynamic logic could be added here for structured milestones */}
-              {member.biography && (
-                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+              {timeline.map(item => (
+                <div key={item.title} style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
                   <span style={{ minWidth: '50px', fontSize: '14px', fontWeight: '900', color: 'var(--drawer-accent)', paddingTop: '3px' }}>
-                    INFO
+                    {item.year}
                   </span>
                   <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--drawer-fg)', fontWeight: '800' }}>Vida y Legado</h4>
+                    <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--drawer-fg)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {item.title}
+                      {item.title === 'Partió' && <MourningRibbon size={10} />}
+                    </h4>
                     <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--drawer-fg)', opacity: 0.75, fontWeight: '500' }}>
-                      Información detallada sobre su trayectoria y momentos clave.
+                      {item.desc}
                     </p>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           </section>
 

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { MessageCircle, UserPlus, Edit2, Trophy, User, Trash2, Link2, Lightbulb, GitBranch } from 'lucide-react'
 import type { Member } from '@/lib/types'
+import MourningRibbon from '@/components/MourningRibbon'
 
 interface MobileBottomSheetProps {
   member: Member | null
@@ -118,12 +119,17 @@ export default function MobileBottomSheet({
 
         {/* Header: avatar + name + meta */}
         <div className="mobile-sheet-header">
-          <img
-            className="mobile-sheet-avatar"
-            src={avatarSrc}
-            alt={member.firstName}
-            onError={() => setImgError(true)}
-          />
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <img
+              className="mobile-sheet-avatar"
+              src={avatarSrc}
+              alt={member.firstName}
+              onError={() => setImgError(true)}
+            />
+            {member.dateOfDeath && (
+              <MourningRibbon size={16} style={{ position: 'absolute', right: '-4px', bottom: '-2px' }} />
+            )}
+          </div>
           <div>
             <p className="mobile-sheet-name">
               {member.firstName} {member.lastName}

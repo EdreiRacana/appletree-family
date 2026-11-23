@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import type { Member } from '@/lib/types'
+import MourningRibbon from '@/components/MourningRibbon'
 
 interface AppleNodeProps {
   member: Member
@@ -128,25 +129,6 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
             : 'drop-shadow(0 10px 25px rgba(0,0,0,0.5))'
         }}
       />
-      {isDeceased && (
-        <span
-          style={{
-            position: 'absolute',
-            top: '18%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            color: '#D4AF37',
-            fontSize: '13px',
-            fontWeight: 700,
-            textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-            pointerEvents: 'none',
-            zIndex: 11
-          }}
-          aria-hidden="true"
-        >
-          ✝
-        </span>
-      )}
 
       {/* 2. CENTERED INTERNAL BLOCK */}
       <div style={{
@@ -161,7 +143,11 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
         zIndex: 10
       }}>
         
-        {/* 3. Small Medallion (48px Lux Style) */}
+        {/* 3. Small Medallion (48px Lux Style). Finados: moño negro discreto. */}
+        <div style={{ position: 'relative', marginBottom: '6px', opacity: medallionOpacity, transition: 'opacity 0.25s ease-out' }}>
+        {isDeceased && (
+          <MourningRibbon size={16} style={{ position: 'absolute', right: '-7px', bottom: '-5px', zIndex: 2 }} />
+        )}
         <div style={{
           width: '48px',
           height: '48px',
@@ -173,20 +159,18 @@ export default function AppleNode({ member, isHovered, onHover, onLeave, hideTex
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: '6px',
-          opacity: medallionOpacity,
-          transition: 'opacity 0.25s ease-out'
         }}>
           <img
             src={getMedallionContent()}
             alt={member.firstName}
             onError={() => setImgHasError(true)}
-            style={{ 
-              width: isBaby || imgHasError ? '75%' : '100%', 
-              height: isBaby || imgHasError ? '75%' : '100%', 
+            style={{
+              width: isBaby || imgHasError ? '75%' : '100%',
+              height: isBaby || imgHasError ? '75%' : '100%',
               objectFit: isBaby || imgHasError ? 'contain' : 'cover'
             }}
           />
+        </div>
         </div>
 
         {/* 4. Fine Single-Line Typography */}
