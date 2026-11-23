@@ -308,10 +308,16 @@ export default function AppleTreeDashboard() {
     setIsLoggedIn(false)
   }, [processPendingInvite])
 
+  // Árbol que se está viendo ahora: una respuesta lenta de otro árbol
+  // (p.ej. al salir del ejemplo o cambiar de familia) no debe pisarlo.
+  const latestTreeRef = React.useRef(currentTreeId)
+  useEffect(() => { latestTreeRef.current = currentTreeId }, [currentTreeId])
+
   const fetchFamilyData = React.useCallback(async () => {
-    // El árbol de demostración ya no es público (RLS): no se consulta. Se
-    // espera a que la sesión elija el árbol real del usuario.
-    if (currentTreeId === DEMO_TREE_ID) return
+    // El árbol de ejemplo (Familia Pérez, ficticia) solo se carga durante el
+    // recorrido de funciones (botón ?). Al entrar, se espera a que la sesión
+    // elija el árbol real del usuario.
+    if (currentTreeId === DEMO_TREE_ID && tutorialStep === 0) return
     try {
       const { data: membersData, error: mError } = await supabase.from('members').select('*').eq('tree_id', currentTreeId)
       const { data: relsData, error: rError } = await supabase.from('relationships').select('*').eq('tree_id', currentTreeId)
@@ -349,15 +355,14 @@ export default function AppleTreeDashboard() {
         isActive: r.is_active
       }))
 
-      setTreeData(prev => {
-        return { members: mappedMembers, relationships: mappedRels }
-      })
+      if (latestTreeRef.current !== currentTreeId) return
+      setTreeData({ members: mappedMembers, relationships: mappedRels })
     } catch (err) {
       console.error('Error fetching tree data:', err)
     } finally {
       setLoading(false)
     }
-  }, [currentTreeId])
+  }, [currentTreeId, tutorialStep])
 
   // Real notification system (persistente + realtime)
   const { notifications, unreadCount, markAllRead, dismiss, dismissAll, markRead } =
@@ -1402,7 +1407,7 @@ export default function AppleTreeDashboard() {
             {tutorialStep === 1 && (
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'auto', backgroundColor: '#FAEFBC', padding: '30px', borderRadius: '24px', border: '3px solid #D4822A', width: '350px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', animation: 'modalFadeIn 0.4s ease-out' }}>
                 <h3 style={{ margin: '0 0 10px', color: '#8B4513', fontFamily: 'serif', fontSize: '22px' }}>🌳 Bienvenido al Legado</h3>
-                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Estás viendo el Árbol Genealógico de la Familia Pérez. Aquí es donde la historia cobra vida.</p>
+                <p style={{ margin: '0 0 20px', color: '#2C1810', fontSize: '14px', lineHeight: '1.5' }}>Estás viendo la Familia Pérez, una familia de ejemplo. Te mostramos cómo funciona todo antes de volver a tu árbol.</p>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button onClick={() => setTutorialStep(0)} style={{ flex: 1, padding: '10px', backgroundColor: 'transparent', border: '1px solid #D4822A', borderRadius: '10px', color: '#8B4513', fontWeight: 'bold', cursor: 'pointer' }}>Omitir</button>
                   <button onClick={() => setTutorialStep(2)} style={{ flex: 2, padding: '10px', backgroundColor: '#D4822A', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>Siguiente</button>
