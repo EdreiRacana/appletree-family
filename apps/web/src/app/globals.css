@@ -75,6 +75,8 @@
   --menu-border:          rgba(212,175,55,0.3);
   --menu-active:          rgba(212,175,55,0.16);
   --menu-input-bg:        rgba(255,255,255,0.06);
+  --glass-card-bg:        rgba(18,28,20,0.84);
+  --glass-overlay:        rgba(6,12,8,0.55);
 
   --topbar-bg:            var(--chrome-bg);
   --topbar-border:        var(--chrome-border);
@@ -152,6 +154,8 @@
   --menu-border:          rgba(139,101,8,0.25);
   --menu-active:          rgba(184,134,11,0.13);
   --menu-input-bg:        rgba(139,101,8,0.06);
+  --glass-card-bg:        rgba(255,251,241,0.88);
+  --glass-overlay:        rgba(60,45,15,0.28);
 
   --canvas-tree-size:     cover;
   --canvas-tree-pos:      center center;
@@ -858,3 +862,10 @@ html, body {
 :root[data-theme="light"] .topbar-container {
   box-shadow: 0 6px 24px rgba(90, 70, 20, 0.10) !important;
 }
+
+/* --- Animaciones de ventanas --- */
+@keyframes afModalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes afSpin { to { transform: rotate(360deg); } }

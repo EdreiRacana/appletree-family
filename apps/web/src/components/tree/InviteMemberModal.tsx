@@ -1,8 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
-import { X, Send, Mail, Shield, Info, MessageCircle, Link as LinkIcon, Check } from 'lucide-react'
+import React, { useState, type CSSProperties } from 'react'
+import { X, Send, Mail, Shield, MessageCircle, Link as LinkIcon, Check } from 'lucide-react'
 import type { Member } from '@/lib/types'
+
+// Invitar a un familiar a su manzana: por correo, WhatsApp o enlace.
+// Diseño "vidrio" como el resto de la app (fondo translúcido, letras doradas)
+// y con los colores del tema (claro / oscuro).
 
 interface InviteMemberModalProps {
   member: Member
@@ -12,330 +16,215 @@ interface InviteMemberModalProps {
   onCreateLink?: (side: string, message: string) => Promise<string | null>
 }
 
+// Ya no hay "linaje": cada familia es su propio árbol (lista de familias).
+const SIDE = 'both'
+
 export default function InviteMemberModal({ member, onClose, onSend, onCreateLink }: InviteMemberModalProps) {
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState(`¡Hola! Te invito a unirte a nuestro árbol genealógico familiar en AppleFamily Tree para que nos ayudes a documentar nuestra historia.`)
+  const [message, setMessage] = useState(`¡Hola! Te invito a unirte a nuestro árbol familiar en AppleFamily Tree. Tu manzana ya te está esperando.`)
   const [isSending, setIsSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false)
   const [copyingLink, setCopyingLink] = useState(false)
   const [copiedOk, setCopiedOk] = useState(false)
 
-  const [side, setSide] = useState<'paternal' | 'maternal' | 'both'>('both')
+  const fullName = `${member.firstName}${member.lastName ? ' ' + member.lastName : ''}`
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 
   const handleSend = async () => {
-    if (!email) return
+    if (!validEmail) return
     setIsSending(true)
     try {
-      await onSend(email, side, message)
+      await onSend(email.trim(), SIDE, message)
       setSuccess(true)
       setTimeout(onClose, 1800)
     } catch {
-      // el padre ya mostró el alert; solo desmarcar loading
+      // el padre ya mostró el aviso; solo quitar el "enviando"
     } finally {
       setIsSending(false)
     }
   }
 
+  const shareWhatsApp = async () => {
+    if (!onCreateLink || sharingWhatsApp) return
+    setSharingWhatsApp(true)
+    try {
+      const url = await onCreateLink(SIDE, message)
+      if (!url) return
+      const text = `${message}\n\nEstás invitado como *${fullName}* a nuestro árbol familiar.\nEntra aquí: ${url}`
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+      onClose()
+    } finally {
+      setSharingWhatsApp(false)
+    }
+  }
+
+  const copyLink = async () => {
+    if (!onCreateLink || copyingLink) return
+    setCopyingLink(true)
+    try {
+      const url = await onCreateLink(SIDE, message)
+      if (!url) return
+      await navigator.clipboard.writeText(url)
+      setCopiedOk(true)
+      setTimeout(() => setCopiedOk(false), 2200)
+    } catch {
+      alert('No se pudo copiar. Intenta de nuevo.')
+    } finally {
+      setCopyingLink(false)
+    }
+  }
+
+  const initials = `${member.firstName?.[0] ?? ''}${member.lastName?.[0] ?? ''}`.toUpperCase()
+
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(15, 26, 15, 0.85)',
-      backdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 5000,
-      padding: '20px'
-    }}>
-      <div style={{
-        maxWidth: '550px',
-        width: '100%',
-        maxHeight: '92vh',
-        backgroundColor: '#FAEFBC',
-        borderRadius: '32px',
-        border: '3px solid #2C1810',
-        boxShadow: '0 30px 100px rgba(0,0,0,0.6)',
-        overflow: 'hidden',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        {/* Success Overlay */}
+    <div role="dialog" aria-modal="true" aria-label={`Invitar a ${fullName}`} onClick={onClose} style={overlay}>
+      <div onClick={e => e.stopPropagation()} style={card}>
+        {/* Brillo dorado sutil arriba */}
+        <div aria-hidden style={glow} />
+
         {success && (
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundColor: '#FAEFBC',
-            zIndex: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '20px'
-          }}>
-            <div style={{ 
-              width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#2C1810', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center' 
-            }}>
-              <Send color="#FAEFBC" size={40} />
-            </div>
-            <h2 style={{ fontFamily: 'serif', color: '#2C1810', margin: 0 }}>¡Invitación Enviada!</h2>
-            <p style={{ color: '#2C1810', opacity: 0.6, fontWeight: '700' }}>Redireccionando...</p>
+          <div style={successLayer}>
+            <div style={successIcon}><Check size={38} color="#16201A" strokeWidth={3} /></div>
+            <h2 style={{ ...title, fontSize: 24, margin: 0 }}>¡Invitación enviada!</h2>
+            <p style={{ margin: 0, color: 'var(--menu-fg)', opacity: 0.7, fontSize: 13 }}>
+              Le llegará un correo a {email.trim()}
+            </p>
           </div>
         )}
 
-        {/* Header */}
-        <div style={{ padding: '30px', backgroundColor: '#2C1810', color: '#FAEFBC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: 0, fontFamily: 'serif', fontSize: '24px' }}>Invitar a la Familia</h2>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', opacity: 0.7, fontWeight: '700' }}>
-              Enviando acceso para: <span style={{ color: '#D4AF37' }}>{member.firstName} {member.lastName}</span>
+        {/* Encabezado */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '22px 22px 6px', position: 'relative' }}>
+          <div style={avatar}>
+            {member.avatarUrl
+              ? <img src={member.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--accent-gold)' }}>{initials}</span>}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={title}>Invitar a la familia</h2>
+            <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--menu-fg)', opacity: 0.75 }}>
+              Su manzana: <strong style={{ color: 'var(--accent-gold)' }}>{fullName}</strong>
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#FAEFBC', cursor: 'pointer' }}>
-            <X size={24} />
-          </button>
+          <button onClick={onClose} aria-label="Cerrar" style={closeBtn}><X size={20} /></button>
         </div>
 
-        {/* Body — scrollable para pantallas medianas/pequeñas donde
-            los 2-3 botones del final quedaban cortados. */}
-        <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: '22px', overflowY: 'auto', flex: 1 }}>
-          
-          {/* Email Input */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '900', color: '#2C1810', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Correo Electrónico
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Mail style={{ position: 'absolute', left: '15px', top: '15px', opacity: 0.4 }} size={20} />
-              <input 
-                type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ejemplo@correo.com"
-                style={{
-                  width: '100%',
-                  padding: '15px 15px 15px 50px',
-                  borderRadius: '16px',
-                  border: '2px solid rgba(44, 24, 16, 0.1)',
-                  backgroundColor: 'white',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  outline: 'none',
-                  color: '#2C1810'
-                }}
-              />
+        <div style={{ padding: '14px 22px 22px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+          {/* Correo */}
+          <label style={fieldLabel}>
+            Correo electrónico
+            <div style={{ position: 'relative', marginTop: 7 }}>
+              <Mail size={17} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--accent-gold)', opacity: 0.8 }} />
+              <input type="email" inputMode="email" autoComplete="off" value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') void handleSend() }}
+                placeholder="ejemplo@correo.com" style={{ ...input, paddingLeft: 42 }} />
             </div>
+          </label>
+
+          {/* Mensaje */}
+          <label style={fieldLabel}>
+            Mensaje personal <span style={{ opacity: 0.6, fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span>
+            <textarea value={message} onChange={e => setMessage(e.target.value)} maxLength={500}
+              style={{ ...input, marginTop: 7, minHeight: 92, resize: 'none', lineHeight: 1.5, padding: '12px 14px' }} />
+          </label>
+
+          {/* Privacidad */}
+          <div style={note}>
+            <Shield size={17} color="var(--accent-gold)" style={{ flexShrink: 0 }} />
+            <span>La invitación es privada: el enlace solo sirve para <strong>{member.firstName}</strong> y su manzana.</span>
           </div>
 
-          {/* Lineage Selection */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '900', color: '#2C1810', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              Acceso de Linaje <Info size={14} />
-            </label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {[
-                { id: 'paternal', label: 'Paterno' },
-                { id: 'both', label: 'Ambos' },
-                { id: 'maternal', label: 'Materno' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => setSide(opt.id as any)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: '2px solid',
-                    borderColor: side === opt.id ? '#2C1810' : 'rgba(44, 24, 16, 0.1)',
-                    backgroundColor: side === opt.id ? '#2C1810' : 'transparent',
-                    color: side === opt.id ? '#FAEFBC' : '#2C1810',
-                    fontSize: '13px',
-                    fontWeight: '900',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {opt.label}
-                </button>
-              ))}
+          {/* Acciones */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 2 }}>
+            <button onClick={handleSend} disabled={!validEmail || isSending}
+              style={{ ...primaryBtn, opacity: !validEmail || isSending ? 0.55 : 1, cursor: !validEmail ? 'not-allowed' : 'pointer' }}>
+              {isSending ? <span style={spinner} /> : <><Send size={17} /> Enviar por correo</>}
+            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={shareWhatsApp} disabled={!onCreateLink || sharingWhatsApp} style={{ ...ghostBtn, flex: 1, color: '#25D366', borderColor: 'rgba(37,211,102,0.55)' }}>
+                <MessageCircle size={17} /> {sharingWhatsApp ? 'Generando…' : 'WhatsApp'}
+              </button>
+              <button onClick={copyLink} disabled={!onCreateLink || copyingLink}
+                style={{ ...ghostBtn, flex: 1, ...(copiedOk ? { background: 'rgba(46,125,50,0.18)', borderColor: '#2E7D32', color: '#3FA34D' } : {}) }}>
+                {copiedOk ? <><Check size={17} /> ¡Copiado!</> : <><LinkIcon size={17} /> {copyingLink ? 'Generando…' : 'Copiar enlace'}</>}
+              </button>
             </div>
-            <p style={{ margin: 0, fontSize: '11px', color: '#7A6558', fontStyle: 'italic' }}>
-              * Al seleccionar un linaje, el familiar verá ese árbol por defecto al entrar.
-            </p>
-          </div>
-
-          {/* Message */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '900', color: '#2C1810', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Mensaje Personal (Opcional)
-            </label>
-            <textarea 
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '15px',
-                borderRadius: '16px',
-                border: '2px solid rgba(44, 24, 16, 0.1)',
-                backgroundColor: 'rgba(255,255,255,0.5)',
-                fontSize: '14px',
-                fontWeight: '600',
-                outline: 'none',
-                color: '#2C1810',
-                minHeight: '100px',
-                resize: 'none'
-              }}
-            />
-          </div>
-
-          {/* Security Note */}
-          <div style={{ 
-            display: 'flex', gap: '15px', alignItems: 'center', padding: '15px', 
-            backgroundColor: 'rgba(44, 24, 16, 0.05)', borderRadius: '16px' 
-          }}>
-            <Shield size={20} color="#D4822A" />
-            <p style={{ margin: 0, fontSize: '12px', color: '#7A6558', fontWeight: '600', lineHeight: '1.4' }}>
-              Las invitaciones son privadas. Solo este familiar podrá ver los datos que compartas en este árbol.
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <button 
-              onClick={handleSend}
-              disabled={!email || isSending}
-              style={{
-                width: '100%',
-                padding: '16px',
-                backgroundColor: '#D4822A',
-                color: 'white',
-                borderRadius: '16px',
-                border: 'none',
-                fontSize: '15px',
-                fontWeight: '900',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                opacity: (!email || isSending) ? 0.6 : 1,
-                boxShadow: '0 8px 25px rgba(212, 130, 42, 0.3)'
-              }}
-            >
-              {isSending ? (
-                <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%' }} />
-              ) : (
-                <>
-                  <Send size={18} />
-                  Enviar por Correo
-                </>
-              )}
-            </button>
-            
-            <button
-              onClick={async () => {
-                if (!onCreateLink || sharingWhatsApp) return
-                setSharingWhatsApp(true)
-                try {
-                  // Genera el link con token de invitación real; sin él
-                  // el link llevaba al DEMO en vez de este árbol.
-                  const url = await onCreateLink(side, message)
-                  if (!url) return
-                  const familyName = `${member.firstName}${member.lastName ? ' ' + member.lastName : ''}`
-                  const text = `${message}\n\nEstás invitado como *${familyName}* a nuestro árbol familiar.\nEntra aquí: ${url}`
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-                  onClose()
-                } finally {
-                  setSharingWhatsApp(false)
-                }
-              }}
-              disabled={!onCreateLink || sharingWhatsApp}
-              style={{
-                width: '100%',
-                padding: '16px',
-                backgroundColor: '#25D366',
-                color: 'white',
-                borderRadius: '16px',
-                border: 'none',
-                fontSize: '15px',
-                fontWeight: '900',
-                cursor: sharingWhatsApp ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                opacity: sharingWhatsApp ? 0.7 : 1,
-                boxShadow: '0 8px 25px rgba(37, 211, 102, 0.3)'
-              }}
-            >
-              <MessageCircle size={18} />
-              {sharingWhatsApp ? 'Generando link…' : 'Enviar por WhatsApp'}
-            </button>
-
-            {/* Copiar link — cualquiera que reciba este link (SMS, Telegram,
-                Instagram, chat interno) puede aceptar la invitación. */}
-            <button
-              onClick={async () => {
-                if (!onCreateLink || copyingLink) return
-                setCopyingLink(true)
-                try {
-                  const url = await onCreateLink(side, message)
-                  if (!url) return
-                  await navigator.clipboard.writeText(url)
-                  setCopiedOk(true)
-                  setTimeout(() => setCopiedOk(false), 2000)
-                } catch {
-                  alert('No se pudo copiar. Intenta de nuevo.')
-                } finally {
-                  setCopyingLink(false)
-                }
-              }}
-              disabled={!onCreateLink || copyingLink}
-              style={{
-                width: '100%',
-                padding: '14px',
-                backgroundColor: copiedOk ? '#2E7D32' : 'transparent',
-                color: copiedOk ? 'white' : '#2C1810',
-                borderRadius: '16px',
-                border: '2px solid #2C1810',
-                fontSize: '14px',
-                fontWeight: '800',
-                cursor: copyingLink ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                transition: 'all 0.25s ease'
-              }}
-            >
-              {copiedOk ? <><Check size={16} /> ¡Enlace copiado!</> : <><LinkIcon size={16} /> {copyingLink ? 'Generando…' : 'Copiar enlace'}</>}
-            </button>
-
-            {/* Cancelar — atajo para salir sin enviar nada. Duplica el X del
-                header pero es más visible aquí abajo después de todo el form. */}
-            <button
-              onClick={onClose}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: 'transparent',
-                color: '#7A6558',
-                borderRadius: '16px',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                textDecoration: 'underline'
-              }}
-            >
-              Cancelar / Volver al árbol
-            </button>
+            <button onClick={onClose} style={cancelBtn}>Cancelar</button>
           </div>
         </div>
       </div>
     </div>
   )
+}
+
+const overlay: CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 5000, padding: 16,
+  background: 'var(--glass-overlay)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+const card: CSSProperties = {
+  position: 'relative', width: '100%', maxWidth: 480, maxHeight: '92dvh', display: 'flex', flexDirection: 'column',
+  borderRadius: 24, overflow: 'hidden', color: 'var(--menu-fg)',
+  background: 'var(--glass-card-bg)', border: '1px solid var(--menu-border)',
+  backdropFilter: 'blur(22px) saturate(140%)', WebkitBackdropFilter: 'blur(22px) saturate(140%)',
+  boxShadow: '0 30px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)',
+  animation: 'afModalIn 0.28s ease-out',
+}
+const glow: CSSProperties = {
+  position: 'absolute', top: -120, left: '50%', transform: 'translateX(-50%)', width: 380, height: 200,
+  background: 'radial-gradient(ellipse at center, rgba(212,175,55,0.22), transparent 70%)', pointerEvents: 'none',
+}
+const title: CSSProperties = {
+  margin: 0, fontFamily: "'Playfair Display', 'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600,
+  color: 'var(--accent-gold)', letterSpacing: '0.01em',
+}
+const avatar: CSSProperties = {
+  width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  border: '2px solid var(--accent-gold)', background: 'var(--accent-gold-soft)',
+  boxShadow: '0 0 0 4px var(--accent-gold-soft)',
+}
+const closeBtn: CSSProperties = {
+  width: 36, height: 36, borderRadius: 10, border: '1px solid var(--menu-border)', background: 'transparent',
+  color: 'var(--menu-fg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+}
+const fieldLabel: CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-gold)',
+}
+const input: CSSProperties = {
+  width: '100%', height: 46, padding: '0 14px', borderRadius: 13, outline: 'none',
+  border: '1px solid var(--menu-border)', background: 'var(--menu-input-bg)', color: 'var(--menu-fg)',
+  fontSize: 15, fontWeight: 500, fontFamily: 'inherit', textTransform: 'none', letterSpacing: 0,
+}
+const note: CSSProperties = {
+  display: 'flex', gap: 10, alignItems: 'center', padding: '11px 13px', borderRadius: 13,
+  background: 'var(--accent-gold-soft)', border: '1px solid var(--menu-border)', fontSize: 12.5, lineHeight: 1.45,
+}
+const primaryBtn: CSSProperties = {
+  width: '100%', height: 50, borderRadius: 14, border: 'none',
+  background: 'linear-gradient(180deg, #E2C15A 0%, #C9A23A 55%, #B08A2A 100%)', color: '#1A1408',
+  fontSize: 15, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+  boxShadow: '0 10px 24px rgba(184,134,11,0.32), inset 0 1px 0 rgba(255,255,255,0.35)',
+}
+const ghostBtn: CSSProperties = {
+  height: 46, borderRadius: 13, border: '1px solid var(--menu-border)', background: 'transparent',
+  color: 'var(--accent-gold)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s ease',
+}
+const cancelBtn: CSSProperties = {
+  height: 38, border: 'none', background: 'transparent', color: 'var(--menu-fg)', opacity: 0.65,
+  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+}
+const successLayer: CSSProperties = {
+  position: 'absolute', inset: 0, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center',
+  justifyContent: 'center', gap: 14, background: 'var(--glass-card-bg)', backdropFilter: 'blur(22px)',
+}
+const successIcon: CSSProperties = {
+  width: 76, height: 76, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'linear-gradient(180deg, #E2C15A, #B08A2A)', boxShadow: '0 12px 30px rgba(184,134,11,0.4)',
+}
+const spinner: CSSProperties = {
+  width: 20, height: 20, borderRadius: '50%', border: '2px solid #1A1408', borderTopColor: 'transparent',
+  animation: 'afSpin 0.8s linear infinite',
 }
