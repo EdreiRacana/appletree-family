@@ -20,6 +20,39 @@ export const HEX_R = NODE_SIZE * 1.05
 export const SPOUSE_SPACING = NODE_SIZE * 0.95
 export const UNIT_AIR = NODE_SIZE * 0.18
 export const GENERATION_GAP = NODE_SIZE * 2.0
+// Una generación más ancha que esto se acomoda en DOS filas escalonadas
+// (como fruta a distintas alturas) para que la familia tenga forma de copa
+// y quepa dentro del follaje sin alejar tanto la vista.
+export const MAX_ROW_WIDTH = NODE_SIZE * 19
+// Distancia vertical entre las dos filas de una misma generación
+export const SUB_ROW_GAP = NODE_SIZE * 1.0
+
+// Coloca una fila de unidades (persona o pareja) lo más cerca posible de su
+// punto deseado (encima de sus padres) sin encimarse: regresión isotónica (PAV).
+function placeRow(widths: number[], desired: number[]): number[] {
+  const n = widths.length
+  const cum: number[] = [0]
+  for (let i = 1; i < n; i++) {
+    cum[i] = cum[i - 1] + widths[i - 1] / 2 + UNIT_AIR + widths[i] / 2
+  }
+  // y[i] = x[i] - cum[i]; la restricción x[i] >= x[i-1] + espacio se vuelve
+  // y[i] >= y[i-1] → regresión isotónica clásica.
+  const t = desired.map((d, i) => d - cum[i])
+  const blocks: { sum: number, count: number, val: number }[] = []
+  t.forEach(v => {
+    blocks.push({ sum: v, count: 1, val: v })
+    while (blocks.length > 1 && blocks[blocks.length - 1].val < blocks[blocks.length - 2].val) {
+      const b = blocks.pop()!
+      const a = blocks[blocks.length - 1]
+      a.sum += b.sum
+      a.count += b.count
+      a.val = a.sum / a.count
+    }
+  })
+  const y: number[] = []
+  blocks.forEach(b => { for (let k = 0; k < b.count; k++) y.push(b.val) })
+  return y.map((v, i) => v + cum[i])
+}
 
 // Generador de espiral hexagonal — produce coords axiales (q, r) partiendo
 // del origen y creciendo por anillos. El ring n tiene 6n celdas.
@@ -150,8 +183,17 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
 
   const positioned: (Member & { canvasX: number, canvasY: number })[] = []
 
+  // Altura acumulada: cada generación sube GENERATION_GAP por nivel, más
+  // una fila extra si la generación de abajo se partió en dos.
+  let yOffset = 0
+  let lastGen: number | null = null
+  let lastSplit = false
+  let anySplit = false
+
   sortedGens.forEach(g => {
     const genMembers = [...gens[g]]
+    if (lastGen !== null) yOffset += (g - lastGen) * GENERATION_GAP + (lastSplit ? SUB_ROW_GAP : 0)
+    else yOffset = g * GENERATION_GAP
 
     // ── 2. CLUSTER SPOUSES INTO UNITS ──────────────────────────────
     const spouseAdjacency: Record<string, string[]> = {}
@@ -269,7 +311,6 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     // ── 4. MAGNETIC PLACEMENT (isotonic regression / PAV) ─────────
     // Each unit wants its center at its parents' midpoint. Minimum
     // center-to-center distances keep apples from ever overlapping.
-    // PAV finds the closest-to-desired positions that respect both.
     const n = units.length
     const widths = units.map(u => u.length * SPOUSE_SPACING)
 
@@ -282,42 +323,66 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     const fallbackDesire = knownDesires.length > 0
       ? knownDesires.reduce((a, b) => a + b, 0) / knownDesires.length
       : CENTER_X
-
     const desired = units.map(u => unitDesired.get(u) ?? fallbackDesire)
 
-    // cum[i] = required offset of unit i's center from unit 0's center
-    const cum: number[] = [0]
-    for (let i = 1; i < n; i++) {
-      cum[i] = cum[i - 1] + widths[i - 1] / 2 + UNIT_AIR + widths[i] / 2
+    // ── 4b. ¿UNA FILA O DOS? ─────────────────────────────────────
+    // Si la generación es más ancha que la copa, se reparte en dos filas.
+    // Los hermanos (mismos padres) se quedan juntos en la misma fila y las
+    // familias se alternan abajo/arriba, en orden de izquierda a derecha.
+    const rowWidth = widths.reduce((a, w) => a + w, 0) + UNIT_AIR * Math.max(0, n - 1)
+    const subRow: number[] = new Array(n).fill(0)
+    const isSplit = rowWidth > MAX_ROW_WIDTH && n >= 4
+    if (isSplit) {
+      const famKey = (u: Member[]) => u
+        .map(m => [...(m.parents || [])].sort().join('+'))
+        .filter(Boolean).sort()[0] || `solo:${u[0].id}`
+      // Agrupar unidades consecutivas de la misma familia
+      const groups: number[][] = []
+      units.forEach((u, i) => {
+        const last = groups[groups.length - 1]
+        if (last && famKey(units[last[0]]) === famKey(u)) last.push(i)
+        else groups.push([i])
+      })
+      // Familias grandes se parten a la mitad para no desbalancear
+      const half = Math.ceil(n / 2)
+      const chunks: number[][] = []
+      groups.forEach(gr => {
+        if (gr.length > half) { chunks.push(gr.slice(0, Math.ceil(gr.length / 2))); chunks.push(gr.slice(Math.ceil(gr.length / 2))) }
+        else chunks.push(gr)
+      })
+      // Repartir alternando, pero mandando cada familia a la fila más corta
+      // cuando la diferencia ya es grande.
+      const load = [0, 0]
+      let next = 0
+      chunks.forEach(ch => {
+        const w = ch.reduce((a, i) => a + widths[i] + UNIT_AIR, 0)
+        let row = next
+        if (load[row] - load[1 - row] > MAX_ROW_WIDTH * 0.15) row = 1 - row
+        ch.forEach(i => { subRow[i] = row })
+        load[row] += w
+        next = 1 - row
+      })
     }
 
-    // Transform: y[i] = x[i] - cum[i]. Constraint x[i] >= x[i-1] + gap
-    // becomes y[i] >= y[i-1]  →  classic isotonic regression, solved by PAV.
-    const t = desired.map((d, i) => d - cum[i])
-    const blocks: { sum: number, count: number, val: number }[] = []
-    t.forEach(v => {
-      blocks.push({ sum: v, count: 1, val: v })
-      while (blocks.length > 1 && blocks[blocks.length - 1].val < blocks[blocks.length - 2].val) {
-        const b = blocks.pop()!
-        const a = blocks[blocks.length - 1]
-        a.sum += b.sum
-        a.count += b.count
-        a.val = a.sum / a.count
-      }
-    })
-    const y: number[] = []
-    blocks.forEach(b => { for (let k = 0; k < b.count; k++) y.push(b.val) })
-
     // ── 5. EMIT POSITIONS ──────────────────────────────────────────
-    const currentY = ROOT_Y - g * GENERATION_GAP
-    units.forEach((unit, i) => {
-      const centerX = y[i] + cum[i]
-      const L = unit.length
-      const startOffset = -((L - 1) * SPOUSE_SPACING) / 2
-      unit.forEach((member, k) => {
-        positioned.push({ ...member, canvasX: centerX + startOffset + k * SPOUSE_SPACING, canvasY: currentY })
+    const baseY = ROOT_Y - yOffset
+    ;[0, 1].forEach(row => {
+      const idx = units.map((_, i) => i).filter(i => subRow[i] === row)
+      if (idx.length === 0) return
+      const centers = placeRow(idx.map(i => widths[i]), idx.map(i => desired[i]))
+      const rowY = baseY - row * SUB_ROW_GAP
+      idx.forEach((ui, k) => {
+        const unit = units[ui]
+        const L = unit.length
+        const startOffset = -((L - 1) * SPOUSE_SPACING) / 2
+        unit.forEach((member, j) => {
+          positioned.push({ ...member, canvasX: centers[k] + startOffset + j * SPOUSE_SPACING, canvasY: rowY })
+        })
       })
     })
+    lastSplit = isSplit
+    if (isSplit) anySplit = true
+    lastGen = g
   })
 
   // ── 6. COPA EN ARCO ───────────────────────────────────────────────
@@ -332,7 +397,8 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     const maxX = Math.max(...xs)
     const cx = (minX + maxX) / 2
     const half = Math.max((maxX - minX) / 2, NODE_SIZE)
-    const DROOP = GENERATION_GAP * 0.55
+    // Con filas dobles el árbol ya es más alto: se curva menos para no crecer.
+    const DROOP = GENERATION_GAP * (anySplit ? 0.3 : 0.55)
     positioned.forEach(p => {
       const t = (p.canvasX - cx) / half
       p.canvasY = p.canvasY + DROOP * t * t
