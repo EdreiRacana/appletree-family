@@ -385,6 +385,33 @@ export function computeTreeLayout(members: Member[] = [], relationships: Relatio
     lastGen = g
   })
 
+  // ── 5b. FILAS DE ARRIBA HACIA EL CENTRO ───────────────────────────
+  // La copa es una cúpula: angosta arriba. Una fila corta en lo alto (p.ej.
+  // los bisnietos de una sola rama) quedaría en la esquina, que es cielo.
+  // Las filas más cortas que la más ancha se recorren hacia el centro, más
+  // entre más cortas sean (los hermanos y su orden no cambian).
+  if (positioned.length > 1) {
+    const rows = new Map<number, typeof positioned>()
+    positioned.forEach(p => {
+      const key = Math.round(p.canvasY)
+      if (!rows.has(key)) rows.set(key, [])
+      rows.get(key)!.push(p)
+    })
+    const info = [...rows.entries()].map(([y, list]) => {
+      const xs = list.map(p => p.canvasX)
+      const lo = Math.min(...xs), hi = Math.max(...xs)
+      return { y, list, w: hi - lo, c: (lo + hi) / 2 }
+    })
+    const widest = info.reduce((a, b) => (b.w > a.w ? b : a))
+    const cx = widest.c
+    info.forEach(r => {
+      if (r.y >= widest.y || r.w >= widest.w) return
+      const pull = 0.85 * (1 - r.w / Math.max(widest.w, 1))
+      const shift = (cx - r.c) * pull
+      r.list.forEach(p => { p.canvasX += shift })
+    })
+  }
+
   // ── 6. COPA EN ARCO ───────────────────────────────────────────────
   // Las filas rectas parecen tabla; una copa es redonda. Cada manzana baja
   // según su distancia horizontal al centro del árbol (parábola): el centro

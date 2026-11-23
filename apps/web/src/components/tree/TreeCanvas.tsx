@@ -320,46 +320,83 @@ export default function TreeCanvas({ members, relationships, onRefresh, onViewPr
   const fitToView = useCallback(() => {
     if (!treeBounds || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    // Encajar el árbol DENTRO DE LA COPA del fondo (no en toda la pantalla):
-    // así ninguna manzana flota en el cielo ni se corta en la orilla.
-    // La copa ocupa aprox. del 10% al 90% del ancho y del 4% al 80% del alto
-    // del área del lienzo; se respeta además la barra lateral y el panel.
-    const leftInset = SIDEBAR_INSET
-    const rightInset = profilePanelOpen ? DRAWER_WIDTH + 24 : 24
-    const canopyLeft = Math.max(leftInset + 12, rect.width * 0.1)
-    const canopyRight = Math.min(rect.width - rightInset - 12, rect.width * 0.9)
-    const canopyTop = rect.height * 0.04
-    const canopyBottom = rect.height * 0.8
-    const usableW = Math.max(canopyRight - canopyLeft, 200)
-    const usableH = Math.max(canopyBottom - canopyTop, 200)
-    const treeW = treeBounds.maxX - treeBounds.minX
-    const treeH = treeBounds.maxY - treeBounds.minY
-    const treeCenterX = (treeBounds.minX + treeBounds.maxX) / 2
-    const treeCenterY = (treeBounds.minY + treeBounds.maxY) / 2
-    // La copa es REDONDA, no rectangular: las esquinas del rectángulo son
-    // cielo. Además del ajuste al rectángulo, cada manzana (con su nombre)
-    // debe caer dentro del óvalo de la copa.
-    const rx = usableW / 2
-    const ry = (usableH / 2) * 1.08
-    let ovalScale = Infinity
-    for (const m of positionedMembers) {
-      const dx = Math.abs((m.canvasX ?? 0) - treeCenterX) + NODE_SIZE * 0.5
-      const dy = Math.abs((m.canvasY ?? 0) + NODE_SIZE / 2 - treeCenterY) + NODE_SIZE * 0.6
-      // Súper-elipse (exponente 3): entre óvalo y rectángulo. Recorta las
-      // esquinas (cielo) sin encoger de más el árbol como un óvalo puro.
-      const k = Math.cbrt((dx / rx) ** 3 + (dy / ry) ** 3)
-      if (k > 0) ovalScale = Math.min(ovalScale, 1 / k)
+    // Encajar el árbol DENTRO DE LA COPA de la foto de fondo. La copa es una
+    // CÚPULA (angosta arriba, ancha abajo), medida sobre la imagen original
+    // (1536×1024). El fondo usa "cover" centrado, así que se convierte esa
+    // cúpula a coordenadas de pantalla y se busca la escala más grande y la
+    // posición en que TODAS las manzanas (con su nombre) caen dentro.
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    const imgScale = Math.max(vw / 1536, vh / 1024)
+    const imgLeft = (vw - 1536 * imgScale) / 2 - rect.left
+    const imgTop = (vh - 1024 * imgScale) / 2 - rect.top
+    const toImg = (sx: number, sy: number): [number, number] => [(sx - imgLeft) / imgScale, (sy - imgTop) / imgScale]
+    // Cúpula en la imagen: centro x 757; la parte de arriba es media elipse
+    // (radio 595 × 480, cima en y≈140); de y 620 a 700 conserva el ancho;
+    // más abajo solo el tronco.
+    const insideCanopy = (ix: number, iy: number) => {
+      const dx = Math.abs(ix - 757)
+      if (iy < 620) {
+        const ex = dx / (595 * 0.93)
+        const ey = (620 - iy) / (480 * 0.93)
+        return ex * ex + ey * ey <= 1
+      }
+      if (iy <= 700) return dx <= 595 * 0.93
+      return iy <= 860 && dx <= 150
     }
-    const fitScale = Math.min(usableW / treeW, usableH / treeH, ovalScale, 1.1)
-    const newScale = Math.max(Math.min(fitScale, MAX_SCALE), MIN_SCALE)
-    const usableCenterX = canopyLeft + usableW / 2
-    const usableCenterY = canopyTop + usableH / 2
+    const leftInset = SIDEBAR_INSET + 8
+    const rightInset = profilePanelOpen ? DRAWER_WIDTH + 24 : 24
+    // Puntos a revisar por manzana: las 4 esquinas de la manzana + su nombre.
+    const pts: Array<[number, number]> = []
+    for (const m of positionedMembers) {
+      const x = m.canvasX ?? 0
+      const y = m.canvasY ?? 0
+      pts.push([x - NODE_SIZE * 0.42, y + NODE_SIZE * 0.1], [x + NODE_SIZE * 0.42, y + NODE_SIZE * 0.1],
+        [x - NODE_SIZE * 0.42, y + NODE_SIZE * 1.3], [x + NODE_SIZE * 0.42, y + NODE_SIZE * 1.3])
+    }
+    const treeCenterX = (treeBounds.minX + treeBounds.maxX) / 2
+    const treeH = treeBounds.maxY - treeBounds.minY
+    // Centro horizontal de la copa en pantalla
+    const canopyCX = imgLeft + 757 * imgScale
+    const canopyTopY = imgTop + 140 * imgScale
+    const canopyBotY = imgTop + 860 * imgScale
+    const fits = (sc: number, ox: number, oy: number) => {
+      for (const [px, py] of pts) {
+        const sx = px * sc + ox
+        const sy = py * sc + oy
+        if (sx < leftInset || sx > rect.width - rightInset || sy < 4 || sy > rect.height - 70) return false
+        const [ix, iy] = toImg(sx, sy)
+        if (!insideCanopy(ix, iy)) return false
+      }
+      return true
+    }
+    let best: { sc: number, ox: number, oy: number } | null = null
+    for (let sc = 1.1; sc >= MIN_SCALE && !best; sc -= 0.02) {
+      const ox = canopyCX - treeCenterX * sc
+      // Probar distintas alturas: de la cima de la copa hacia abajo
+      const span = canopyBotY - canopyTopY - treeH * sc
+      if (span < 0) continue
+      for (let k = 0; k <= 24; k++) {
+        const top = canopyTopY + (span * k) / 24
+        const oy = top - treeBounds.minY * sc
+        if (fits(sc, ox, oy)) { best = { sc, ox, oy }; break }
+      }
+    }
+    // Si nada cabe (familia enorme o pantalla muy chica): todo a la vista.
+    if (!best) {
+      const usableW = Math.max(rect.width - leftInset - rightInset, 200)
+      const usableH = Math.max(rect.height - 90, 200)
+      const sc = Math.max(Math.min(usableW / (treeBounds.maxX - treeBounds.minX), usableH / treeH, 1.1), MIN_SCALE)
+      best = {
+        sc,
+        ox: leftInset + usableW / 2 - treeCenterX * sc,
+        oy: 10 + usableH / 2 - ((treeBounds.minY + treeBounds.maxY) / 2) * sc,
+      }
+    }
+    const newScale = Math.max(Math.min(best.sc, MAX_SCALE), MIN_SCALE)
     userMovedRef.current = false
     setScale(newScale)
-    setOffset({
-      x: usableCenterX - treeCenterX * newScale,
-      y: usableCenterY - treeCenterY * newScale
-    })
+    setOffset({ x: best.ox, y: best.oy })
   }, [treeBounds, profilePanelOpen, positionedMembers])
 
   // ── ZOOM AROUND A SCREEN POINT (cursor or viewport center) ──
