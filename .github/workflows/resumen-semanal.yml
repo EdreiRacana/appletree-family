@@ -1,0 +1,42 @@
+name: Resumen semanal
+
+# Cada domingo a las 9:00 a. m. (hora del centro de México) manda a cada
+# familiar un correo con los cumpleaños de la semana, a quién recordamos,
+# quién se unió y las historias y fotos nuevas. Quien no tenga novedades
+# no recibe nada. Cada correo trae un enlace para darse de baja.
+#
+# Secretos de GitHub que usa:
+#   SUPABASE_DB_URL  (el mismo del respaldo)
+#   RESEND_API_KEY   (la llave de Resend)
+#
+# Para probar: pestaña Actions → "Resumen semanal" → Run workflow y escribe
+# tu correo en "solo_a" para que solo te llegue a ti.
+
+on:
+  schedule:
+    - cron: '0 15 * * 0'   # 15:00 UTC = 9:00 a. m. en Ciudad de México
+  workflow_dispatch:
+    inputs:
+      solo_a:
+        description: 'Enviar solo a este correo (vacío = a toda la familia)'
+        required: false
+        default: ''
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts/resumen-semanal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund
+      - name: Enviar resumen
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SOLO_A: ${{ github.event.inputs.solo_a }}
+        run: node enviar.mjs

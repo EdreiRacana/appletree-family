@@ -19,6 +19,7 @@ import {
   unsubscribeFromPush,
 } from '@/lib/pushClient'
 import AdminsPanel from '@/components/AdminsPanel'
+import WeeklyDigestToggle from '@/components/WeeklyDigestToggle'
 import type { Member } from '@/lib/types'
 
 interface AccountSettingsModalProps {
@@ -397,6 +398,7 @@ export default function AccountSettingsModal({ currentEmail, onClose, treeId, is
                    : 'Activar notificaciones al celular'}
                 </button>
               )}
+              <WeeklyDigestToggle />
             </>
           )}
 
