@@ -102,6 +102,9 @@ export async function renderPoster(opts: PosterOptions): Promise<HTMLCanvasEleme
   document.body.appendChild(probe)
   const serif = getComputedStyle(probe).fontFamily || "'Cormorant Garamond', Georgia, serif"
   probe.remove()
+  // Que la fuente de título esté descargada antes de dibujar (si no, el
+  // canvas usa una genérica).
+  await document.fonts?.load?.(`600 48px ${serif}`).catch(() => {})
 
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -187,10 +190,54 @@ export async function renderPoster(opts: PosterOptions): Promise<HTMLCanvasEleme
     const maxX = Math.max(...positioned.map(p => p.canvasX)) + NODE_SIZE / 2
     const minY = Math.min(...positioned.map(p => p.canvasY))
     const maxY = Math.max(...positioned.map(p => p.canvasY)) + NODE_SIZE + label
-    const region = { x: W * 0.06, y: H * 0.2, w: W * 0.88, h: H * 0.6 }
-    const s = Math.min(region.w / (maxX - minX), region.h / (maxY - minY), (W * 0.09) / NODE_SIZE)
-    const ox = region.x + (region.w - (maxX - minX) * s) / 2 - minX * s
-    const oy = region.y + (region.h - (maxY - minY) * s) / 2 - minY * s
+    // Encajar TODAS las manzanas dentro de la copa de la foto (misma cúpula
+    // que usa la app, medida sobre arbol-base.png de 1536×1024). La foto se
+    // dibuja "cover" pegada abajo, así que se convierte a coordenadas del póster.
+    const ir = Math.max(W / 1536, H / 1024)
+    const imgLeft = (W - 1536 * ir) / 2
+    const imgTop = H - 1024 * ir
+    const insideCanopy = (px: number, py: number) => {
+      const ix = (px - imgLeft) / ir, iy = (py - imgTop) / ir
+      const dx = Math.abs(ix - 757)
+      if (iy < 620) {
+        const ex = dx / (595 * 0.9), ey = (620 - iy) / (480 * 0.9)
+        return ex * ex + ey * ey <= 1
+      }
+      if (iy <= 700) return dx <= 595 * 0.9
+      return iy <= 860 && dx <= 150
+    }
+    const pts: Array<[number, number]> = []
+    for (const p of positioned) {
+      pts.push([p.canvasX - NODE_SIZE * 0.42, p.canvasY + NODE_SIZE * 0.1], [p.canvasX + NODE_SIZE * 0.42, p.canvasY + NODE_SIZE * 0.1],
+        [p.canvasX - NODE_SIZE * 0.42, p.canvasY + NODE_SIZE * 0.95], [p.canvasX + NODE_SIZE * 0.42, p.canvasY + NODE_SIZE * 0.95])
+    }
+    const titleBottom = H * 0.19
+    const canopyCX = imgLeft + 757 * ir
+    const canopyTop = Math.max(imgTop + 140 * ir, titleBottom)
+    const canopyBot = imgTop + 860 * ir
+    const fits = (sc: number, fx: number, fy: number) => pts.every(([px, py]) => {
+      const sx = px * sc + fx, sy = py * sc + fy
+      return sy >= titleBottom && sy <= H * 0.88 && sx >= W * 0.04 && sx <= W * 0.96 && insideCanopy(sx, sy)
+    })
+    const treeCX = (minX + maxX) / 2
+    const treeH = maxY - minY
+    let best: { s: number, ox: number, oy: number } | null = null
+    for (let sc = (W * 0.09) / NODE_SIZE; sc >= (W * 0.012) / NODE_SIZE && !best; sc *= 0.97) {
+      const span = canopyBot - canopyTop - treeH * sc
+      if (span < 0) continue
+      const fx = canopyCX - treeCX * sc
+      for (let k = 0; k <= 30; k++) {
+        const fy = canopyTop + (span * k) / 30 - minY * sc
+        if (fits(sc, fx, fy)) { best = { s: sc, ox: fx, oy: fy }; break }
+      }
+    }
+    if (!best) {
+      // Familia enorme: que quepa toda en el área central.
+      const region = { x: W * 0.06, y: H * 0.2, w: W * 0.88, h: H * 0.6 }
+      const sc = Math.min(region.w / (maxX - minX), region.h / (maxY - minY), (W * 0.09) / NODE_SIZE)
+      best = { s: sc, ox: region.x + (region.w - (maxX - minX) * sc) / 2 - minX * sc, oy: region.y + (region.h - treeH * sc) / 2 - minY * sc }
+    }
+    const { s, ox, oy } = best
     const n = NODE_SIZE * s
     const X = (x: number) => ox + x * s
     const Y = (y: number) => oy + y * s
