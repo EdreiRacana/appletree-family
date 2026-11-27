@@ -1187,6 +1187,7 @@ export default function AppleTreeDashboard() {
               profilePanelOpen={!!selectedMember}
               relationLabels={kinship}
               meId={treeData.members.find(m => session?.user?.id && m.userId === session.user.id)?.id ?? null}
+              familyName={families.find(f => f.tree_id === currentTreeId)?.tree_name}
             />
           )}
 

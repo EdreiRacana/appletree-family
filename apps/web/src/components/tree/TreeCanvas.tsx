@@ -4,6 +4,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import AppleNode from './AppleNode'
 import type { Member, Relationship } from '@/lib/types'
 import { computeTreeLayout, NODE_SIZE, SPOUSE_SPACING } from '@/lib/treeLayout'
+import PosterModal from '@/components/PosterModal'
 import { kinshipPhrase } from '@/lib/kinship'
 import { filterTreeView, AUTO_HIDE_FROM, type GenMode } from '@/lib/treeView'
 import { supabase } from '@/lib/supabase'
@@ -44,6 +45,8 @@ interface TreeCanvasProps {
   relationLabels?: Map<string, string>
   // Manzana de quien mira (para "Generaciones: desde mis abuelos")
   meId?: string | null
+  // Nombre de la familia (título del póster)
+  familyName?: string
 }
 
 // Chrome insets — the fixed UI edges the canvas must avoid.
@@ -51,7 +54,8 @@ interface TreeCanvasProps {
 const SIDEBAR_INSET = 116
 const DRAWER_WIDTH = 340
 
-export default function TreeCanvas({ members: allMembers, relationships: allRelationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false, relationLabels, meId }: TreeCanvasProps) {
+export default function TreeCanvas({ members: allMembers, relationships: allRelationships, onRefresh, onViewProfile, onEditMember, onAddStory, onOpenChat, onConnectMember, bgOpacity, profilePanelOpen = false, relationLabels, meId, familyName }: TreeCanvasProps) {
+  const [posterOpen, setPosterOpen] = useState(false)
   const isMobile = useIsMobile()
 
   // ── QUÉ PARTE DEL ÁRBOL SE VE ──────────────────────────────────
@@ -791,12 +795,28 @@ export default function TreeCanvas({ members: allMembers, relationships: allRela
           </div>
         )}
 
-        {/* Menú Generaciones */}
-        {!treeView.branchRoot && treeView.canHideGenerations && (
-          <div style={mobile
-            ? { position: 'absolute', top: 54, right: 12, zIndex: 640 }
-            : { position: 'absolute', bottom: 24, left: 'calc(50% + 120px)', zIndex: 640 }}
+        {/* Menú Generaciones + Póster */}
+        {!treeView.branchRoot && (
+          <div style={{
+            ...(mobile
+              ? { position: 'absolute', top: 54, right: 12, flexDirection: 'row-reverse' as const }
+              : { position: 'absolute', bottom: 24, left: 'calc(50% + 120px)' }),
+            zIndex: 640, display: 'flex', gap: 8,
+          }}
             onMouseDown={e => e.stopPropagation()}>
+          {allMembers.length > 0 && (
+            <button onClick={() => setPosterOpen(true)} title="Descargar el árbol para imprimir"
+              style={{
+                height: mobile ? 34 : 48, padding: '0 14px', borderRadius: mobile ? 999 : 14, cursor: 'pointer',
+                background: 'var(--panel-bg)', color: 'var(--accent-gold)', border: '1px solid var(--panel-border)',
+                boxShadow: 'var(--panel-shadow)', backdropFilter: 'blur(8px)', fontWeight: 700, fontSize: 12,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+              <span aria-hidden style={{ fontSize: 14 }}>🖼️</span> Póster
+            </button>
+          )}
+          {treeView.canHideGenerations && (
+          <div style={{ position: 'relative' }}>
             <button onClick={() => setGenMenuOpen(o => !o)} aria-haspopup="menu" aria-expanded={genMenuOpen}
               style={{
                 height: mobile ? 34 : 48, padding: '0 14px', borderRadius: mobile ? 999 : 14, cursor: 'pointer',
@@ -830,6 +850,16 @@ export default function TreeCanvas({ members: allMembers, relationships: allRela
               </div>
             )}
           </div>
+          )}
+          </div>
+        )}
+        {posterOpen && (
+          <PosterModal
+            members={allMembers}
+            relationships={allRelationships}
+            familyName={familyName || 'Nuestra familia'}
+            onClose={() => setPosterOpen(false)}
+          />
         )}
       </>
     )
