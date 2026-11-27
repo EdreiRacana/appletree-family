@@ -1123,6 +1123,7 @@ export default function AppleTreeDashboard() {
             myUserId={session?.user?.id ?? null}
             onSwitch={switchTree}
             onFamiliesChanged={reloadFamilies}
+            onTreeDataChanged={fetchFamilyData}
           />
         ) : undefined}
         onAdd={() => {

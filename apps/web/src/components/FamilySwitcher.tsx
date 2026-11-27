@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { ChevronDown, Check, Plus, Pencil, Send, Clock, X, Users } from 'lucide-react'
+import { ChevronDown, Check, Plus, Pencil, Send, Clock, X, Users, GitMerge } from 'lucide-react'
+import MergeFamiliesModal from '@/components/MergeFamiliesModal'
 import { supabase } from '@/lib/supabase'
 import type { Member } from '@/lib/types'
 
@@ -42,6 +43,7 @@ interface FamilySwitcherProps {
   myUserId: string | null
   onSwitch: (treeId: string) => void
   onFamiliesChanged: () => Promise<void> | void
+  onTreeDataChanged?: () => void   // volver a leer el árbol actual (tras unir familias)
 }
 
 // Igual que public.norm_surname en la base.
@@ -61,8 +63,9 @@ export function familyLabel(f: Pick<FamilyTree, 'tree_name'>): string {
 }
 
 export default function FamilySwitcher({
-  families, currentTreeId, members, myUserId, onSwitch, onFamiliesChanged,
+  families, currentTreeId, members, myUserId, onSwitch, onFamiliesChanged, onTreeDataChanged,
 }: FamilySwitcherProps) {
+  const [mergeOpen, setMergeOpen] = useState(false)
   const [open, setOpen] = useState(false)
   const [found, setFound] = useState<FoundTree[]>([])
   const [busy, setBusy] = useState<string | null>(null)
@@ -201,6 +204,11 @@ export default function FamilySwitcher({
               <Pencil size={13} /> Cambiar nombre de esta familia
             </button>
           )}
+          {canRename && !renaming && (
+            <button onClick={() => { close(); setMergeOpen(true) }} style={{ ...linkBtn, marginLeft: 30 }}>
+              <GitMerge size={13} /> Unir con otra familia
+            </button>
+          )}
           {renaming && (
             <div style={{ display: 'flex', gap: 6, padding: '4px 4px 8px 30px' }}>
               <input autoFocus value={newName} maxLength={60} onChange={e => setNewName(e.target.value)}
@@ -280,6 +288,20 @@ export default function FamilySwitcher({
 
           {error && <p role="alert" style={{ margin: '8px 4px 0', color: '#D9534F', fontSize: 12, fontWeight: 600 }}>{error}</p>}
         </div>
+      )}
+      {mergeOpen && current && (
+        <MergeFamiliesModal
+          families={families}
+          current={current}
+          currentMembers={members}
+          onClose={() => setMergeOpen(false)}
+          onMerged={async keepId => {
+            setMergeOpen(false)
+            await onFamiliesChanged()
+            if (keepId === currentTreeId) onTreeDataChanged?.()
+            else onSwitch(keepId)
+          }}
+        />
       )}
     </div>
   )
